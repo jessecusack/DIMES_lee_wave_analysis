@@ -79,7 +79,7 @@ def read_grid(lon_lat, file_path=None):
     bathy_grid = np.ndarray(lat_grid.shape, dtype='i2')
 
     if file_path is None:
-        file_path = 'C:/Users/jc3e13/data/sandwell_bathymetry/topo_16.1.img'
+        file_path = '../../data/sandwell_bathymetry/topo_16.1.img'
 #        file_path = 'C:/Users/Jesse/Documents/MATLAB/bathymetry/topo_15.1.img'
 
     with open(file_path, 'rb') as f:
@@ -118,7 +118,7 @@ def main():
                    lat_0=0.5*(llcrnrlat+urcrnrlat))
 
     x, y = m(lon_grid, lat_grid)
-    m.contour(x, y, bathy_grid, levels=[0, -2000, -3000, -6000])
+    m.pcolormesh(x, y, bathy_grid)
     m.drawmapboundary()
     m.drawmeridians([-72, -68, -64, -60, -56, -52, -48, -44, -40, -36, -32, -28])
     m.drawparallels([-48, -52, -56, -60, -64])
