@@ -5,13 +5,13 @@ Created on Tue Apr 08 12:17:53 2014
 @author: jc3e13
 """
 
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import mpl_toolkits.basemap as bm
 import sandwell
 
 
-def dist_section(Float, hpids, var, plot_func=pl.contourf):
+def dist_section(Float, hpids, var, plot_func=plt.contourf):
     """"""
     z_vals = np.arange(-1400., -100., 10.)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
@@ -20,19 +20,19 @@ def dist_section(Float, hpids, var, plot_func=pl.contourf):
     plot_func(dists, z_vals, var_grid)
 
 
-def depth_profile(Float, hpids, var, plot_func=pl.plot):
+def depth_profile(Float, hpids, var, plot_func=plt.plot):
     """"""
     profiles = Float.get_profiles(hpids)
     if np.iterable(profiles):
         for profile in profiles:
             z = getattr(profile, 'z')
             x = profile.interp(z, 'z', var)
-            pl.figure()
+            plt.figure()
             plot_func(x, z)
     else:
         z = getattr(profiles, 'z')
         x = profile.interp(z, 'z', var)
-        pl.figure()
+        plt.figure()
         plot_func(x, z)
 
 
@@ -46,17 +46,17 @@ def isosurface(Float, hpids, var_1_name, var_2_name, var_2_vals):
 
     ig, __, var_1g = Float.get_interp_grid(hpids, var_2_vals,
                                            var_2_name, var_1_name)
-    pl.figure()
-    pl.plot(ig.T, var_1g.T)
-    pl.legend(str(var_2_vals).strip('[]').split())
+    plt.figure()
+    plt.plot(ig.T, var_1g.T)
+    plt.legend(str(var_2_vals).strip('[]').split())
 
 
 def timeseries(Float, hpids, var_name):
     """TODO: Docstring..."""
 
     t, var = Float.get_timeseries(hpids, var_name)
-    pl.figure()
-    pl.plot(t, var)
+    plt.figure()
+    plt.plot(t, var)
 
 
 def track(Float, hpids, projection='cyl'):
@@ -74,6 +74,7 @@ def track(Float, hpids, projection='cyl'):
     lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
 
     lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat)
+    bathy_grid[bathy_grid > 0] = 0
 
     m = bm.Basemap(projection=projection, llcrnrlon=llcrnrlon,
                    llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
@@ -81,9 +82,28 @@ def track(Float, hpids, projection='cyl'):
                    lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
 
     x, y = m(lon_grid, lat_grid)
-    m.pcolormesh(x, y, bathy_grid, #levels=[0, -2000, -4000, -6000],
-                 cmap=pl.get_cmap('binary_r'))
+    m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
     x, y = m(lons, lats)
-    m.plot(x, y, 'r--')
-    m.drawmapboundary()
+    m.plot(x, y, 'r-', linewidth=2)
+
     m.fillcontinents()
+    m.drawcoastlines()
+
+    r = np.abs((urcrnrlon-llcrnrlon)/(urcrnrlat-llcrnrlat))
+
+    if r > 1.:
+        Nm = 8
+        Np = max(3, np.round(Nm/r))
+        orientation = 'horizontal'
+    elif r < 1.:
+        Np = 8
+        Nm = max(3, np.round(Nm/r))
+        orientation = 'vertical'
+
+    parallels = np.round(np.linspace(llcrnrlat, urcrnrlat, Np), 1)
+    m.drawparallels(parallels, labels=[1, 0, 0, 0])
+    meridians = np.round(np.linspace(llcrnrlon, urcrnrlon, Nm), 1)
+    m.drawmeridians(meridians, labels=[0, 0, 0, 1])
+
+    cbar = plt.colorbar(orientation=orientation)
+    cbar.set_label('Depth (m)')
