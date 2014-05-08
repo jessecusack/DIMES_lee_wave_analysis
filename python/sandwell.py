@@ -80,7 +80,6 @@ def read_grid(lon_lat, file_path=None):
 
     if file_path is None:
         file_path = '../../data/sandwell_bathymetry/topo_16.1.img'
-#        file_path = 'C:/Users/Jesse/Documents/MATLAB/bathymetry/topo_15.1.img'
 
     with open(file_path, 'rb') as f:
         for i in xrange(Nlats):
@@ -101,28 +100,27 @@ def read_grid(lon_lat, file_path=None):
     return lon_grid, lat_grid, bathy_grid
 
 
-def main():
-
-    lon_lat = np.array([-72, -27, -68, -47])
-
-    lon_grid, lat_grid, bathy_grid = read_grid(lon_lat)
-
-    llcrnrlon = lon_lat[0]
-    llcrnrlat = lon_lat[2]
-    urcrnrlon = lon_lat[1]
-    urcrnrlat = lon_lat[3]
-
-    m = bm.Basemap(projection='cyl', llcrnrlon=llcrnrlon,
-                   llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
-                   urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
-                   lat_0=0.5*(llcrnrlat+urcrnrlat))
-
-    x, y = m(lon_grid, lat_grid)
-    m.pcolormesh(x, y, bathy_grid)
-    m.drawmapboundary()
-    m.drawmeridians([-72, -68, -64, -60, -56, -52, -48, -44, -40, -36, -32, -28])
-    m.drawparallels([-48, -52, -56, -60, -64])
-
 if __name__ == '__main__':
 
-    main()
+    lon_lat = np.array([-72, -27, -68, -47])
+    west, east, south, north = lon_lat
+
+    lon_grid, lat_grid, bathy_grid = read_grid(lon_lat)
+    bathy_grid[bathy_grid > 0] = 0
+
+    m = bm.Basemap(projection='cyl', llcrnrlon=west,
+                   llcrnrlat=south, urcrnrlon=east,
+                   urcrnrlat=north, lon_0=0.5*(west+east),
+                   lat_0=0.5*(south+north), resolution='f')
+
+    x, y = m(lon_grid, lat_grid)
+    m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
+
+    m.drawcoastlines()
+    m.fillcontinents()
+
+    meridians = np.round(np.linspace(west, east, 7))
+    m.drawmeridians(meridians, labels=[0, 0, 0, 1])
+    parallels = np.round(np.linspace(south, north, 3))
+    m.drawparallels(parallels, labels=[1, 0, 0, 0])
+    plt.title('Drake Passage and Scotia Sea Bathymetry')
