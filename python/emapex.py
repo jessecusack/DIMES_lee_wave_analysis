@@ -3,6 +3,9 @@
 Created on Tue Dec 17 22:49:23 2013
 
 @author: Jesse
+
+Contains functions and classes for investigating and manipulating EM-APEX float
+data.
 """
 
 import numpy as np
@@ -296,6 +299,8 @@ class EMApexFloat:
                                  self.lat_start)
         # Conservative temperature.
         self.CT = gsw.CT_from_t(self.SA, self.T, self.P)
+        # Potential temperature with respect to 0 dbar.
+        self.PT = gsw.pt_from_CT(self.SA, self.CT)
         # In-situ density.
         self.rho = gsw.rho(self.SA, self.CT, self.P)
         # Buoyancy frequency. (Bizarrely output is a tuple)
@@ -305,7 +310,7 @@ class EMApexFloat:
         self.rho_1 = gsw.pot_rho_t_exact(self.SA, self.T, self.P, p_ref=1000.)
 
         # Vertical velocity interpolated back onto a ctd grid.
-        dt = 86400.*np.diff(self.UTC, axis=0)
+        dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
         self.Wz_ca = np.diff(self.z, axis=0)/dt
         Wz_ca_flat = self.Wz_ca.flatten(order='F')
         UTC_flat = self.UTC.flatten(order='F')
@@ -321,8 +326,6 @@ class EMApexFloat:
         # Vertical water velocity.
         self.Wpef = self.Wp.copy()
         del self.Wp
-#        self.Ww1 = self.Wpef - self.Wf
-#        self.Wp =
 
         print("Creating array of half profiles.")
 
