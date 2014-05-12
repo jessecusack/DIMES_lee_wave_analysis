@@ -5,19 +5,17 @@ function [] = W_model(EMF, param_file)
 % Output:
 %   Saves model output to .mat file.
 
+% This imports the structure 'mp' which contains all model parameters.
 run(param_file)
 
-% Am only doing it for profiles 1:300 for the moment because I do not have
-% the correct data quality controls in place. (Some profiles at hpid > 300
-% do not have enough data to produce the grid and need to be discarded.)
-[~, Pg, Wf] = EMF.gridVar(hpidIndx, 'P', PLvls, 'Wef');
-[~, ~, pc] = EMF.gridVar(hpidIndx, 'P', PLvls, 'pc_ctd');
-[~, ~, dens] = EMF.gridVar(hpidIndx, 'P', PLvls, 'pdens');
+[~, Pg, Wf] = EMF.gridVar(mp.hpidIndx, 'P', mp.PLvls, 'Wef');
+[~, ~, pc] = EMF.gridVar(mp.hpidIndx, 'P', mp.PLvls, 'pc_ctd');
+[~, ~, dens] = EMF.gridVar(mp.hpidIndx, 'P', mp.PLvls, 'pdens');
 dens = dens.^(-1);
 % Subtract mean density profile.
 % dens = dens - repmat(mean(dens, 2), 1, size(dens, 2));
 
-[~, validHpidIndx] = EMF.getPflSubset(hpidIndx);
+[~, validHpidIndx] = EMF.getPflSubset(mp.hpidIndx);
 
 oddPfls = rem(validHpidIndx, 2) == 1;
 evenPfls = rem(validHpidIndx, 2) == 0;
@@ -31,9 +29,9 @@ Wf2 = Wf.^2;
 Wf2(:,evenPfls) = -Wf2(:,evenPfls);
 
 % What profiles to choose? What depth levels to use?
-if useOdd
+if mp.useOdd
     usePfls = oddPfls;
-elseif useEven
+elseif mp.useEven
     usePfls = evenPfls;
 else
     usePfls = allPfls;
@@ -48,15 +46,15 @@ dens_ = dens(useLvls,usePfls);
 
 fprintf(1,'Wref\t\tkappa\t\talpha\t\tk0\t\tmeanErr\n');
 
-x = zeros(NGrps,4); Wref = zeros(NGrps,1); alpha = zeros(NGrps,1); 
-kappa = zeros(NGrps,1); k0 = zeros(NGrps,1); meanErr = zeros(NGrps,1);
-sx = zeros(NGrps,4);
-for i = 1:NGrps
+x = zeros(mp.NGrps,4); Wref = zeros(mp.NGrps,1); alpha = zeros(mp.NGrps,1); 
+kappa = zeros(mp.NGrps,1); k0 = zeros(mp.NGrps,1); 
+meanErr = zeros(mp.NGrps,1); sx = zeros(mp.NGrps,4);
+for i = 1:mp.NGrps
     
     % Don't want to include imaginary results for Wref!
     while x(i,4) <= 0
         
-        [~, idx] = datasample(Wf2_, NPfls, 2);
+        [~, idx] = datasample(Wf2_, mp.NPfls, 2);
         % Solve equation Ax = B for x using lscov.
         B = reshape(Wf2_(:,idx),[],1);
         A(:,2) = reshape(pc_(:,idx),[],1);
@@ -99,5 +97,8 @@ fprintf(1,'%3.3f\t\t%6.2e\t%6.2e\t%5.1f\t\t%6.2e\n',...
 % Wrel = Wrel_model_lin(mabcd, pc, Pg, dens, validHpidIndx);
 % Wwat = Wf - Wrel;
 
-save(saveFName, 'x', 'sx', 'mabcd', 'dens0')
+if ~exist(mp.savePath, 'dir')
+    mkdir(mp.savePath)
+end
+save(fullfile(mp.savePath, mp.saveFName), 'x', 'sx', 'mabcd', 'dens0')
 

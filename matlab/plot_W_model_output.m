@@ -15,7 +15,7 @@ file_type = '-djpeg';
 
 x = output.x;
 % mabcd = output.mabcd;
-dens0 = 1027.;
+dens0 = output.dens0;
 
 Wref = sqrt(x(:,4)./dens0);
 alpha = -x(:,2).*dens0./x(:,4);
