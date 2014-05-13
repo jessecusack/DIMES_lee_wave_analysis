@@ -31,7 +31,7 @@
 % Note data file is beg-endian. Somehow my version of 10.1 was small endian
 function  [image_data,vlat,vlon] = mygrid_sand(region,iopt)
 
-DatabasesDir = '';
+DatabasesDir = '../../data/sandwell_bathymetry/';
 DataBaseFile = 'topo_16.1.img';
 
 % determine the requested region
@@ -75,7 +75,7 @@ for i = 1:length(wlon);
 	fid = fopen([DatabasesDir DataBaseFile], 'r','ieee-be');
 %
 	if (fid < 0)
-		errordlg(['Could not open database: ' DatabasesDir '/topo_10.1.img'],'Error');
+		errordlg('Could not open database.','Error');
 	end
 
 	% Make sure the longitude data goes from 0 to 360
