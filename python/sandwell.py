@@ -8,8 +8,30 @@ Functions for reading Smith and Sandwell bathymetry.
 """
 
 import numpy as np
+from scipy.interpolate import interp2d
 import matplotlib.pyplot as plt
 import mpl_toolkits.basemap as bm
+
+
+def bilinear_interpolation(xg, yg, fg, x, y):
+    """TODO:"""
+    xa = xg[:, 0]
+    ya = yg[0, :]
+
+    i1 = np.searchsorted(xa, x)
+    i2 = i1 + 1
+    j1 = np.searchsorted(ya, y)
+    j2 = j1 + 1
+
+    dx = xa[i2] - xa[i1]
+    dy = ya[j2] - ya[j1]
+
+    f11, f21, f12, f22 = fg[i1, j1], fg[i2, j1], fg[i1, j2], fg[i2, j2]
+
+    x1, y1, x2, y2 = xa[i1], ya[j1], xa[i2], ya[j2]
+
+    return (f11*(x2 - x)*(y2 - y) + f21*(x - x1)*(y2 - y) +
+            f12*(x2 - x)*(y - y1) + f22*(x - x1)*(y - y1))/(dx*dy)
 
 
 def read_grid(lon_lat, file_path=None):
@@ -19,7 +41,7 @@ def read_grid(lon_lat, file_path=None):
     Output:
       bathy_grid, lon_grid, lat_grid
 
-    TODO: More input checks.
+    TODO: More input checks. Improve docstring...
     """
 
     # Important parameters.
@@ -100,8 +122,20 @@ def read_grid(lon_lat, file_path=None):
     return lon_grid, lat_grid, bathy_grid
 
 
+def interp_track(lons, lats, file_path=None, kind='linear'):
+    """Interpolates bathymetry data to given longitude and latitude
+    coordinates. The inputs should be one dimensional arrays."""
+
+    margin = 1
+    lon_lat = np.array([np.min(lons)-margin, np.max(lons)+margin,
+                        np.min(lats)-margin, np.max(lats)+margin])
+    lon_grid, lat_grid, bathy_grid = read_grid(lon_lat, file_path)
+    return bilinear_interpolation(lon_grid, lat_grid, bathy_grid, lons, lats)
+
+
 if __name__ == '__main__':
 
+    # Plotting bathymetry example.
     lon_lat = np.array([-72, -27, -68, -47])
     west, east, south, north = lon_lat
 
@@ -113,8 +147,8 @@ if __name__ == '__main__':
                    urcrnrlat=north, lon_0=0.5*(west+east),
                    lat_0=0.5*(south+north), resolution='f')
 
-    x, y = m(lon_grid, lat_grid)
-    m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
+    x_grid, y_grid = m(lon_grid, lat_grid)
+    m.pcolormesh(x_grid, y_grid, bathy_grid, cmap=plt.get_cmap('binary_r'))
 
     m.drawcoastlines()
     m.fillcontinents()
@@ -124,3 +158,16 @@ if __name__ == '__main__':
     parallels = np.round(np.linspace(south, north, 3))
     m.drawparallels(parallels, labels=[1, 0, 0, 0])
     plt.title('Drake Passage and Scotia Sea Bathymetry')
+
+    #Plotting bathymetry along a track example.
+    lons = np.linspace(-60., -50., 1000)
+    lats = np.linspace(-60., -55., 1000)
+    bathy_track = interp_track(lons, lats)
+
+    q, p = m(lons, lats)
+    m.plot(p, q, 'r--', linewidth=2)
+
+    plt.figure()
+    plt.plot(lons, bathy_track)
+    plt.xlabel('Longitude')
+    plt.ylabel('Depth (m)')
