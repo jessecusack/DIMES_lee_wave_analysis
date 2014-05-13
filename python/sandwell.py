@@ -4,44 +4,51 @@ Created on Sun Feb 02 17:45:16 2014
 
 Functions for reading Smith and Sandwell bathymetry.
 
+While the functions themselves only require numpy, the examples require
+matplotlib and basemap.
+
 @author: jc3e13
 """
 
 import numpy as np
-from scipy.interpolate import interp2d
-import matplotlib.pyplot as plt
-import mpl_toolkits.basemap as bm
-
-
-def bilinear_interpolation(xg, yg, fg, x, y):
-    """TODO:"""
-    xa = xg[:, 0]
-    ya = yg[0, :]
-
-    i1 = np.searchsorted(xa, x)
-    i2 = i1 + 1
-    j1 = np.searchsorted(ya, y)
-    j2 = j1 + 1
-
-    dx = xa[i2] - xa[i1]
-    dy = ya[j2] - ya[j1]
-
-    f11, f21, f12, f22 = fg[i1, j1], fg[i2, j1], fg[i1, j2], fg[i2, j2]
-
-    x1, y1, x2, y2 = xa[i1], ya[j1], xa[i2], ya[j2]
-
-    return (f11*(x2 - x)*(y2 - y) + f21*(x - x1)*(y2 - y) +
-            f12*(x2 - x)*(y - y1) + f22*(x - x1)*(y - y1))/(dx*dy)
 
 
 def read_grid(lon_lat, file_path=None):
-    """Input format [lonmin lonmax lat_min lat_max].
-                     west   east   south   north
+    """Read in Smith and Sandwell bathymetry data.
 
-    Output:
-      bathy_grid, lon_grid, lat_grid
+      Parameters
+      ----------
+      lon_lat : array_like
+          [lonmin lonmax lat_min lat_max].
+           west   east   south   north
+      file_path : string, optional
+          Path to the Smith and Sandwell data file.
 
-    TODO: More input checks. Improve docstring...
+      Returns
+      -------
+      lon_grid : 2-D numpy.ndarray of floats
+          Longitude values.
+      lat_grid : 2-D numpy.ndarray of floats
+          Latitude values.
+      bathy_grid : 2-D numpy.ndarray of 16 bit integers.
+          Bathymetry values.
+
+      Raises
+      ------
+      ValueError
+          If lon_lat bounds are not in the range -180 to +180 or
+          -80.738 to +80.738.
+
+      Notes
+      -----
+      The returned bathymetry array indexing is as follows,
+      bathygrid[longitude, latitude], where both are monotonically increasing
+      with index.
+
+      Examples
+      --------
+      See code.
+
     """
 
     # Important parameters.
@@ -119,21 +126,115 @@ def read_grid(lon_lat, file_path=None):
     lat_grid = 90 - lat_grid
     lon_grid[lon_grid > 180.] = lon_grid[lon_grid > 180.] - 360.
 
+    # So because I couldn't get the grid orientations correct to begin with I
+    # flip them here so that latitude and longitude are both monotonically
+    # increasing with index. Not ideal.
+    lat_grid = np.fliplr(lat_grid)
+    bathy_grid = np.fliplr(bathy_grid)
+
     return lon_grid, lat_grid, bathy_grid
 
 
-def interp_track(lons, lats, file_path=None, kind='linear'):
-    """Interpolates bathymetry data to given longitude and latitude
-    coordinates. The inputs should be one dimensional arrays."""
+def bilinear_interpolation(xa, ya, fg, x, y):
+    """Because, bizarrely, this doesn't exist in numpy.
 
-    margin = 1
+      Parameters
+      ----------
+      xa : 1-D numpy.ndarray of floats
+          x values of fg, must be monotonically increasing.
+      ya : 1-D numpy.ndarray of floats
+          y values of fg, must be monotonically increasing.
+      fg : 2-D numpy.ndarray of floats
+          values to be interpolated, formatted such that first index (rows)
+          correspond to x and second index (columns) correspond to y, f[x,y]
+      x : 1-D numpy.ndarray of floats
+          x values of interpolation points.
+      y : 1-D numpy.ndarray of floats
+          y values of interpolation points.
+
+      Returns
+      -------
+      fi : 1-D numpy.ndarray of floats
+          Interpolated values of fg.
+
+      Raises
+      ------
+      None.
+
+      Notes
+      -----
+      Currently no error checking.
+      Source: wikipedia.
+
+      Examples
+      --------
+      None.
+
+    """
+
+    i1 = np.searchsorted(xa, x)
+    i2 = i1 + 1
+    j1 = np.searchsorted(ya, y)
+    j2 = j1 + 1
+
+    dx = xa[i2] - xa[i1]
+    dy = ya[j2] - ya[j1]
+
+    f11, f21, f12, f22 = fg[i1, j1], fg[i2, j1], fg[i1, j2], fg[i2, j2]
+
+    x1, y1, x2, y2 = xa[i1], ya[j1], xa[i2], ya[j2]
+
+    fi = (f11*(x2 - x)*(y2 - y) + f21*(x - x1)*(y2 - y) +
+          f12*(x2 - x)*(y - y1) + f22*(x - x1)*(y - y1))/(dx*dy)
+
+    return fi
+
+
+
+def interp_track(lons, lats, file_path=None):
+    """Interpolate bathymetry data to given longitude and latitude coordinates.
+
+      Parameters
+      ----------
+      lons : 1-D numpy.ndarray of floats
+          Longitude values.
+      lats : 1-D numpy.ndarray of floats
+          Latitude values.
+      file_path : string, optional
+          Path to the Smith and Sandwell data file.
+
+      Returns
+      -------
+      b : 1-D numpy.ndarray of floats
+          Interpolated values of Smith and Sandwell bathymetry.
+
+      Raises
+      ------
+      None.
+
+      Notes
+      -----
+      Currently no error checking except that which occurs in read_grid.
+
+      Examples
+      --------
+      See code.
+
+    """
+
+    margin = 0.5
     lon_lat = np.array([np.min(lons)-margin, np.max(lons)+margin,
                         np.min(lats)-margin, np.max(lats)+margin])
     lon_grid, lat_grid, bathy_grid = read_grid(lon_lat, file_path)
-    return bilinear_interpolation(lon_grid, lat_grid, bathy_grid, lons, lats)
+    b = bilinear_interpolation(lon_grid[:, 0], lat_grid[0, :], bathy_grid,
+                               lons, lats)
+    return b
 
 
 if __name__ == '__main__':
+
+    import mpl_toolkits.basemap as bm
+    import matplotlib.pyplot as plt
 
     # Plotting bathymetry example.
     lon_lat = np.array([-72, -27, -68, -47])
@@ -161,13 +262,14 @@ if __name__ == '__main__':
 
     #Plotting bathymetry along a track example.
     lons = np.linspace(-60., -50., 1000)
-    lats = np.linspace(-60., -55., 1000)
+    lats = np.linspace(-60., -48., 1000)
     bathy_track = interp_track(lons, lats)
 
     q, p = m(lons, lats)
-    m.plot(p, q, 'r--', linewidth=2)
+    m.plot(q, p, 'r--', linewidth=2)
 
     plt.figure()
-    plt.plot(lons, bathy_track)
-    plt.xlabel('Longitude')
+    plt.plot(lats, bathy_track)
+    plt.xlabel('Latitude')
     plt.ylabel('Depth (m)')
+    plt.title('Bathymetry interpolated along track')
