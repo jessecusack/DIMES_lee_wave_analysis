@@ -47,7 +47,7 @@ def fitter(Float, params0, model='1', hpids=np.arange(50, 151), profiles='all',
     print("The final parameter values:")
     print(params)
 
-    data = [getattr(Float, data_name) for data_name in data_names]
+    data = [getattr(Float, 'r' + data_name) for data_name in data_names]
 
     setattr(Float, 'rWs', still_water_model(params, data))
     setattr(Float, 'rWw', Float.rWz - Float.rWs)
@@ -102,12 +102,18 @@ def still_water_model_2(params, data):
 
     w_sqrd = a + b*ppos + c*p + d*rho
 
-    is_going_down = w_sqrd < 0.
+    is_going_down = w_sqrd > 0.
 
     w = np.sqrt(np.abs(w_sqrd))
     w[is_going_down] = -1.*w[is_going_down]
 
     return w
+
+#    Wref(i) = sqrt(x(i,4)/dens0);
+#    alpha(i) = -x(i,2)*dens0/x(i,4);
+#    kappa(i) = x(i,3)*dens0/x(i,4);
+#    k0(i) = -x(i,1)/x(i,2) - x(i,4)/(x(i,2)*dens0);
+#
 
 
 def cost(params, model, wf, data, cf_key):
@@ -148,16 +154,6 @@ def cost(params, model, wf, data, cf_key):
 
     ws = model(params, data)
 
-    c = cost_func(ws, wf)
-    print c, c.shape
+    c = cost_func(ws, wf).flatten()
 
     return c
-
-
-
-
-#    Wref(i) = sqrt(x(i,4)/dens0);
-#    alpha(i) = -x(i,2)*dens0/x(i,4);
-#    kappa(i) = x(i,3)*dens0/x(i,4);
-#    k0(i) = -x(i,1)/x(i,2) - x(i,4)/(x(i,2)*dens0);
-#
