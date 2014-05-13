@@ -496,33 +496,6 @@ class EMApexFloat:
 
         return times, vals
 
-#    def apply_vertical_velocity_model(self, float_velocity_model, params,
-#                                      data_var_names):
-#        """TODO: Docstring...
-#        Must update float with regular grids for this to work.
-#        """
-#
-#        data = [getattr(self, var_name) for var_name in data_var_names]
-#
-#        self.rWs = float_velocity_model(params, data)
-#
-#        self.rWw = self.rWz - self.rWs
-#
-#        self.update_profiles()
-#
-#    def fit_vertical_velocity_model(self, hpids):
-#        """"""
-#        reload(vvm)
-#        params = vvm.fit_model(self, hpids)
-#        self.apply_vertical_velocity_model(vvm.still_water_model_2,
-#                                           params, ['rppos', 'rP', 'rrho'])
-#        t1, Ws = self.get_timeseries(hpids, 'rWs')
-#        __, Wz = self.get_timeseries(hpids, 'rWz')
-#        __, Wf = self.get_timeseries(hpids, 'rWf')
-#        __, Ww = self.get_timeseries(hpids, 'rWw')
-#        pl.figure()
-#        pl.plot(t1, Ws, 'r', t1, Wz, 'g', t1, Wf, 'r--', t1, Ww, 'b')
-
 
 def up_down_indices(hpid_array, up_or_down='up'):
     """Given an array of hpid numbers return the indices of numbers that
