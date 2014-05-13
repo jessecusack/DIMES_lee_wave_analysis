@@ -69,10 +69,10 @@ for i = 1:mp.NGrps
         [x(i,:), sx(i,:)] = lscov(A(ix,:),B(ix));
     end
 
-    Wref(i) = sqrt(x(i,4)/dens0);
-    alpha(i) = -x(i,2)*dens0/x(i,4);
-    kappa(i) = x(i,3)*dens0/x(i,4);
-    k0(i) = -x(i,1)/x(i,2) - x(i,4)/(x(i,2)*dens0);
+    Wref(i) = sqrt(x(i,4)/mp.dens0);
+    alpha(i) = -x(i,2)*mp.dens0/x(i,4);
+    kappa(i) = x(i,3)*mp.dens0/x(i,4);
+    k0(i) = -x(i,1)/x(i,2) - x(i,4)/(x(i,2)*mp.dens0);
 
     % Given these parameters this is hte modeled value of squared velocity
     Wrel2 = Wrel2_model_lin(x(i,:), pc, Pg, dens);
@@ -100,5 +100,5 @@ fprintf(1,'%3.3f\t\t%6.2e\t%6.2e\t%5.1f\t\t%6.2e\n',...
 if ~exist(mp.savePath, 'dir')
     mkdir(mp.savePath)
 end
-save(fullfile(mp.savePath, mp.saveFName), 'x', 'sx', 'mabcd', 'dens0')
+save(fullfile(mp.savePath, mp.saveFName), 'x', 'sx', 'mabcd', 'mp')
 
