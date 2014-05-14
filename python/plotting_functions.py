@@ -59,7 +59,7 @@ def timeseries(Float, hpids, var_name):
     plt.plot(t, var)
 
 
-def track(Float, hpids, projection='cyl'):
+def track_on_bathy(Float, hpids, projection='cyl'):
     """TODO: Docstring..."""
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
@@ -81,6 +81,7 @@ def track(Float, hpids, projection='cyl'):
                    urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
                    lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
 
+    plt.figure()
     x, y = m(lon_grid, lat_grid)
     m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
     x, y = m(lons, lats)
@@ -107,3 +108,18 @@ def track(Float, hpids, projection='cyl'):
 
     cbar = plt.colorbar(orientation=orientation)
     cbar.set_label('Depth (m)')
+
+
+def bathy_along_track(Float, hpids):
+    """TODO: Docstring..."""
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    lons = Float.lon_start[idxs]
+    lats = Float.lat_start[idxs]
+    dist = Float.dist[idxs]
+    bathy = sandwell.interp_track(lons, lats)
+
+    plt.figure()
+    plt.plot(dist, bathy)
+    plt.xlabel('Distance (km)')
+    plt.ylabel('Depth (m)')
