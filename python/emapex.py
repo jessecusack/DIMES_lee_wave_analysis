@@ -303,19 +303,29 @@ class EMApexFloat:
         self.PT = gsw.pt_from_CT(self.SA, self.CT)
         # In-situ density.
         self.rho = gsw.rho(self.SA, self.CT, self.P)
-        # Buoyancy frequency. (Bizarrely output is a tuple)
-#        self.Nsquared = gsw.Nsquared(self.SA, self.CT, self.P,
-#                                     self.lat_start)[0]
+
         # Potential density with respect to 1000 dbar.
         self.rho_1 = gsw.pot_rho_t_exact(self.SA, self.T, self.P, p_ref=1000.)
 
-        # Vertical velocity interpolated back onto a ctd grid.
-        dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
-        self.Wz_ca = np.diff(self.z, axis=0)/dt
-        Wz_ca_flat = self.Wz_ca.flatten(order='F')
+        # Variables needed for regridding N2 and Wz.
         UTC_flat = self.UTC.flatten(order='F')
         UTC_ca_flat = \
             ((self.UTC[1:, :] + self.UTC[:-1, :])/2.).flatten(order='F')
+
+        # Buoyancy frequency regridded onto ctd grid.
+        N2_ca, __ = gsw.Nsquared(self.SA, self.CT, self.P, self.lat_start)
+        N2_ca_flat = N2_ca.flatten(order='F')
+        nnans = ~np.isnan(UTC_ca_flat) & ~np.isnan(N2_ca_flat)
+        N2_flat = UTC_flat.copy()
+        unnans = ~np.isnan(N2_flat)
+        N2_flat[unnans] = np.interp(UTC_flat[unnans], UTC_ca_flat[nnans],
+                                    N2_ca_flat[nnans])
+        self.N2 = N2_flat.reshape(self.UTC.shape, order='F')
+
+        # Vertical velocity regridded onto ctd grid.
+        dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
+        Wz_ca = np.diff(self.z, axis=0)/dt
+        Wz_ca_flat = Wz_ca.flatten(order='F')
         nnans = ~np.isnan(UTC_ca_flat) & ~np.isnan(Wz_ca_flat)
         Wz_flat = UTC_flat.copy()
         unnans = ~np.isnan(Wz_flat)
@@ -333,7 +343,7 @@ class EMApexFloat:
 
         print("Interpolating some variables onto regular grids.")
 
-        z_vals = np.arange(-1400., -40., 6.)
+        z_vals = np.arange(-1500., -10., 6.)
         self_dict = self.__dict__
         for key in self_dict.keys():
 
