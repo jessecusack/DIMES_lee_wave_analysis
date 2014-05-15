@@ -59,7 +59,7 @@ class Profile:
           RuntimeWarning
               If numpy.interp raises a value error which could be because an
               empty array was passed.
-              TODO: Make this work property without exiting program.
+              TODO: Make this work properly without exiting program.
 
           Notes
           -----
@@ -583,8 +583,3 @@ def what_floats_are_in_here(fname):
     """Finds all unique float ID numbers from a given allprofs##.mat file."""
     fs = io.loadmat(fname, squeeze_me=True, variable_names='flid')['flid']
     return np.unique(fs[~np.isnan(fs)])
-
-
-if __name__ == "__main__":
-
-    E76 = EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4976)
