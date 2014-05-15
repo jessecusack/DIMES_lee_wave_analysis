@@ -22,6 +22,8 @@ def fitter(Float, params0, model='1', hpids=np.arange(50, 151), profiles='all',
         still_water_model = still_water_model_1
     elif model == '2':
         still_water_model = still_water_model_2
+    else:
+        raise ValueError('Cannot find model.')
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     existing_hpids = Float.hpid[idxs]
@@ -34,6 +36,8 @@ def fitter(Float, params0, model='1', hpids=np.arange(50, 151), profiles='all',
     elif profiles == 'down':
         down_idxs = emapex.up_down_indices(existing_hpids, 'down')
         hpids = existing_hpids[down_idxs]
+    else:
+        raise ValueError('Cannot understand what type of profiles')
 
     data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
             for data_name in data_names]
@@ -80,7 +84,7 @@ def still_water_model_1(params, data):
     alpha_p = 3.76e-6  # Coeff. of expansion with pressure [-].
     p_0 = 2000.  # Pressure when float is neutrally buoyant [dbar].
 
-    V_0, CA, alpha_p, p_0 = params
+    V_0, CA, alpha_p, p_0, alpha_ppos, ppos_0 = params
 
     float_volume = V_0*(1 + alpha_ppos*(ppos - ppos_0)/V_0 - alpha_p*(p - p_0))
     effective_water_volume = M/rho
@@ -100,9 +104,10 @@ def still_water_model_2(params, data):
     a, b, c, d = params
     ppos, p, rho = data
 
-    w_sqrd = a + b*ppos + c*p + d*rho
+    w_sqrd = a + b*ppos + c*p + d/rho
 
-    is_going_down = w_sqrd > 0.
+    # Not sure about this condition...
+    is_going_down = w_sqrd < 0.
 
     w = np.sqrt(np.abs(w_sqrd))
     w[is_going_down] = -1.*w[is_going_down]
@@ -148,7 +153,11 @@ def cost(params, model, wf, data, cf_key):
     def square_diff(ws, wf):
         return ws**2 - wf**2
 
-    cfd = {'sqdiff': square_diff}
+    def diff_square(ws, wf):
+        return (ws - wf)**2
+
+    cfd = {'sqdiff': square_diff,
+           'diffsq': diff_square}
 
     cost_func = cfd[cf_key]
 
