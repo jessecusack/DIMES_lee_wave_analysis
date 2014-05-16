@@ -123,3 +123,25 @@ def bathy_along_track(Float, hpids):
     plt.plot(dist, bathy)
     plt.xlabel('Distance (km)')
     plt.ylabel('Depth (m)')
+
+
+def assess_vvm_fit(Float):
+    """"""
+
+    vfi = Float.__vfi
+    floatID = Float.floatID
+
+    Ww = Float.rWw.flatten(order='F')
+
+    Ww_mean = np.nanmean(Ww)
+    Ww_std = np.nanstd(Ww)
+
+    plt.figure()
+    bins = np.arange(-0.15, 0.16, 0.005)
+    Ww_hist, bins, patches = plt.hist(Ww, bins=bins, histtype='stepfilled')
+    plt.setp(patches, 'facecolor', 'b', 'alpha', 0.75)
+    plt.xlim(np.min(bins), np.max(bins))
+    plt.xlabel('$W_w$ (m s$^{-1}$)')
+    title_str = ("Float {}, mean = {:1.2e} m s$^{{-1}}$, std = {:1.2e} "
+                 "m s$^{{-1}}$").format(floatID, Ww_mean, Ww_std)
+    plt.title(title_str)
