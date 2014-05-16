@@ -13,8 +13,8 @@ import numpy as np
 class vv_fit_info:
     """Storage class for information relating to the vertical velocity
     fitting."""
-    def __init__(self, params0, fixed, model_func, hpids, profiles, cf_key, P_vals,
-                 data_names, params, cov, info, mesg, ier):
+    def __init__(self, params0, fixed, model_func, hpids, profiles, cf_key,
+                 P_vals, data_names, params, cov, info, mesg, ier):
 
         self.params0 = params0
         self.fixed = fixed
