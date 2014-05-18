@@ -13,8 +13,6 @@ import scipy.io as io
 import gsw
 import mapping_tools as mptls
 import mat2py as m2p
-#import vertical_velocity_model as vvm
-#import matplotlib.pyplot as pl
 
 
 class Profile:
@@ -82,23 +80,27 @@ class Profile:
         # Shorten some names.
         var_1 = getattr(self, var_1_name)
         var_2 = getattr(self, var_2_name)
-        t = self.UTC
-        tef = self.UTCef
+        t = getattr(self, 'UTC')
+        tef = getattr(self, 'UTCef')
+        rt = getattr(self, 'rUTC', None)
+        
+        equal_size = False
 
-        # Check array sizes *before removing NaNs*. Gives boolean result.
-        equal_size = var_2.size == var_1.size
-        var_1_ef_var_2_ctd = ((var_1.size < var_2.size) &
-                              (var_1.size == tef.size) &
-                              (var_2.size == t.size))
-        var_1_ctd_var_2_ef = ((var_1.size > var_2.size) &
-                              (var_1.size == t.size) &
-                              (var_2.size == tef.size))
+        # If sizes are not equal, check for corresponding time arrays.
+        if var_2.size == var_1.size:
+            equal_size = True
+        else:
+            for time in [t, tef, rt]:
+                if time is None:
+                    continue
+                elif time.size == var_1.size:
+                    t_1 = time
+                elif time.size == var_2.size:
+                    t_2 = time
 
         # Find NaN values.
         nans_var_1 = np.isnan(var_1)
         nans_var_2 = np.isnan(var_2)
-        nans_t = np.isnan(t)
-        nans_tef = np.isnan(tef)
 
         try:
 
@@ -109,30 +111,17 @@ class Profile:
                 var_2_sorted, idxs = np.unique(var_2, return_index=True)
                 var_1_vals = np.interp(var_2_vals, var_2_sorted, var_1[idxs])
 
-            elif var_1_ef_var_2_ctd:
-                # Variable 1 is of length ef and variable 2 is of length ctd.
-                # Remove all possible NaNs.
-                nans_ef = nans_var_1 | nans_tef
-                nans_ctd = nans_var_2 | nans_t
-                var_1, tef = var_1[~nans_ef], tef[~nans_ef]
-                var_2, t = var_2[~nans_ctd], t[~nans_ctd]
+            elif not equal_size:
+                nans_1 = nans_var_1 | np.isnan(t_1)
+                nans_2 = nans_var_2 | np.isnan(t_2)
+                var_1, t_1 = var_1[~nans_1], t_1[~nans_1]
+                var_2, t_2 = var_2[~nans_2], t_2[~nans_2]
                 # np.unique is necessary to make sure inputs to interp are
                 # monotonically increasing!
                 var_2_sorted, idxs = np.unique(var_2, return_index=True)
-                t_interp = np.interp(var_2_vals, var_2_sorted, t[idxs])
-                tef_sorted, idxs = np.unique(tef, return_index=True)
-                var_1_vals = np.interp(t_interp, tef_sorted, var_1[idxs])
-
-            elif var_1_ctd_var_2_ef:
-                # Variable 1 is of length ctd and variable 2 is of length ef.
-                nans_ef = nans_var_2 | nans_tef
-                nans_ctd = nans_var_1 | nans_t
-                var_1, t = var_1[~nans_ctd], t[~nans_ctd]
-                var_2, tef = var_2[~nans_ef], tef[~nans_ef]
-                var_2_sorted, idxs = np.unique(var_2, return_index=True)
-                t_interp = np.interp(var_2_vals, var_2_sorted, tef[idxs])
-                t_sorted, idxs = np.unique(t, return_index=True)
-                var_1_vals = np.interp(t_interp, t_sorted, var_1[idxs])
+                t_2_interp = np.interp(var_2_vals, var_2_sorted, t_2[idxs])
+                t_1_sorted, idxs = np.unique(t_1, return_index=True)
+                var_1_vals = np.interp(t_2_interp, t_1_sorted, var_1[idxs])                
 
             else:
                 raise RuntimeError('Cannot match time array and/or variable'
