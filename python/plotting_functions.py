@@ -12,16 +12,17 @@ import sandwell
 
 
 def dist_section(Float, hpids, var, plot_func=plt.contourf):
-    """"""
+    """ """
     z_vals = np.arange(-1400., -100., 10.)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     dists = Float.dist[idxs]
     __, __, var_grid = Float.get_interp_grid(hpids, z_vals, 'z', var)
+    plt.figure()
     plot_func(dists, z_vals, var_grid)
 
 
 def depth_profile(Float, hpids, var, plot_func=plt.plot):
-    """"""
+    """ """
     profiles = Float.get_profiles(hpids)
     if np.iterable(profiles):
         for profile in profiles:
@@ -126,10 +127,13 @@ def bathy_along_track(Float, hpids):
 
 
 def assess_vvm_fit(Float):
-    """"""
+    """ """
 
     vfi = Float.__vfi
+    hpids = vfi.hpids
     floatID = Float.floatID
+
+    # Histogram of vertical water velocity.
 
     Ww = Float.rWw.flatten(order='F')
 
@@ -145,3 +149,34 @@ def assess_vvm_fit(Float):
     title_str = ("Float {}, mean = {:1.2e} m s$^{{-1}}$, std = {:1.2e} "
                  "m s$^{{-1}}$").format(floatID, Ww_mean, Ww_std)
     plt.title(title_str)
+
+    # Time series of different velocity measures.
+
+    hpid1 = hpids[0]
+    
+    plt.figure()
+    N = 4
+    time, Ww = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWw')
+    __, Wz = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWz')
+    __, Ws = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWs')
+    plt.plot(time, Ww)
+    plt.plot(time, Wz)
+    plt.plot(time, Ws)
+    plt.ylabel('$W_w$, $W_f$, $W_s$ (m s$^{-1}$)')
+    plt.xlabel('Time')
+    title_str = ("Float {}, half profiles {}").format(floatID, hpids[0:N])
+    plt.title(title_str)
+    plt.legend(['$W_w$','$W_f$','$W_s$'])
+
+    # Distance section of water velocity.
+
+#    dist_section(Float, np.arange(1, 1000), 'rWw')
+#    plt.xlabel('Distance (km)')
+#    plt.ylabel('Depth (m)')
+#    plt.xlim(np.min(Float.dist), np.max(Float.dist))
+#    title_str = ("Float {}").format(floatID)
+#    plt.title(title_str)
+#    cbar = plt.colorbar(orientation='horizontal')
+#    cbar.set_label('$W_w$ (m s$^{-1}$)')
+
+    
