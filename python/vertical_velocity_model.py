@@ -14,7 +14,7 @@ class vv_fit_info:
     """Storage class for information relating to the vertical velocity
     fitting."""
     def __init__(self, params0, fixed, model_func, hpids, profiles, cf_key,
-                 P_vals, data_names, params, cov, info, mesg, ier):
+                 P_vals, data_names, params, pcov, info, mesg, ier):
 
         self.params0 = params0
         self.fixed = fixed
@@ -25,7 +25,7 @@ class vv_fit_info:
         self.P_vals = P_vals
         self.data_names = data_names
         self.params = params
-        self.cov = cov
+        self.pcov = pcov
         self.info = info
         self.mesg = mesg
         self.ier = ier
@@ -40,7 +40,6 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
 
     TODO: Calculate parameter covarience matrix using least squares or
     alternatively using the bootstrap method or both. See:
-    http://stackoverflow.com/questions/14581358/getting-standard-errors-on-fitted-parameters-using-the-optimize-leastsq-method-i
 
     """
 
@@ -68,15 +67,31 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
     data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
             for data_name in data_names]
 
-    __, __, w_floatg = Float.get_interp_grid(hpids, P_vals, 'P', 'Wz')
+    __, __, w_f = Float.get_interp_grid(hpids, P_vals, 'P', 'Wz')
 
-    cargs = (fixed, still_water_model, w_floatg, data, cf_key)
+    cargs = (fixed, still_water_model, w_f, data, cf_key)
 
-    params, cov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
+    params, pcov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
                                               full_output=True)
 
-    print("The final parameter values:")
-    print(params)
+#    print("The final parameter values:")
+#    print(params)
+
+    # Bootstrapping error estimation.
+    residuals = cost(params, *cargs)
+    s_res = np.std(residuals)
+    ps = []
+    # 100 random data sets are generated and fitted
+    for i in range(100):
+        rand_delta = np.random.normal(0., s_res, w_f.shape)
+        rand_w_f = w_f + rand_delta
+        cargs = (fixed, still_water_model, rand_w_f, data, cf_key)            
+        rand_params, __ = op.leastsq(cost, params0, args=cargs)
+        ps.append(rand_params) 
+
+    ps = np.array(ps)
+    pcov = np.cov(ps.T)
+    params = np.mean(ps, 0)
 
     data = [getattr(Float, 'r' + data_name) for data_name in data_names]
 
@@ -84,19 +99,11 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
     setattr(Float, 'rWw', Float.rWz - Float.rWs)
 
     vfi = vv_fit_info(params0, fixed, still_water_model, hpids, profiles,
-                      cf_key, P_vals, data_names, params, cov, info, mesg, ier)
+                      cf_key, P_vals, data_names, params, pcov, info, mesg, ier)
 
     setattr(Float, '__vfi', vfi)  # Don't want this added to Profile classes.
 
     Float.update_profiles()
-
-#    t1, Ws = Float.get_timeseries(hpids, 'rWs')
-#    __, Wz = Float.get_timeseries(hpids, 'rWz')
-#    __, Wf = Float.get_timeseries(hpids, 'rWf')
-#    __, Ww = Float.get_timeseries(hpids, 'rWw')
-#
-#    plt.figure()
-#    plt.plot(t1, Ws, 'r', t1, Wz, 'g', t1, Wf, 'r--', t1, Ww, 'b')
 
 
 def still_water_model_1(params, data, fixed):
