@@ -36,7 +36,13 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
            data_names=['ppos', 'P', 'rho']):
     """This function takes an EM-APEX float, fits a vertical velocity model and
     applies it to the float using the given scope and saves the scope and
-    parameters for future use as an attribute of the float class."""
+    parameters for future use as an attribute of the float class.
+
+    TODO: Calculate parameter covarience matrix using least squares or
+    alternatively using the bootstrap method or both. See:
+    http://stackoverflow.com/questions/14581358/getting-standard-errors-on-fitted-parameters-using-the-optimize-leastsq-method-i
+
+    """
 
     if model == '1':
         still_water_model = still_water_model_1
