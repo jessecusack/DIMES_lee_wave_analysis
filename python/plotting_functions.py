@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import mpl_toolkits.basemap as bm
 import sandwell
+import mat2py as m2p
 
 
 def dist_section(Float, hpids, var, plot_func=plt.contourf):
@@ -19,6 +20,36 @@ def dist_section(Float, hpids, var, plot_func=plt.contourf):
     __, __, var_grid = Float.get_interp_grid(hpids, z_vals, 'z', var)
     plt.figure()
     plot_func(dists, z_vals, var_grid)
+
+
+def scatter_section(Float, hpids, var, x_var='dist'):
+
+    z_vals = np.arange(-1500., -40., 20.)
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    __, z, var = Float.get_interp_grid(hpids, z_vals, 'z', var)
+
+    if x_var == 'dist':
+
+        __, __, d = Float.get_interp_grid(hpids, z_vals, 'z', 'dist_ctd_data')
+        d = d.flatten(order='F')
+
+    elif x_var == 'time':
+
+        __, __, d = Float.get_interp_grid(hpids, z_vals, 'z', 'UTC')
+        d = d.flatten(order='F')
+        d = m2p.datenum_to_datetime(d)
+
+    else:
+        raise ValueError("Input x_var should be 'dist' or 'time'.")
+
+    z = z.flatten(order='F')
+    var = var.flatten(order='F')
+
+    plt.figure()
+    plt.scatter(d, z, c=var, edgecolor='none')
+    plt.ylim(np.min(z), np.max(z))
+    plt.xlim(np.min(d), np.max(d))
+    plt.colorbar(orientation='horizontal', extend='both')
 
 
 def depth_profile(Float, hpids, var, plot_func=plt.plot):
@@ -126,4 +157,3 @@ def bathy_along_track(Float, hpids):
     plt.ylabel('Depth (m)')
 
 
-    
