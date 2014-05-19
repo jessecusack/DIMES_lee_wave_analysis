@@ -10,11 +10,12 @@ import scipy.optimize as op
 import numpy as np
 
 
-class vv_fit_info:
+class vv_fit_info(object):
     """Storage class for information relating to the vertical velocity
     fitting."""
     def __init__(self, params0, fixed, model_func, hpids, profiles, cf_key,
-                 P_vals, data_names, params, pcov, info, mesg, ier):
+                 P_vals, data_names, p, ps, pmean, pcov, pcorr, info, mesg,
+                 ier):
 
         self.params0 = params0
         self.fixed = fixed
@@ -24,8 +25,11 @@ class vv_fit_info:
         self.cf_key = cf_key
         self.P_vals = P_vals
         self.data_names = data_names
-        self.params = params
+        self.p = p
+        self.ps = ps
+        self.pmean = pmean
         self.pcov = pcov
+        self.pcorr = pcorr
         self.info = info
         self.mesg = mesg
         self.ier = ier
@@ -71,35 +75,37 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
 
     cargs = (fixed, still_water_model, w_f, data, cf_key)
 
-    params, pcov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
-                                              full_output=True)
+    p, pcov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
+                                          full_output=True)
 
 #    print("The final parameter values:")
 #    print(params)
 
     # Bootstrapping error estimation.
-    residuals = cost(params, *cargs)
+    residuals = cost(p, *cargs)
     s_res = np.std(residuals)
     ps = []
     # 100 random data sets are generated and fitted
-    for i in range(100):
+    for i in range(200):
         rand_delta = np.random.normal(0., s_res, w_f.shape)
         rand_w_f = w_f + rand_delta
-        cargs = (fixed, still_water_model, rand_w_f, data, cf_key)            
+        cargs = (fixed, still_water_model, rand_w_f, data, cf_key)
         rand_params, __ = op.leastsq(cost, params0, args=cargs)
-        ps.append(rand_params) 
+        ps.append(rand_params)
 
     ps = np.array(ps)
     pcov = np.cov(ps.T)
-    params = np.mean(ps, 0)
+    pmean = np.mean(ps, 0)
+    pcorr = np.corrcoef(ps.T)
 
     data = [getattr(Float, 'r' + data_name) for data_name in data_names]
 
-    setattr(Float, 'rWs', still_water_model(params, data, fixed))
+    setattr(Float, 'rWs', still_water_model(p, data, fixed))
     setattr(Float, 'rWw', Float.rWz - Float.rWs)
 
     vfi = vv_fit_info(params0, fixed, still_water_model, hpids, profiles,
-                      cf_key, P_vals, data_names, params, pcov, info, mesg, ier)
+                      cf_key, P_vals, data_names, p, ps, pmean, pcov, pcorr,
+                      info, mesg, ier)
 
     setattr(Float, '__vfi', vfi)  # Don't want this added to Profile classes.
 
