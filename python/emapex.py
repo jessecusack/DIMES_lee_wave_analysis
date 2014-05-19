@@ -83,7 +83,7 @@ class Profile:
         t = getattr(self, 'UTC')
         tef = getattr(self, 'UTCef')
         rt = getattr(self, 'rUTC', None)
-        
+
         equal_size = False
 
         # If sizes are not equal, check for corresponding time arrays.
@@ -121,7 +121,7 @@ class Profile:
                 var_2_sorted, idxs = np.unique(var_2, return_index=True)
                 t_2_interp = np.interp(var_2_vals, var_2_sorted, t_2[idxs])
                 t_1_sorted, idxs = np.unique(t_1, return_index=True)
-                var_1_vals = np.interp(t_2_interp, t_1_sorted, var_1[idxs])                
+                var_1_vals = np.interp(t_2_interp, t_1_sorted, var_1[idxs])
 
             else:
                 raise RuntimeError('Cannot match time array and/or variable'
@@ -181,7 +181,6 @@ class EMApexFloat:
     variables are not put on to a regular grid because they are normally also
     contained on a ctd array
 
-    TODO: need to do something with Wp now it has been renamed. - deleted it.
     """
     def __init__(self, filepath, floatID):
 

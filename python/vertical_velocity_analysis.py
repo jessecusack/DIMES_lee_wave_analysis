@@ -5,6 +5,7 @@ Created on Thu May 15 12:07:00 2014
 @author: jc3e13
 """
 
+import emapex
 import vertical_velocity_model as vvm
 import numpy as np
 import plotting_functions as pf
@@ -12,6 +13,7 @@ import matplotlib.pyplot as plt
 
 reload(vvm)
 reload(pf)
+
 
 def assess_vvm_fit(Float):
     """ """
@@ -40,7 +42,7 @@ def assess_vvm_fit(Float):
     # Time series of different velocity measures.
 
     hpid1 = hpids[0]
-    
+
     plt.figure()
     N = 4
     time, Ww = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWw')
@@ -53,7 +55,7 @@ def assess_vvm_fit(Float):
     plt.xlabel('Time')
     title_str = ("Float {}, half profiles {}").format(floatID, hpids[0:N])
     plt.title(title_str)
-    plt.legend(['$W_w$','$W_f$','$W_s$'])
+    plt.legend(['$W_w$', '$W_f$', '$W_s$'])
 
     # Distance section of water velocity.
 
@@ -65,6 +67,14 @@ def assess_vvm_fit(Float):
 #    plt.title(title_str)
 #    cbar = plt.colorbar(orientation='horizontal')
 #    cbar.set_label('$W_w$ (m s$^{-1}$)')
+
+
+try:
+    print("Floats {} and {}.".format(E76.floatID, E77.floatID))
+except NameError:
+    E76 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4976)
+    E77 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4977)
+
 
 model = '1'
 cf_key = 'diffsq'
