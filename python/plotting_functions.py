@@ -157,16 +157,17 @@ def bathy_along_track(Float, hpids):
     plt.ylabel('Depth (m)')
 
 
-
-def _blob(x,y,area,colour):
+# Source of hinton: http://wiki.scipy.org/Cookbook/Matplotlib/HintonDiagrams
+def _blob(x, y, area, colour):
     """
     Draws a square-shaped blob with the given area (< 1) at
     the given coordinates.
     """
-    hs = N.sqrt(area) / 2.
-    xcorners = N.array([x - hs, x + hs, x + hs, x - hs])
-    ycorners = N.array([y - hs, y - hs, y + hs, y + hs])
-    P.fill(xcorners, ycorners, colour, edgecolor=colour)
+    hs = np.sqrt(area) / 2.
+    xcorners = np.array([x - hs, x + hs, x + hs, x - hs])
+    ycorners = np.array([y - hs, y - hs, y + hs, y + hs])
+    plt.fill(xcorners, ycorners, colour, edgecolor=colour)
+
 
 def hinton(W, maxWeight=None):
     """
@@ -175,25 +176,28 @@ def hinton(W, maxWeight=None):
     otherwise this takes forever.
     """
     reenable = False
-    if P.isinteractive():
-        P.ioff()
-    P.clf()
+    if plt.isinteractive():
+        plt.ioff()
+    plt.clf()
     height, width = W.shape
     if not maxWeight:
-        maxWeight = 2**N.ceil(N.log(N.max(N.abs(W)))/N.log(2))
+        maxWeight = 2**np.ceil(np.log(np.max(np.abs(W)))/np.log(2))
 
-    P.fill(N.array([0,width,width,0]),N.array([0,0,height,height]),'gray')
-    P.axis('off')
-    P.axis('equal')
+    plt.fill(np.array([0, width, width, 0]), np.array([0, 0, height, height]),
+             'gray')
+    plt.axis('off')
+    plt.axis('equal')
     for x in xrange(width):
         for y in xrange(height):
             _x = x+1
             _y = y+1
-            w = W[y,x]
+            w = W[y, x]
             if w > 0:
-                _blob(_x - 0.5, height - _y + 0.5, min(1,w/maxWeight),'white')
+                _blob(_x - 0.5, height - _y + 0.5,
+                      min(1, w/maxWeight), 'white')
             elif w < 0:
-                _blob(_x - 0.5, height - _y + 0.5, min(1,-w/maxWeight),'black')
+                _blob(_x - 0.5, height - _y + 0.5,
+                      min(1, -w/maxWeight), 'black')
     if reenable:
-        P.ion()
-    P.show()
+        plt.ion()
+    plt.show()
