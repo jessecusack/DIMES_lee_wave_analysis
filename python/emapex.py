@@ -15,7 +15,7 @@ import mapping_tools as mptls
 import mat2py as m2p
 
 
-class Profile:
+class Profile(object):
     """Provide to this class its parent float and half profile number and it
     will extract its data.
     """
@@ -165,7 +165,7 @@ class Profile:
         pass
 
 
-class EMApexFloat:
+class EMApexFloat(object):
     """Initialise this class with the path to an 'allprofs##.mat' file where
     ## denotes the last two digits of the year, e.g. 11 for 2011. Also provide
     the ID number of the particular float to extract from the file.
@@ -282,6 +282,7 @@ class EMApexFloat:
         # Depth.
         self.z = gsw.z_from_p(self.P, self.lat_start)
         self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
+        self.zef = gsw.z_from_p(self.Pef, self.lat_start)
         # Absolute salinity.
         self.SA = gsw.SA_from_SP(self.S, self.P, self.lon_start,
                                  self.lat_start)
@@ -295,31 +296,24 @@ class EMApexFloat:
         # Potential density with respect to 1000 dbar.
         self.rho_1 = gsw.pot_rho_t_exact(self.SA, self.T, self.P, p_ref=1000.)
 
-        # Variables needed for regridding N2 and Wz.
-        UTC_flat = self.UTC.flatten(order='F')
-        UTC_ca_flat = \
-            ((self.UTC[1:, :] + self.UTC[:-1, :])/2.).flatten(order='F')
-
         # Buoyancy frequency regridded onto ctd grid.
         N2_ca, __ = gsw.Nsquared(self.SA, self.CT, self.P, self.lat_start)
-        N2_ca_flat = N2_ca.flatten(order='F')
-        nnans = ~np.isnan(UTC_ca_flat) & ~np.isnan(N2_ca_flat)
-        N2_flat = UTC_flat.copy()
-        unnans = ~np.isnan(N2_flat)
-        N2_flat[unnans] = np.interp(UTC_flat[unnans], UTC_ca_flat[nnans],
-                                    N2_ca_flat[nnans])
-        self.N2 = N2_flat.reshape(self.UTC.shape, order='F')
+        self.N2 = self.__regrid_from_ca_to_('ctd', N2_ca)
 
         # Vertical velocity regridded onto ctd grid.
         dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
         Wz_ca = np.diff(self.z, axis=0)/dt
-        Wz_ca_flat = Wz_ca.flatten(order='F')
-        nnans = ~np.isnan(UTC_ca_flat) & ~np.isnan(Wz_ca_flat)
-        Wz_flat = UTC_flat.copy()
-        unnans = ~np.isnan(Wz_flat)
-        Wz_flat[unnans] = np.interp(UTC_flat[unnans], UTC_ca_flat[nnans],
-                                    Wz_ca_flat[nnans])
-        self.Wz = Wz_flat.reshape(self.UTC.shape, order='F')
+        self.Wz = self.__regrid_from_ca_to_('ctd', Wz_ca)
+
+        # Shear calculations.
+        dU1dz_ca = np.diff(self.U1, axis=0)/np.diff(self.zef, axis=0)
+        dU2dz_ca = np.diff(self.U2, axis=0)/np.diff(self.zef, axis=0)
+        dV1dz_ca = np.diff(self.V1, axis=0)/np.diff(self.zef, axis=0)
+        dV2dz_ca = np.diff(self.V2, axis=0)/np.diff(self.zef, axis=0)
+        self.dU1dz = self.__regrid_from_ca_to_('ef', dU1dz_ca)
+        self.dU2dz = self.__regrid_from_ca_to_('ef', dU2dz_ca)
+        self.dV1dz = self.__regrid_from_ca_to_('ef', dV1dz_ca)
+        self.dV2dz = self.__regrid_from_ca_to_('ef', dV2dz_ca)
 
         # Vertical water velocity.
         self.Wpef = self.Wp.copy()
@@ -375,6 +369,28 @@ class EMApexFloat:
     def update_profiles(self):
         print("Updating half profiles.")
         [profile.update(self) for profile in self.Profiles]
+
+    def __regrid_from_ca_to_(self, grid, a):
+        """Take a centered grid and put it on a ctd/ef grid using time as the
+        interpolant. This will not work if flattened time is not monotonically
+        increasing."""
+        if grid == 'ctd':
+            Uf = self.UTC.flatten(order='F')
+            Ucf = ((self.UTC[1:, :] + self.UTC[:-1, :])/2.).flatten(order='F')
+            shape = self.UTC.shape
+        elif grid == 'ef':
+            Uf = self.UTCef.flatten(order='F')
+            Ucf = ((self.UTCef[1:, :] +
+                    self.UTCef[:-1, :])/2.).flatten(order='F')
+            shape = self.UTCef.shape
+        else:
+            raise ValueError("grid must be either 'ctd' or 'ef'")
+        a_flat = a.flatten(order='F')
+        nnans = ~np.isnan(Ucf) & ~np.isnan(a_flat)
+        x = Uf.copy()
+        unnans = ~np.isnan(x)
+        x[unnans] = np.interp(Uf[unnans], Ucf[nnans], a_flat[nnans])
+        return x.reshape(shape, order='F')
 
     def get_interp_grid(self, hpids, var_2_vals, var_2_name, var_1_name):
         """Grid data from multiple profiles into a matrix. Linear interpolation
