@@ -28,10 +28,6 @@ figures/*
 *.so
 *.pyc
 
-# Compiled LaTeX #
-##################
-docs/EM-Apex_W_model/*.pdf
-docs/wave_analysis_report/*.pdf
 
 # LaTeX baggage #
 #################
