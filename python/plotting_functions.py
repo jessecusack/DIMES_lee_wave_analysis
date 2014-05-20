@@ -10,6 +10,7 @@ import numpy as np
 import mpl_toolkits.basemap as bm
 import sandwell
 import mat2py as m2p
+import scipy.signal as sig
 
 
 def dist_section(Float, hpids, var, plot_func=plt.contourf):
@@ -52,18 +53,24 @@ def scatter_section(Float, hpids, var, x_var='dist'):
     plt.colorbar(orientation='horizontal', extend='both')
 
 
-def depth_profile(Float, hpids, var, plot_func=plt.plot):
+def depth_profile(Float, hpids, var, plot_func=plt.plot, hold='off'):
     """ """
     profiles = Float.get_profiles(hpids)
     if np.iterable(profiles):
-        for profile in profiles:
+        for i, profile in enumerate(profiles):
             z = getattr(profile, 'z')
             x = profile.interp(z, 'z', var)
-            plt.figure()
-            plot_func(x, z)
+            if hold == 'on':
+                if i == 0:
+                    plt.figure()
+                plot_func(x, z)
+            else:
+                plt.figure()
+                plot_func(x, z)
+
     else:
         z = getattr(profiles, 'z')
-        x = profile.interp(z, 'z', var)
+        x = profiles.interp(z, 'z', var)
         plt.figure()
         plot_func(x, z)
 
@@ -201,3 +208,56 @@ def hinton(W, maxWeight=None):
     if reenable:
         plt.ion()
     plt.show()
+
+
+def welch_psd(Float, hpids, var, tz='z', hold='off'):
+    """Compute power spectral density of some variable using Welch method.
+    Variables are first interpolated onto a regular grid in either time or
+    depth which can be specified using the fw optional argument. A time
+    interval of 30 seconds is used and a depth interval of 6m."""
+
+    dz = 6.
+    dt = 30./86400.
+
+    if tz == 'z':
+        df = dz
+        ivar = 'z'
+        m = 1.
+    elif tz == 't':
+        df = dt
+        ivar = 'UTC'
+        m = 86400.
+    else:
+        raise RuntimeWarning("tz should be 't' or 'z'.")
+
+    profiles = Float.get_profiles(hpids)
+    if np.iterable(profiles):
+        for i, profile in enumerate(profiles):
+            f = getattr(profile, ivar)
+            nans = np.isnan(f)
+            f = np.unique(f[~nans])
+            f = np.arange(f[0], f[-1], df)
+
+            x = profile.interp(f, ivar, var)
+
+            if hold == 'on':
+                if i == 0:
+                    plt.figure()
+                freq, Pxx = sig.welch(x, 1./(m*df))
+                plt.semilogy(freq, Pxx)
+            else:
+                plt.figure()
+                freq, Pxx = sig.welch(x, 1./(m*df))
+                plt.semilogy(freq, Pxx)
+
+    else:
+        f = getattr(profiles, ivar)
+        nans = np.isnan(f)
+        f = np.unique(f[~nans])
+
+        f = np.arange(f[0], f[-1], df)
+
+        x = profiles.interp(f, ivar, var)
+        plt.figure()
+        freq, Pxx = sig.welch(x, 1./(m*df))
+        plt.semilogy(freq, Pxx)
