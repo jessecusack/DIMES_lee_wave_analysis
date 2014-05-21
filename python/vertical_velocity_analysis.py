@@ -113,6 +113,8 @@ def assess_vvm_fit(Float, save_id=''):
                 y = np.array(axs[i, j].get_ylim())
                 x = np.array([vfi.p[i], vfi.p[i]])
                 axs[i, j].plot(x, y, 'r-')
+                x = np.array([vfi.params0[i], vfi.params0[i]])
+                axs[i, j].plot(x, y, 'g-')
 
     name = save_id + '_param_matrix_scatter.pdf'
     fname = os.path.join(save_dir, name)
@@ -152,7 +154,7 @@ except NameError:
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, 1.156e-6, None, 27.179]
+fixed = [None, None, None, None, None, None, None]
 vvm.fitter(E76, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_vvm_fit(E76, str(E76.floatID))
 print(E76.__vfi.p)
@@ -160,10 +162,10 @@ print(E76.__vfi.p)
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, 1.156e-6, None, 27.179]
+fixed = [None, None, None, None, None, None, None]
 vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_vvm_fit(E77, str(E77.floatID))
-print(E76.__vfi.p)
+print(E77.__vfi.p)
 
 ###############################################################################
 
@@ -181,7 +183,7 @@ params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_vvm_fit(E77, str(E77.floatID)+'_fix_alphakM')
-print(E76.__vfi.p)
+print(E77.__vfi.p)
 
 ###############################################################################
 
@@ -199,7 +201,7 @@ params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [3e-2, None, None, None, None, 16., 27.179]
 vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_vvm_fit(E77, str(E77.floatID)+'_fix_k0V0M')
-print(E76.__vfi.p)
+print(E77.__vfi.p)
 
 ###############################################################################
 
@@ -217,7 +219,7 @@ params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, 16., 27.179]
 vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_vvm_fit(E77, str(E77.floatID)+'_fix_alphakk0M')
-print(E76.__vfi.p)
+print(E77.__vfi.p)
 
 ###############################################################################
 
@@ -235,4 +237,4 @@ params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [3e-2, None, 3.76e-6, None, 1.156e-6, 16., 27.179]
 vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_vvm_fit(E77, str(E77.floatID)+'_fix_alphakk0V0alphapM')
-print(E76.__vfi.p)
+print(E77.__vfi.p)
