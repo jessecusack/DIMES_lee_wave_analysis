@@ -8,11 +8,10 @@ A place for finescale parameterisation functions.
 """
 
 import numpy as np
-import scipy as sp
 import gsw
 
 
-def adiabatic_level(P, SA, T, N2, lat, P_bin_width=200.):
+def adiabatic_level(P, SA, T, N2, lat, P_bin_width=200., deg=1):
     """Generate smooth buoyancy frequency profile by applying the adiabatic
     levelling method of Bray and Fofonoff (1981).
 
@@ -29,9 +28,11 @@ def adiabatic_level(P, SA, T, N2, lat, P_bin_width=200.):
       N2 : 1-D ndarray
           Buoyancy frequency [s-2]
       lat : float
-          The [-90...+90]
+          Latitude [-90...+90]
       p_bin_width : float, optional
           Pressure bin width [dbar]
+      deg : int, option
+          Degree of polynomial fit.
 
       Returns
       -------
@@ -50,21 +51,20 @@ def adiabatic_level(P, SA, T, N2, lat, P_bin_width=200.):
     """
 
     N2_ref = np.NaN*P.copy()
-
+    P_min, P_max = np.nanmin(P), np.nanmax(P)
+    pot_rho = gsw.pot_rho_t_exact
 
     for i in xrange(len(P)):
-        P_min = np.maximum(P[i] - P_bin_width/2., np.nanmin(P))
-        P_max = np.minimum(P[i] + P_bin_width/2., np.nanmax(P))
-        in_bin = np.where((P >= P_min) & (P <= P_max))[0]
+        P_bin_min = np.maximum(P[i] - P_bin_width/2., P_min)
+        P_bin_max = np.minimum(P[i] + P_bin_width/2., P_max)
+        in_bin = np.where((P >= P_bin_min) & (P <= P_bin_max))[0]
         if in_bin.size == 0:
             continue
         P_bar = np.nanmean(P[in_bin])
         T_bar = np.nanmean(T[in_bin])
         SA_bar = np.nanmean(SA[in_bin])
-        rho_bar = gsw.pot_rho_t_exact(SA_bar, T_bar, P_bar, P_bar)
-        sv = 1./gsw.pot_rho_t_exact(SA[in_bin], T[in_bin], P[in_bin], P_bar)
-
-        deg = 1
+        rho_bar = pot_rho(SA_bar, T_bar, P_bar, P_bar)
+        sv = 1./pot_rho(SA[in_bin], T[in_bin], P[in_bin], P_bar)
 
         p = np.polyfit(P[in_bin], sv - np.nanmean(sv), deg)
         g = gsw.grav(lat, P_bar)
