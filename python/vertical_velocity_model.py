@@ -85,7 +85,7 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
     residuals = cost(p, *cargs)
     s_res = np.std(residuals)
     ps = []
-    # 100 random data sets are generated and fitted
+    # 200 random data sets are generated and fitted
     for i in range(200):
         rand_delta = np.random.normal(0., s_res, w_f.shape)
         rand_w_f = w_f + rand_delta
