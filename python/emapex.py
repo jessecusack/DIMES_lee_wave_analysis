@@ -203,12 +203,13 @@ class EMApexFloat(object):
         self.UTC_start = t_ctd[0, :]
         self.UTC_end = np.nanmax(t_ctd, axis=0)
 
+        # Load the data!
         for key in data.keys():
 
             d = np.ndim(data[key])
 
             if d < 1 or d > 2 or '__' in key:
-                print "* Skipping: {}.".format(key)
+                print("* Skipping: {}.".format(key))
                 continue
             elif d == 1:
                 setattr(self, key, data[key][isFloat])
@@ -273,10 +274,8 @@ class EMApexFloat(object):
         self.sub_surf_v = self.sub_surf_speed*np.cos(self.profile_bearing)
 
         # Absolute velocity.
-        self.U1_abs = self.U1 + self.sub_surf_u
-        self.U2_abs = self.U2 + self.sub_surf_u
-        self.V1_abs = self.V1 + self.sub_surf_v
-        self.V2_abs = self.V2 + self.sub_surf_v
+        self.U_abs = self.U + self.sub_surf_u
+        self.V_abs = self.V + self.sub_surf_v
 
         # Derive some important thermodynamics variables.
         # Depth.
@@ -306,14 +305,10 @@ class EMApexFloat(object):
         self.Wz = self.__regrid_from_ca_to_('ctd', Wz_ca)
 
         # Shear calculations.
-        dU1dz_ca = np.diff(self.U1, axis=0)/np.diff(self.zef, axis=0)
-        dU2dz_ca = np.diff(self.U2, axis=0)/np.diff(self.zef, axis=0)
-        dV1dz_ca = np.diff(self.V1, axis=0)/np.diff(self.zef, axis=0)
-        dV2dz_ca = np.diff(self.V2, axis=0)/np.diff(self.zef, axis=0)
-        self.dU1dz = self.__regrid_from_ca_to_('ef', dU1dz_ca)
-        self.dU2dz = self.__regrid_from_ca_to_('ef', dU2dz_ca)
-        self.dV1dz = self.__regrid_from_ca_to_('ef', dV1dz_ca)
-        self.dV2dz = self.__regrid_from_ca_to_('ef', dV2dz_ca)
+        dUdz_ca = np.diff(self.U, axis=0)/np.diff(self.zef, axis=0)
+        dVdz_ca = np.diff(self.V, axis=0)/np.diff(self.zef, axis=0)
+        self.dUdz = self.__regrid_from_ca_to_('ef', dUdz_ca)
+        self.dVdz = self.__regrid_from_ca_to_('ef', dVdz_ca)
 
         # Vertical water velocity.
         self.Wpef = self.Wp.copy()
