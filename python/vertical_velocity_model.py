@@ -35,8 +35,8 @@ class vv_fit_info(object):
         self.ier = ier
 
 
-def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
-           profiles='all', cf_key='sqdiff', P_vals=np.arange(60., 1500., 8),
+def fitter(Float, params0, fixed, model='1', hpids=None,
+           profiles='all', cf_key='sqdiff', P_vals=None,
            data_names=['ppos', 'P', 'rho']):
     """This function takes an EM-APEX float, fits a vertical velocity model and
     applies it to the float using the given scope and saves the scope and
@@ -46,6 +46,14 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
     alternatively using the bootstrap method or both. See:
 
     """
+
+    if hpids is None:
+        hpids = np.arange(50, 151)
+
+    if P_vals is None:
+        P_vals = np.arange(60., 1500., 8)
+
+    print('Fitting model '+model+'.')
 
     if model == '1':
         still_water_model = still_water_model_1
@@ -78,8 +86,7 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
     p, pcov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
                                           full_output=True)
 
-#    print("The final parameter values:")
-#    print(params)
+    print('Starting bootstrap.')
 
     # Bootstrapping error estimation.
     residuals = cost(p, *cargs)
@@ -98,17 +105,11 @@ def fitter(Float, params0, fixed, model='1', hpids=np.arange(50, 151),
     pmean = np.mean(ps, 0)
     pcorr = np.corrcoef(ps.T)
 
-    data = [getattr(Float, 'r' + data_name) for data_name in data_names]
-
-    setattr(Float, 'rWs', still_water_model(p, data, fixed))
-    setattr(Float, 'rWw', Float.rWz - Float.rWs)
-
-    vfi = vv_fit_info(params0, fixed, still_water_model, hpids, profiles,
+    wfi = vv_fit_info(params0, fixed, still_water_model, hpids, profiles,
                       cf_key, P_vals, data_names, p, ps, pmean, pcov, pcorr,
                       info, mesg, ier)
 
-    setattr(Float, '__vfi', vfi)  # Don't want this added to Profile classes.
-
+    Float.apply_w_model(wfi)
     Float.update_profiles()
 
 
