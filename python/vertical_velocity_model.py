@@ -10,6 +10,11 @@ import scipy.optimize as op
 import numpy as np
 
 
+class Bunch(object):
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
 class vv_fit_info(object):
     """Storage class for information relating to the vertical velocity
     fitting."""
@@ -67,14 +72,13 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
 
     if profiles == 'all':
         hpids = existing_hpids
-    elif profiles == 'up':
+    elif profiles == 'updown':
         up_idxs = emapex.up_down_indices(existing_hpids, 'up')
-        hpids = existing_hpids[up_idxs]
-    elif profiles == 'down':
+        up_hpids = existing_hpids[up_idxs]
         down_idxs = emapex.up_down_indices(existing_hpids, 'down')
-        hpids = existing_hpids[down_idxs]
+        down_hpids = existing_hpids[down_idxs]
     else:
-        raise ValueError('Cannot understand what type of profiles')
+        raise ValueError("profiles can be 'all' or 'updown'")
 
     data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
             for data_name in data_names]
@@ -105,7 +109,30 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
     pmean = np.mean(ps, 0)
     pcorr = np.corrcoef(ps.T)
 
-    wfi = vv_fit_info(params0, fixed, still_water_model, hpids, profiles,
+
+
+        self.params0 = params0
+        self.fixed = fixed
+        self.model_func = model_func
+        self.hpids = hpids
+        self.profiles = profiles
+        self.cf_key = cf_key
+        self.P_vals = P_vals
+        self.data_names = data_names
+        self.p = p
+        self.ps = ps
+        self.pmean = pmean
+        self.pcov = pcov
+        self.pcorr = pcorr
+        self.info = info
+        self.mesg = mesg
+        self.ier = ier
+
+    wfi = Bunch(params0=params0,
+                      fixed,
+                      still_water_model,
+                      hpids,
+                      profiles,
                       cf_key, P_vals, data_names, p, ps, pmean, pcov, pcorr,
                       info, mesg, ier)
 
