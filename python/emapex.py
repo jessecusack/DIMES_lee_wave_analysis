@@ -13,6 +13,8 @@ import scipy.io as io
 import gsw
 import mapping_tools as mptls
 import mat2py as m2p
+import pickle
+import copy
 
 
 class Profile(object):
@@ -474,6 +476,7 @@ class EMApexFloat(object):
             vals = v[:, idxs].flatten(order='F')[nnans]
             times, jdxs = np.unique(times, return_index=True)
             vals = vals[jdxs]
+            # Convert to datetime objects.
             times = m2p.datenum_to_datetime(times)
             return times, vals
 
@@ -504,6 +507,29 @@ class EMApexFloat(object):
                                ' array sizes.')
 
         return times, vals
+
+    def apply_w_model(self, fit_info):
+        """Give a vv_fit_info object or path to pickle of such object."""
+
+        # Initially assume path to fit.
+        try:
+            with open(fit_info, 'rb') as f:
+                print("Unpickling fit info.")
+                setattr(self, '__wfi', pickle.load(f))
+        except TypeError:
+            if fit_info.ier == 1:
+                print('Copying fit info.')
+                setattr(self, '__wfi', copy.copy(fit_info))
+            else:
+                print("It appears that this fit was not successful.\n"
+                      "But we shall use it anyway...")
+                setattr(self, '__wfi', copy.copy(fit_info))
+
+        wfi = getattr(self, '__wfi')
+        data = [getattr(self, 'r' + data_name) for data_name in wfi.data_names]
+        self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
+        self.rWw = self.rWz - self.rWs
+        self.update_profiles()
 
 
 def up_down_indices(hpid_array, up_or_down='up'):
