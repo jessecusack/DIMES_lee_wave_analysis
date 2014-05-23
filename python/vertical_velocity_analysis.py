@@ -16,20 +16,21 @@ import pandas as pd
 import os
 import pickle
 
+reload(emapex)
 reload(vvm)
 reload(pf)
 
 
-def assess_vvm_fit(Float, save_id=''):
+def assess_w_fit(Float, save_id=''):
     """ """
 
     font = {'family': 'normal',
             'weight': 'normal',
-            'size': 7}
+            'size': 8}
     matplotlib.rc('font', **font)
 
-    vfi = Float.__vfi
-    hpids = vfi.hpids
+    wfi = Float.__wfi
+    hpids = wfi.hpids
     floatID = Float.floatID
     s = os.sep
     save_dir = '..'+s+'figures'+s+'vertical_velocity_analysis'
@@ -92,7 +93,7 @@ def assess_vvm_fit(Float, save_id=''):
     N = len(pnames)
     ticks = np.arange(0.5, N, 1)
     plt.figure(figsize=(3, 3))
-    plt.pcolormesh(np.flipud(vfi.pcorr), cmap=plt.get_cmap('PiYG'))
+    plt.pcolormesh(np.flipud(wfi.pcorr), cmap=plt.get_cmap('PiYG'))
     cbar = plt.colorbar()
     cbar.set_label('Correlation')
     plt.clim(-1, 1)
@@ -104,9 +105,10 @@ def assess_vvm_fit(Float, save_id=''):
     fname = os.path.join(save_dir, name)
     plt.savefig(fname, format='pdf', bbox_inches='tight')
 
-    plt.figure(figsize=(7, 7))
-    pps = pd.DataFrame(vfi.ps, columns=pnames)
+    pps = pd.DataFrame(wfi.ps, columns=pnames)
     axs = pd.tools.plotting.scatter_matrix(pps, hist_kwds={'bins': 12})
+    f = plt.gcf()
+    f.set_size_inches(7,7)
     formatter = ticker.ScalarFormatter(useOffset=False)
     formatter.set_scientific(True)
     formatter.set_powerlimits((-1, 2))
@@ -119,9 +121,9 @@ def assess_vvm_fit(Float, save_id=''):
 
             if i == j:
                 y = np.array(axs[i, j].get_ylim())
-                x = np.array([vfi.p[i], vfi.p[i]])
+                x = np.array([wfi.p[i], wfi.p[i]])
                 axs[i, j].plot(x, y, 'r-')
-                x = np.array([vfi.params0[i], vfi.params0[i]])
+                x = np.array([wfi.params0[i], wfi.params0[i]])
                 axs[i, j].plot(x, y, 'g-')
 
     name = save_id + '_param_matrix_scatter.pdf'
@@ -134,7 +136,7 @@ def assess_vvm_fit(Float, save_id=''):
     name = save_id + '_fit_info.p'
     fname = os.path.join(save_dir, name)
     with open(fname, 'wb') as f:
-        pickle.dump(vfi, f)
+        pickle.dump(wfi, f)
 
 try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
@@ -166,16 +168,16 @@ cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 vvm.fitter(E76, params0, fixed, model=model, profiles='all', cf_key=cf_key)
-assess_vvm_fit(E76, str(E76.floatID)+'_fix_alphakM')
-print(E76.__vfi.p)
+assess_w_fit(E76, str(E76.floatID)+'_fix_alphakM')
+print(E76.__wfi.p)
 
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
-assess_vvm_fit(E77, str(E77.floatID)+'_fix_alphakM')
-print(E77.__vfi.p)
+assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
+print(E77.__wfi.p)
 
 ################################################################################
 #
