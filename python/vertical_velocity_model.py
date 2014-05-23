@@ -15,43 +15,17 @@ class Bunch(object):
         self.__dict__.update(kwargs)
 
 
-class vv_fit_info(object):
-    """Storage class for information relating to the vertical velocity
-    fitting."""
-    def __init__(self, params0, fixed, model_func, hpids, profiles, cf_key,
-                 P_vals, data_names, p, ps, pmean, pcov, pcorr, info, mesg,
-                 ier):
-
-        self.params0 = params0
-        self.fixed = fixed
-        self.model_func = model_func
-        self.hpids = hpids
-        self.profiles = profiles
-        self.cf_key = cf_key
-        self.P_vals = P_vals
-        self.data_names = data_names
-        self.p = p
-        self.ps = ps
-        self.pmean = pmean
-        self.pcov = pcov
-        self.pcorr = pcorr
-        self.info = info
-        self.mesg = mesg
-        self.ier = ier
-
-
 def fitter(Float, params0, fixed, model='1', hpids=None,
            profiles='all', cf_key='sqdiff', P_vals=None,
            data_names=['ppos', 'P', 'rho']):
-    """This function takes an EM-APEX float, fits a vertical velocity model and
-    applies it to the float using the given scope and saves the scope and
-    parameters for future use as an attribute of the float class.
-
-    TODO: Calculate parameter covarience matrix using least squares or
-    alternatively using the bootstrap method or both. See:
+    """This function takes an EM-APEX float, fits a vertical velocity model
+    using the given arguments, estimates errors using bootstrapping technique,
+    and then passes this information to the float.
 
     """
+    # Argument checks.
 
+    # Defaults
     if hpids is None:
         hpids = np.arange(50, 151)
 
@@ -71,73 +45,129 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
     existing_hpids = Float.hpid[idxs]
 
     if profiles == 'all':
+
         hpids = existing_hpids
+
+        # Fitting.
+        data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
+                for data_name in data_names]
+
+        __, __, w_f = Float.get_interp_grid(hpids, P_vals, 'P', 'Wz')
+
+        cargs = (fixed, still_water_model, w_f, data, cf_key)
+
+        p, pcov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
+                                              full_output=True)
+
+        # Bootstrapping.
+        print('Starting bootstrap.')
+        residuals = cost(p, *cargs)
+        s_res = np.std(residuals)
+        ps = []
+        # 200 random data sets are generated and fitted
+        for i in range(200):
+            rand_delta = np.random.normal(0., s_res, w_f.shape)
+            rand_w_f = w_f + rand_delta
+            cargs = (fixed, still_water_model, rand_w_f, data, cf_key)
+            rand_params, __ = op.leastsq(cost, params0, args=cargs)
+            ps.append(rand_params)
+
+        ps = np.array(ps)
+        pcov = np.cov(ps.T)
+        pmean = np.mean(ps, 0)
+        pcorr = np.corrcoef(ps.T)
+
+        wfi = Bunch(params0=params0,
+                    fixed=fixed,
+                    model_func=still_water_model,
+                    hpids=hpids,
+                    profiles=profiles,
+                    cf_key=cf_key,
+                    P_vals=P_vals,
+                    data_names=data_names,
+                    p=p,
+                    ps=ps,
+                    pmean=pmean,
+                    pcov=pcov,
+                    pcorr=pcorr,
+                    info=info,
+                    mesg=mesg,
+                    ier=ier)
+
+        Float.apply_w_model(wfi)
+
     elif profiles == 'updown':
+
         up_idxs = emapex.up_down_indices(existing_hpids, 'up')
         up_hpids = existing_hpids[up_idxs]
         down_idxs = emapex.up_down_indices(existing_hpids, 'down')
         down_hpids = existing_hpids[down_idxs]
+
+        # We now contain variables in lists.
+        p = 2*[0]
+        ps = 2*[0]
+        pmean = 2*[0]
+        pcov = 2*[0]
+        pcorr = 2*[0]
+        info = 2*[0]
+        mesg = 2*[0]
+        ier = 2*[0]
+
+        # This is a bit of hack since profiles gets changed here... bad.
+        for i, hpids in enumerate([up_hpids, down_hpids]):
+
+            # Fitting.
+            data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
+                    for data_name in data_names]
+
+            __, __, w_f = Float.get_interp_grid(hpids, P_vals, 'P', 'Wz')
+
+            cargs = (fixed, still_water_model, w_f, data, cf_key)
+
+            p[i], pcov[i], info[i], mesg[i], ier[i] = \
+                op.leastsq(cost, params0, args=cargs, full_output=True)
+
+            # Bootstrapping.
+            print('Starting bootstrap.')
+            residuals = cost(p, *cargs)
+            s_res = np.std(residuals)
+            bps = []
+            # 200 random data sets are generated and fitted
+            for i in range(200):
+                rand_delta = np.random.normal(0., s_res, w_f.shape)
+                rand_w_f = w_f + rand_delta
+                cargs = (fixed, still_water_model, rand_w_f, data, cf_key)
+                rand_params, __ = op.leastsq(cost, params0, args=cargs)
+                bps.append(rand_params)
+
+            ps[i] = np.array(bps)
+            pcov[i] = np.cov(bps.T)
+            pmean[i] = np.mean(bps, 0)
+            pcorr[i] = np.corrcoef(bps.T)
+
+        wfi = Bunch(params0=params0,
+                    fixed=fixed,
+                    model_func=still_water_model,
+                    hpids=hpids,
+                    profiles=profiles,
+                    cf_key=cf_key,
+                    P_vals=P_vals,
+                    data_names=data_names,
+                    p=p,
+                    ps=ps,
+                    pmean=pmean,
+                    pcov=pcov,
+                    pcorr=pcorr,
+                    info=info,
+                    mesg=mesg,
+                    ier=ier)
+
+        Float.apply_w_model(wfi)
+
     else:
         raise ValueError("profiles can be 'all' or 'updown'")
 
-    data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
-            for data_name in data_names]
 
-    __, __, w_f = Float.get_interp_grid(hpids, P_vals, 'P', 'Wz')
-
-    cargs = (fixed, still_water_model, w_f, data, cf_key)
-
-    p, pcov, info, mesg, ier = op.leastsq(cost, params0, args=cargs,
-                                          full_output=True)
-
-    print('Starting bootstrap.')
-
-    # Bootstrapping error estimation.
-    residuals = cost(p, *cargs)
-    s_res = np.std(residuals)
-    ps = []
-    # 200 random data sets are generated and fitted
-    for i in range(200):
-        rand_delta = np.random.normal(0., s_res, w_f.shape)
-        rand_w_f = w_f + rand_delta
-        cargs = (fixed, still_water_model, rand_w_f, data, cf_key)
-        rand_params, __ = op.leastsq(cost, params0, args=cargs)
-        ps.append(rand_params)
-
-    ps = np.array(ps)
-    pcov = np.cov(ps.T)
-    pmean = np.mean(ps, 0)
-    pcorr = np.corrcoef(ps.T)
-
-
-
-        self.params0 = params0
-        self.fixed = fixed
-        self.model_func = model_func
-        self.hpids = hpids
-        self.profiles = profiles
-        self.cf_key = cf_key
-        self.P_vals = P_vals
-        self.data_names = data_names
-        self.p = p
-        self.ps = ps
-        self.pmean = pmean
-        self.pcov = pcov
-        self.pcorr = pcorr
-        self.info = info
-        self.mesg = mesg
-        self.ier = ier
-
-    wfi = Bunch(params0=params0,
-                      fixed,
-                      still_water_model,
-                      hpids,
-                      profiles,
-                      cf_key, P_vals, data_names, p, ps, pmean, pcov, pcorr,
-                      info, mesg, ier)
-
-    Float.apply_w_model(wfi)
-    Float.update_profiles()
 
 
 def still_water_model_1(params, data, fixed):

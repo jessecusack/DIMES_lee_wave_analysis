@@ -510,25 +510,25 @@ class EMApexFloat(object):
 
     def apply_w_model(self, fit_info):
         """Give a vv_fit_info object or path to pickle of such object."""
-
         # Initially assume path to fit.
         try:
             with open(fit_info, 'rb') as f:
                 print("Unpickling fit info.")
                 setattr(self, '__wfi', pickle.load(f))
         except TypeError:
-            if fit_info.ier == 1:
-                print('Copying fit info.')
-                setattr(self, '__wfi', copy.copy(fit_info))
-            else:
-                print("It appears that this fit was not successful.\n"
-                      "But we shall use it anyway...")
-                setattr(self, '__wfi', copy.copy(fit_info))
+            print('Copying fit info.')
+            setattr(self, '__wfi', copy.copy(fit_info))
 
         wfi = getattr(self, '__wfi')
-        data = [getattr(self, 'r' + data_name) for data_name in wfi.data_names]
-        self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
-        self.rWw = self.rWz - self.rWs
+
+        if wfi.profiles == 'all':
+            data = [getattr(self, 'r' + data_name) for
+                    data_name in wfi.data_names]
+            self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
+            self.rWw = self.rWz - self.rWs
+        elif wfi.profiles == 'updown':
+            pass
+
         self.update_profiles()
 
 
