@@ -521,13 +521,30 @@ class EMApexFloat(object):
 
         wfi = getattr(self, '__wfi')
 
+        # Initialise arrays.
+        self.rWs = np.empty_like(self.rUTC.shape)
+        self.rWw = np.empty_like(self.rUTC.shape)
+
         if wfi.profiles == 'all':
+
             data = [getattr(self, 'r' + data_name) for
                     data_name in wfi.data_names]
             self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
             self.rWw = self.rWz - self.rWs
+
         elif wfi.profiles == 'updown':
-            pass
+
+            up = up_down_indices(self.hpid, 'up')
+            data = [getattr(self, 'r' + data_name)[:, up] for
+                    data_name in wfi.data_names]
+            self.rWs[up] = wfi.model_fun(wfi.p[0], data, wfi.fixed)
+
+            down = up_down_indices(self.hpid, 'down')
+            data = [getattr(self, 'r' + data_name)[:, down] for
+                    data_name in wfi.data_names]
+            self.rWs[down] = wfi.model_fun(wfi.p[1], data, wfi.fixed)
+
+            self.rWw = self.rWz - self.rWs
 
         self.update_profiles()
 
