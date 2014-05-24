@@ -108,7 +108,7 @@ def assess_w_fit(Float, save_id=''):
     pps = pd.DataFrame(wfi.ps, columns=pnames)
     axs = pd.tools.plotting.scatter_matrix(pps, hist_kwds={'bins': 12})
     f = plt.gcf()
-    f.set_size_inches(7,7)
+    f.set_size_inches(7, 7)
     formatter = ticker.ScalarFormatter(useOffset=False)
     formatter.set_scientific(True)
     formatter.set_powerlimits((-1, 2))
@@ -161,7 +161,7 @@ except NameError:
 #assess_vvm_fit(E77, str(E77.floatID))
 #print(E77.__vfi.p)
 #
-################################################################################
+###############################################################################
 
 model = '1'
 cf_key = 'diffsq'
@@ -179,7 +179,7 @@ vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
 assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
 print(E77.__wfi.p)
 
-################################################################################
+###############################################################################
 #
 #model = '1'
 #cf_key = 'diffsq'
@@ -197,7 +197,7 @@ print(E77.__wfi.p)
 #assess_vvm_fit(E77, str(E77.floatID)+'_fix_k0V0M')
 #print(E77.__vfi.p)
 #
-################################################################################
+###############################################################################
 #
 #model = '1'
 #cf_key = 'diffsq'
@@ -215,7 +215,7 @@ print(E77.__wfi.p)
 #assess_vvm_fit(E77, str(E77.floatID)+'_fix_alphakk0M')
 #print(E77.__vfi.p)
 #
-################################################################################
+###############################################################################
 #
 #model = '1'
 #cf_key = 'diffsq'
