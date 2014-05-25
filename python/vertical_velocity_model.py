@@ -42,11 +42,9 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
         raise ValueError('Cannot find model.')
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-    existing_hpids = Float.hpid[idxs]
+    hpids = Float.hpid[idxs]
 
     if profiles == 'all':
-
-        hpids = existing_hpids
 
         # Fitting.
         data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
@@ -61,14 +59,13 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
 
         # Bootstrapping.
         print('Starting bootstrap.')
-        residuals = cost(p, *cargs)
-        s_res = np.std(residuals)
         ps = []
         # 200 random data sets are generated and fitted
         for i in range(200):
-            rand_delta = np.random.normal(0., s_res, w_f.shape)
-            rand_w_f = w_f + rand_delta
-            cargs = (fixed, still_water_model, rand_w_f, data, cf_key)
+            rand_idx = np.random.rand(*w_f.shape) < 0.25
+            rand_data = [d[rand_idx] for d in data]
+            cargs = (fixed, still_water_model, w_f[rand_idx], rand_data,
+                     cf_key)
             rand_params, __ = op.leastsq(cost, params0, args=cargs)
             ps.append(rand_params)
 
@@ -77,31 +74,12 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
         pmean = np.mean(ps, 0)
         pcorr = np.corrcoef(ps.T)
 
-        wfi = Bunch(params0=params0,
-                    fixed=fixed,
-                    model_func=still_water_model,
-                    hpids=hpids,
-                    profiles=profiles,
-                    cf_key=cf_key,
-                    P_vals=P_vals,
-                    data_names=data_names,
-                    p=p,
-                    ps=ps,
-                    pmean=pmean,
-                    pcov=pcov,
-                    pcorr=pcorr,
-                    info=info,
-                    mesg=mesg,
-                    ier=ier)
-
-        Float.apply_w_model(wfi)
-
     elif profiles == 'updown':
 
-        up_idxs = emapex.up_down_indices(existing_hpids, 'up')
-        up_hpids = existing_hpids[up_idxs]
-        down_idxs = emapex.up_down_indices(existing_hpids, 'down')
-        down_hpids = existing_hpids[down_idxs]
+        up_idxs = emapex.up_down_indices(hpids, 'up')
+        up_hpids = hpids[up_idxs]
+        down_idxs = emapex.up_down_indices(hpids, 'down')
+        down_hpids = hpids[down_idxs]
 
         # We now contain variables in lists.
         p = 2*[0]
@@ -114,13 +92,13 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
         ier = 2*[0]
 
         # This is a bit of hack since profiles gets changed here... bad.
-        for i, hpids in enumerate([up_hpids, down_hpids]):
+        for i, _hpids in enumerate([up_hpids, down_hpids]):
 
             # Fitting.
-            data = [Float.get_interp_grid(hpids, P_vals, 'P', data_name)[2]
+            data = [Float.get_interp_grid(_hpids, P_vals, 'P', data_name)[2]
                     for data_name in data_names]
 
-            __, __, w_f = Float.get_interp_grid(hpids, P_vals, 'P', 'Wz')
+            __, __, w_f = Float.get_interp_grid(_hpids, P_vals, 'P', 'Wz')
 
             cargs = (fixed, still_water_model, w_f, data, cf_key)
 
@@ -129,45 +107,43 @@ def fitter(Float, params0, fixed, model='1', hpids=None,
 
             # Bootstrapping.
             print('Starting bootstrap.')
-            residuals = cost(p, *cargs)
-            s_res = np.std(residuals)
+
             bps = []
-            # 200 random data sets are generated and fitted
-            for i in range(200):
-                rand_delta = np.random.normal(0., s_res, w_f.shape)
-                rand_w_f = w_f + rand_delta
-                cargs = (fixed, still_water_model, rand_w_f, data, cf_key)
+            # 100 random data sets are generated and fitted
+            for __ in range(100):
+                rand_idx = np.random.rand(*w_f.shape) < 0.25
+                rand_data = [d[rand_idx] for d in data]
+                cargs = (fixed, still_water_model, w_f[rand_idx], rand_data,
+                         cf_key)
                 rand_params, __ = op.leastsq(cost, params0, args=cargs)
                 bps.append(rand_params)
 
             ps[i] = np.array(bps)
-            pcov[i] = np.cov(bps.T)
-            pmean[i] = np.mean(bps, 0)
-            pcorr[i] = np.corrcoef(bps.T)
-
-        wfi = Bunch(params0=params0,
-                    fixed=fixed,
-                    model_func=still_water_model,
-                    hpids=hpids,
-                    profiles=profiles,
-                    cf_key=cf_key,
-                    P_vals=P_vals,
-                    data_names=data_names,
-                    p=p,
-                    ps=ps,
-                    pmean=pmean,
-                    pcov=pcov,
-                    pcorr=pcorr,
-                    info=info,
-                    mesg=mesg,
-                    ier=ier)
-
-        Float.apply_w_model(wfi)
+            pcov[i] = np.cov(ps[i].T)
+            pmean[i] = np.mean(ps[i], 0)
+            pcorr[i] = np.corrcoef(ps[i].T)
 
     else:
         raise ValueError("profiles can be 'all' or 'updown'")
 
+    wfi = Bunch(params0=params0,
+                fixed=fixed,
+                model_func=still_water_model,
+                hpids=hpids,
+                profiles=profiles,
+                cf_key=cf_key,
+                P_vals=P_vals,
+                data_names=data_names,
+                p=p,
+                ps=ps,
+                pmean=pmean,
+                pcov=pcov,
+                pcorr=pcorr,
+                info=info,
+                mesg=mesg,
+                ier=ier)
 
+    return wfi
 
 
 def still_water_model_1(params, data, fixed):
