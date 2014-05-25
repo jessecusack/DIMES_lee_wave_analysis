@@ -213,7 +213,7 @@ def hinton(W, maxWeight=None):
 def welch_psd(Float, hpids, var, tz='z', hold='off'):
     """Compute power spectral density of some variable using Welch method.
     Variables are first interpolated onto a regular grid in either time or
-    depth which can be specified using the fw optional argument. A time
+    depth which can be specified using the tz optional argument. A time
     interval of 30 seconds is used and a depth interval of 6m."""
 
     dz = 6.
@@ -260,4 +260,4 @@ def welch_psd(Float, hpids, var, tz='z', hold='off'):
         x = profiles.interp(f, ivar, var)
         plt.figure()
         freq, Pxx = sig.welch(x, 1./(m*df))
-        plt.semilogy(freq, Pxx)
+        plt.loglog(freq, Pxx)
