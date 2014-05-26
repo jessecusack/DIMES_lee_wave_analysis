@@ -244,11 +244,11 @@ def welch_psd(Float, hpids, var, tz='z', hold='off'):
                 if i == 0:
                     plt.figure()
                 freq, Pxx = sig.welch(x, 1./(m*df))
-                plt.semilogy(freq, Pxx)
+                plt.loglog(freq, Pxx)
             else:
                 plt.figure()
                 freq, Pxx = sig.welch(x, 1./(m*df))
-                plt.semilogy(freq, Pxx)
+                plt.loglog(freq, Pxx)
 
     else:
         f = getattr(profiles, ivar)
