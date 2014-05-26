@@ -10,6 +10,7 @@ data.
 
 import numpy as np
 import scipy.io as io
+from scipy.interpolate import griddata
 import gsw
 import mapping_tools as mptls
 import mat2py as m2p
@@ -442,7 +443,7 @@ class EMApexFloat(object):
         return number_grid, var_2_grid, var_1_grid
 
     def get_griddata_grid(self, hpids, var_1_name, var_2_name, var_3_name,
-                          var_1_vals=None, var_2_vals=None):
+                          var_1_vals=None, var_2_vals=None, method='linear'):
         """
 
           Parameters
@@ -459,12 +460,33 @@ class EMApexFloat(object):
 
         """
 
-#        profiles = self.get_profiles(hpids)
+        __, idxs = self.get_profiles(hpids, ret_idxs=True)
 
         if var_1_vals is None:
-            pass
+            var_1_arr = getattr(self, var_1_name)[:, idxs]
+            start = np.nanmin(var_1_arr)
+            stop = np.nanmax(var_1_arr)
+            var_1_vals = np.linspace(start, stop, 3*idxs.size)
 
-        pass
+        if var_2_vals is None:
+            var_2_arr = getattr(self, var_2_name)[:, idxs]
+            start = np.nanmax(np.nanmin(var_2_arr, axis=0))
+            stop = np.nanmin(np.nanmax(var_2_arr, axis=0))
+            var_2_vals = np.linspace(start, stop, 400)
+
+        x_grid, y_grid = np.meshgrid(var_1_vals, var_2_vals)
+
+        x = getattr(self, var_1_name)[:, idxs].flatten()
+        y = getattr(self, var_2_name)[:, idxs].flatten()
+        z = getattr(self, var_3_name)[:, idxs].flatten()
+
+        nans = np.isnan(x) | np.isnan(y) | np.isnan(z)
+
+        x, y, z = x[~nans], y[~nans], z[~nans]
+
+        z_grid = griddata((x, y), z, (x_grid, y_grid), method=method)
+
+        return z_grid
 
     def get_timeseries(self, hpids, var_name):
         """TODO: Docstring..."""
