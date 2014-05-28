@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import matplotlib.colors as mcolors
 import pandas as pd
 import os
 import pickle
@@ -80,19 +81,57 @@ def assess_w_fit(Float, save_id=''):
     name = save_id + ud_id + '_ww_wf_w0_timeseries.pdf'
     fname = os.path.join(save_dir, name)
     plt.savefig(fname, format='pdf', bbox_inches='tight')
-    # Distance section of water velocity.
 
-#    dist_section(Float, np.arange(1, 1000), 'rWw')
-#    plt.xlabel('Distance (km)')
-#    plt.ylabel('Depth (m)')
-#    plt.xlim(np.min(Float.dist), np.max(Float.dist))
-#    title_str = ("Float {}").format(floatID)
-#    plt.title(title_str)
-#    cbar = plt.colorbar(orientation='horizontal')
-#    cbar.set_label('$W_w$ (m s$^{-1}$)')
+    # Scatter section of water velocity.
+
+    cmap = mcolors.LinearSegmentedColormap.from_list(name='red_white_blue',
+                                                     colors=[(0, 0, 1),
+                                                             (1, 1, 1),
+                                                             (1, 0, 0)],
+                                                     N=40,
+                                                     )
+
+    z_vals = np.arange(-1500., 0., 10.)
+    __, z, Ww = Float.get_interp_grid(np.arange(1, 600), z_vals, 'z', 'rWw')
+    z = z.flatten(order='F')
+    Ww = Ww.flatten(order='F')
+    __, __, d = Float.get_interp_grid(np.arange(1, 600), z_vals, 'z',
+                                      'dist_ctd_data')
+    d = d.flatten(order='F')
+    plt.figure()
+    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=cmap)
+    plt.ylim(np.min(z), np.max(z))
+    plt.xlim(np.min(d), np.max(d))
+    plt.xlabel('Distance (km)')
+    plt.ylabel('Depth (m)')
+    plt.xlim(np.min(Float.dist), np.max(Float.dist))
+    title_str = ("Float {}").format(floatID)
+    plt.title(title_str)
+    cbar = plt.colorbar(orientation='horizontal', extend='both')
+    cbar.set_label('$W_w$ (m s$^{-1}$)')
+    plt.clim(-0.15, 0.15)
+    name = save_id + ud_id + '_ww_scatter_section.pdf'
+    fname = os.path.join(save_dir, name)
+    plt.savefig(fname, format='pdf', bbox_inches='tight')
+
+#    # Varience of Ww2 with N2
+#    Ww2 = Float.rWw.flatten(order='F')**2
+#    N2 = Float.rN2.flatten(order='F')
+#    Ww2 = Ww2[N2 > 0.]
+#    N = np.sqrt(N2[N2 > 0.])
+#    bins = np.linspace(0., np.max(N), 20)
+#    idxs = np.digitize(N, bins)
+#    Wmean = []
+#    Wstd = []
+#    Nm = (bins[1:] + bins[:-1])/2.
+#    N0 = 1e-4
+#    for i in xrange(len(bins) - 1):
+#        Wmean.append(np.nanmean(Ww2[idxs == i+1]))
+#        Wstd.append(np.nanstd(Ww2[idxs == i+1]))
+#    plt.errorbar(Nm, Wmean, Wstd)
+#    plt.plot(Nm, 0.25*N0/Nm)
 
     # Parameter estimates and correlations.
-
     pnames = ['$V_0$', '$CA$', r'$\alpha_p$', '$p_0$', r'$\alpha_k$', '$k_0$',
               '$M$']
     N = len(pnames)
@@ -186,6 +225,8 @@ def assess_w_fit(Float, save_id=''):
     with open(fname, 'wb') as f:
         pickle.dump(wfi, f)
 
+###############################################################################
+
 try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
 except NameError:
@@ -197,86 +238,90 @@ except NameError:
 #cf_key = 'diffsq'
 #params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 #fixed = [None, None, None, None, None, None, None]
-#vvm.fitter(E76, params0, fixed, model=model, profiles='all', cf_key=cf_key)
-#assess_vvm_fit(E76, str(E76.floatID))
-#print(E76.__vfi.p)
-#
-#model = '1'
-#cf_key = 'diffsq'
-#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-#fixed = [None, None, None, None, None, None, None]
-#vvm.fitter(E77, params0, fixed, model=model, profiles='all', cf_key=cf_key)
-#assess_vvm_fit(E77, str(E77.floatID))
-#print(E77.__vfi.p)
-#
-###############################################################################
-
-#model = '1'
-#cf_key = 'diffsq'
-#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-#fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 #wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
 #                 cf_key=cf_key)
 #E76.apply_w_model(wfi)
-#assess_w_fit(E76, str(E76.floatID)+'_fix_alphakM')
+#assess_w_fit(E76, str(E76.floatID))
 #print(E76.__wfi.p)
 #
 #model = '1'
 #cf_key = 'diffsq'
 #params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-#fixed = [None, None, None, None, 1.156e-6, None, 27.179]
+#fixed = [None, None, None, None, None, None, None]
 #wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
 #                 cf_key=cf_key)
-#E76.apply_w_model(wfi)
-#assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
+#E77.apply_w_model(wfi)
+#assess_w_fit(E77, str(E77.floatID))
 #print(E77.__wfi.p)
 
 ###############################################################################
 
 model = '1'
 cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 2e+3, 1e-6, 16., 27.179])
-fixed = [None, None, None, 2e+3, None, None, 27.179]
+params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E76.apply_w_model(wfi)
-assess_w_fit(E76, str(E76.floatID)+'_fix_p0M')
+assess_w_fit(E76, str(E76.floatID)+'_fix_alphakM')
 print(E76.__wfi.p)
 
 model = '1'
 cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 2e-6, 2e+3, 1e-6, 16., 27.179])
-fixed = [None, None, None, 2e+3, None, None, 27.179]
+params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E77.apply_w_model(wfi)
-assess_w_fit(E77, str(E77.floatID)+'_fix_p0M')
+assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
 print(E77.__wfi.p)
 
 ###############################################################################
-
-model = '1'
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, None, None, None]
-wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='updown',
-                 cf_key=cf_key)
-E76.apply_w_model(wfi)
-assess_w_fit(E76, str(E76.floatID))
-print(E76.__wfi.p)
-
-model = '1'
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, None, None, None]
-wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='updown',
-                 cf_key=cf_key)
-E77.apply_w_model(wfi)
-assess_w_fit(E77, str(E77.floatID))
-print(E77.__wfi.p)
-
+#
+#model = '1'
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 2e+3, 1e-6, 16., 27.179])
+#fixed = [None, None, None, 2e+3, None, None, 27.179]
+#wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
+#                 cf_key=cf_key)
+#E76.apply_w_model(wfi)
+#assess_w_fit(E76, str(E76.floatID)+'_fix_p0M')
+#print(E76.__wfi.p)
+#
+#model = '1'
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 2e-6, 2e+3, 1e-6, 16., 27.179])
+#fixed = [None, None, None, 2e+3, None, None, 27.179]
+#wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
+#                 cf_key=cf_key)
+#E77.apply_w_model(wfi)
+#assess_w_fit(E77, str(E77.floatID)+'_fix_p0M')
+#print(E77.__wfi.p)
+#
 ###############################################################################
-
+#
+#model = '1'
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, None, None, None]
+#wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='updown',
+#                 cf_key=cf_key)
+#E76.apply_w_model(wfi)
+#assess_w_fit(E76, str(E76.floatID))
+#print(E76.__wfi.p)
+#
+#model = '1'
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, None, None, None]
+#wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='updown',
+#                 cf_key=cf_key)
+#E77.apply_w_model(wfi)
+#assess_w_fit(E77, str(E77.floatID))
+#print(E77.__wfi.p)
+#
+###############################################################################
+#
 #model = '1'
 #cf_key = 'diffsq'
 #params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])

@@ -26,7 +26,6 @@ def dist_section(Float, hpids, var, plot_func=plt.contourf):
 def scatter_section(Float, hpids, var, x_var='dist'):
 
     z_vals = np.arange(-1500., -40., 20.)
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     __, z, var = Float.get_interp_grid(hpids, z_vals, 'z', var)
 
     if x_var == 'dist':
