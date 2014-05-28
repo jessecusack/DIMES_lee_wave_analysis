@@ -98,7 +98,7 @@ def assess_w_fit(Float, save_id=''):
     __, __, d = Float.get_interp_grid(np.arange(1, 600), z_vals, 'z',
                                       'dist_ctd_data')
     d = d.flatten(order='F')
-    plt.figure()
+    plt.figure(figsize=(6, 3))
     plt.scatter(d, z, c=Ww, edgecolor='none', cmap=cmap)
     plt.ylim(np.min(z), np.max(z))
     plt.xlim(np.min(d), np.max(d))
