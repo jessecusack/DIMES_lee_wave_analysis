@@ -8,6 +8,7 @@ Created on Thu May 29 14:52:32 2014
 """
 
 import scipy as sp
+import plotting_functions as pf
 import gsw
 import emapex
 
