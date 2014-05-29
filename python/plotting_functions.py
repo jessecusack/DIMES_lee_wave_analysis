@@ -23,7 +23,7 @@ def dist_section(Float, hpids, var, plot_func=plt.contourf):
     plot_func(dists, z_vals, var_grid)
 
 
-def scatter_section(Float, hpids, var, x_var='dist'):
+def scatter_section(Float, hpids, var, x_var='dist', cmap=plt.get_cmap('jet')):
 
     z_vals = np.arange(-1500., -40., 20.)
     __, z, var = Float.get_interp_grid(hpids, z_vals, 'z', var)
@@ -46,7 +46,7 @@ def scatter_section(Float, hpids, var, x_var='dist'):
     var = var.flatten(order='F')
 
     plt.figure()
-    plt.scatter(d, z, c=var, edgecolor='none')
+    plt.scatter(d, z, c=var, edgecolor='none', cmap=cmap)
     plt.ylim(np.min(z), np.max(z))
     plt.xlim(np.min(d), np.max(d))
     plt.colorbar(orientation='horizontal', extend='both')
