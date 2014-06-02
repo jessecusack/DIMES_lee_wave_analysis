@@ -16,5 +16,5 @@ import emapex
 E76 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4976)
 E77 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4977)
 
-E76.apply_w_model('../../data/EM-APEX/4976_fix_alphakM_fit_info.p')
-E77.apply_w_model('../../data/EM-APEX/4977_fix_alphakM_fit_info.p')
+E76.apply_w_model('../../data/EM-APEX/4976_fix_p0k0M_fit_info.p')
+E77.apply_w_model('../../data/EM-APEX/4977_fix_p0k0M_fit_info.p')
