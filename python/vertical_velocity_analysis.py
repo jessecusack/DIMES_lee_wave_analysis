@@ -259,6 +259,50 @@ except NameError:
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+fixed = [None, None, None, None, None, None, 27.179]
+wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
+                 cf_key=cf_key)
+E76.apply_w_model(wfi)
+assess_w_fit(E76, str(E76.floatID)+'_fix_M')
+print(E76.__wfi.p)
+
+model = '1'
+cf_key = 'diffsq'
+params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+fixed = [None, None, None, None, None, None, 27.179]
+wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
+                 cf_key=cf_key)
+E77.apply_w_model(wfi)
+assess_w_fit(E77, str(E77.floatID)+'_fix_M')
+print(E77.__wfi.p)
+
+###############################################################################
+
+model = '1'
+cf_key = 'diffsq'
+params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+fixed = [None, None, None, 2000., None, 16, 27.179]
+wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
+                 cf_key=cf_key)
+E76.apply_w_model(wfi)
+assess_w_fit(E76, str(E76.floatID)+'_fix_p0k0M')
+print(E76.__wfi.p)
+
+model = '1'
+cf_key = 'diffsq'
+params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+fixed = [None, None, None, 2000., None, 16, 27.179]
+wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
+                 cf_key=cf_key)
+E77.apply_w_model(wfi)
+assess_w_fit(E77, str(E77.floatID)+'_fix_p0k0M')
+print(E77.__wfi.p)
+
+###############################################################################
+
+model = '1'
+cf_key = 'diffsq'
+params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, None, 27.179]
 wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
