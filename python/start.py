@@ -7,6 +7,8 @@ Created on Thu May 29 14:52:32 2014
 @author: jc3e13
 """
 
+import numpy as np
+import matplotlib.pyplot as plt
 import scipy as sp
 import plotting_functions as pf
 import gsw
@@ -14,7 +16,7 @@ import emapex
 
 
 E76 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4976)
-E77 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4977)
-
 E76.apply_w_model('../../data/EM-APEX/4976_fix_p0k0M_fit_info.p')
+
+E77 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4977)
 E77.apply_w_model('../../data/EM-APEX/4977_fix_p0k0M_fit_info.p')
