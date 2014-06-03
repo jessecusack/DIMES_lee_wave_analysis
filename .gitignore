@@ -18,6 +18,10 @@ figures/*
 \#*\#
 *.asv
 
+# Ipython notebook #
+####################
+.ipynb_checkpoints
+
 # Compiled source #
 ###################
 *.com
@@ -27,7 +31,6 @@ figures/*
 *.o
 *.so
 *.pyc
-
 
 # LaTeX baggage #
 #################
