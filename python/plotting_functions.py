@@ -52,26 +52,29 @@ def scatter_section(Float, hpids, var, x_var='dist', cmap=plt.get_cmap('jet')):
     plt.colorbar(orientation='horizontal', extend='both')
 
 
-def depth_profile(Float, hpids, var, plot_func=plt.plot, hold='off'):
+def depth_profile(Float, hpids, var, plot_func=plt.plot, hold='off', 
+                  dlim=[-10000., 0]):
     """ """
     profiles = Float.get_profiles(hpids)
     if np.iterable(profiles):
         for i, profile in enumerate(profiles):
             z = getattr(profile, 'z')
             x = profile.interp(z, 'z', var)
+            in_lim = (z > dlim[0]) == (z < dlim[1])
             if hold == 'on':
                 if i == 0:
                     plt.figure()
-                plot_func(x, z)
+                plot_func(x[in_lim], z[in_lim])
             else:
                 plt.figure()
-                plot_func(x, z)
+                plot_func(x[in_lim], z[in_lim])
 
     else:
         z = getattr(profiles, 'z')
         x = profiles.interp(z, 'z', var)
+        in_lim = (z > dlim[0]) == (z < dlim[1])
         plt.figure()
-        plot_func(x, z)
+        plot_func(x[in_lim], z[in_lim])
 
 
 def isosurface(Float, hpids, var_1_name, var_2_name, var_2_vals):
