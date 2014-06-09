@@ -323,7 +323,7 @@ class EMApexFloat(object):
 
         print("Interpolating some variables onto regular grids.")
 
-        z_vals = np.arange(-1500., -10., 6.)
+        z_vals = np.arange(-1400., 0., 5.)
         self_dict = self.__dict__
         for key in self_dict.keys():
 
