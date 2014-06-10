@@ -81,7 +81,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
             Pzz, ms = plt.psd(var, NFFT=N//2, Fs=dk,
                               noverlap=int(0.2*N//2),
                               detrend=pyl.detrend_linear)
-            mmax = ms[Pzz.argmax()]
+            mmax = ms[Pzz.argmax()] 
             title = ("{}: Float {}, profile {}\nm_max {:1.2e} m$^{{-1}}$"
                      "\nlambda_max {:4.0f} m"
                      "").format(name, Float.floatID, pfl.hpid, mmax, 1./mmax)
@@ -90,3 +90,8 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
             plt.title(title)
             plt.xlabel('$m$ (m$^{-1}$)')
             print(title)
+
+def plane_wave2(x, A, k, m, om, phase, C):
+    return A*np.cos(2*np.pi*(k*x[:,0] + m*x[:,1] + om*x[:,2] + phase)) + C
+    
+    
