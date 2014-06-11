@@ -91,7 +91,26 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
             plt.xlabel('$m$ (m$^{-1}$)')
             print(title)
 
-def plane_wave2(x, A, k, m, om, phase, C):
-    return A*np.cos(2*np.pi*(k*x[:,0] + m*x[:,1] + om*x[:,2] + phase)) + C
+def plane_wave2(params, x):
+    A, k, m, om = params
+    return A*np.cos(2*np.pi*(k*x[:,0] + m*x[:,1] + om*x[:,2]))
     
+def cost(params, data, func, y):
+    return (func(params, data) - y).flatten()
+    
+for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
+    
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    
+    z = Float.rz[:,idxs].flatten(order='F')
+    x = Float.rdist_ctd_data[:, idxs].flatten(order='F')*1000.
+    t = Float.rUTC[:, idxs].flatten(order='F')*86400.
+    W = Float.rWw[:, idxs].flatten(order='F')
+    
+    nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -300)
+    data = np.array([z[~nans], x[~nans], t[~nans]]).T
+    W = W[~nans]
+    
+    res = op.basinhopping(cost, x0=[0.01, 0.0001, 0.01, 0.], niter=1000,
+                          minimizer_kwargs={'args':(data, plane_wave2, W)})
     
