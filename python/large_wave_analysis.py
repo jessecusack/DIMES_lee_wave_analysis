@@ -29,7 +29,7 @@ except NameError:
     E77.apply_w_model('../../data/EM-APEX/4977_fix_p0k0M_fit_info.p')
 
     for Float, fstr in zip([E76, E77], ['76', '77']):
-        with open('../../data/EM-APEX/49'+fstr+'_N2_ref_100dbar.p', 'rb') as f:
+        with open('../../data/EM-APEX/49'+fstr+'_N2_ref_300dbar.p', 'rb') as f:
             N2_ref = pickle.load(f)
             setattr(Float, 'N2_ref', N2_ref)
             setattr(Float, 'strain_z', (Float.N2 - N2_ref)/N2_ref)
@@ -37,7 +37,7 @@ except NameError:
 
 
 def plane_wave(x, A, k, phase, C):
-    return A*np.cos*(2*np.pi(k*x + phase)) + C
+    return A*np.cos(2*np.pi*(k*x + phase)) + C
 
 dz = 5.
 dk = 1./dz
@@ -60,7 +60,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
             # Try fitting plane wave.
             popt, __ = op.curve_fit(plane_wave, z, var, 
-                                    p0=[0.1, 0.01, np.pi, 0.])
+                                    p0=[0.1, 1.6e-3, 0., 0.])
             mfit = popt[1]
             
             plt.figure()
@@ -70,26 +70,25 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
             plt.xticks(rotation=45)
             plt.xlabel('$W_w$ (m s$^{-1}$)')
             plt.ylabel('$z$ (m)')
-            title = ("{}: Float {}, profile {}\nm_fit {:1.2e} m$^{{-1}}$"
+            title = ("{}: Float {}, profile {}\nm_fit {:1.1e} m$^{{-1}}$"
                      "\nlambda_fit {:4.0f} m"
-                     "").format(name, Float.floatID, pfl.hpid, mfit, 1./mfit)
+                     "").format(name, Float.floatID, pfl.hpid[0], mfit, 1./mfit)
             plt.title(title)
-            print(title)
 
             plt.subplot(1, 2, 2)
             # Try calculating power spectral density.
             Pzz, ms = plt.psd(var, NFFT=N//2, Fs=dk,
                               noverlap=int(0.2*N//2),
                               detrend=pyl.detrend_linear)
-            mmax = ms[Pzz.argmax()] 
-            title = ("{}: Float {}, profile {}\nm_max {:1.2e} m$^{{-1}}$"
+            plt.gca().set_xscale('log')
+            mmax = ms[Pzz.argmax()]
+            title = ("{}: Float {}, profile {}\nm_max {:1.1e} m$^{{-1}}$"
                      "\nlambda_max {:4.0f} m"
                      "").format(name, Float.floatID, pfl.hpid, mmax, 1./mmax)
             ylim = plt.ylim()
             plt.plot(2*[mmax], ylim, 'r', 2*[mfit], ylim, 'g')
             plt.title(title)
             plt.xlabel('$m$ (m$^{-1}$)')
-            print(title)
 
 def plane_wave2(params, x):
     A, k, m, om = params
@@ -114,3 +113,15 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     res = op.basinhopping(cost, x0=[0.01, 0.0001, 0.01, 0.], niter=1000,
                           minimizer_kwargs={'args':(data, plane_wave2, W)})
     
+    
+def line(params, x):
+    m, c = params
+    return m*x + c
+    
+x = np.linspace(-10, 10, 40)
+y = line([-2., 5], x) + 4*np.random.randn(*x.shape)
+plt.figure()
+plt.plot(x, y, '.')
+
+res = op.basinhopping(cost, x0=np.array([1., 0.]), niter=1000, 
+                      minimizer_kwargs={'args':(x, line, y)})
