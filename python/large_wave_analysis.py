@@ -97,6 +97,8 @@ def plane_wave2(params, x):
 def cost(params, data, func, y):
     return (func(params, data) - y).flatten()
     
+res = []    
+    
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
@@ -110,18 +112,6 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     data = np.array([z[~nans], x[~nans], t[~nans]]).T
     W = W[~nans]
     
-    res = op.basinhopping(cost, x0=[0.01, 0.0001, 0.01, 0.], niter=1000,
-                          minimizer_kwargs={'args':(data, plane_wave2, W)})
-    
-    
-def line(params, x):
-    m, c = params
-    return m*x + c
-    
-x = np.linspace(-10, 10, 40)
-y = line([-2., 5], x) + 4*np.random.randn(*x.shape)
-plt.figure()
-plt.plot(x, y, '.')
-
-res = op.basinhopping(cost, x0=np.array([1., 0.]), niter=1000, 
-                      minimizer_kwargs={'args':(x, line, y)})
+    res.append(op.leastsq(cost, x0=[0.01, 0.0001, 0.01, 0.],
+               args=(data, plane_wave2, W))[0])
+                          
