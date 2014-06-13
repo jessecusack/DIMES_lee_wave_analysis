@@ -169,11 +169,6 @@ def apply_strain(Float, P_bin_width=100.):
     setattr(Float, 'N2_ref', N2_ref)
     setattr(Float, 'strain_z', strain_z)
         
-def fcor(lat):
-    rot = 7.292115e-5  # rad s-1
-    latr = np.pi*lat/180.
-    return 2.*rot*np.sin(latr)
-        
 def h(R):
     return 3.*(R + 1)/(2.*R*np.sqrt(2*(R - 1)))
     
