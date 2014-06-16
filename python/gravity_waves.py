@@ -14,6 +14,8 @@ import numpy as np
 def omega(N, k, m, l=None, f=None):
     """Dispersion relation for an internal gravity wave in a continuously 
     stratified fluid.
+    
+    (Vallis 2012)
 
       Parameters
       ----------
@@ -38,6 +40,7 @@ def omega(N, k, m, l=None, f=None):
 
       Notes
       -----
+      The appropriate equation will be used based on the function arguments.
 
       Examples
       --------
