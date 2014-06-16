@@ -177,4 +177,21 @@ def L(f, N):
     N0 = 5.2e-3  # rad s-1
     return f*np.arccosh(N/f)/(f30*np.arccosh(N0/f30))
     
+def GM(omega, f, N):
+    """Garrett-Munk (power?) spectrum.  
     
+    Model variant for the frequency spectrum of horizontal kinetic energy.
+    """
+    
+    om2 = omega**2.
+    f2 = f**2.
+    N2 = N**2.
+    
+    a = 0.5
+    b = 0.
+    
+    continuum = f*(om2 + f2)*(N2 - om2)/(N2*om2**2.)
+    inertial = om2/(om2 - f2)**a
+    buoyancy = N2/(N2 - om2)**b
+    
+    return continuum*inertial*buoyancy
