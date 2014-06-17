@@ -263,3 +263,88 @@ def welch_psd(Float, hpids, var, tz='z', hold='off'):
         plt.figure()
         freq, Pxx = sig.welch(x, 1./(m*df))
         plt.loglog(freq, Pxx)
+
+def spew_track(Floats, dt=12.):
+    """Given a sequence of floats this function plots a time-lapse of 
+    their tracks onto bathymetry
+    
+    If you want it to work for one float you must put it in a sequence.   
+    """
+    
+#    __, idxs = Float.get_profiles(np.arange(1,1000), ret_idxs=True)
+    t_mins, t_maxs = [], []
+    for Float in Floats:
+        t_mins.append(np.min(Float.UTC_start))
+        t_maxs.append(np.max(Float.UTC_start))
+    
+    t_min = np.min(t_mins)
+    t_max = np.max(t_maxs) 
+    ti = np.arange(t_min, t_max, dt/24.)
+    lons = np.empty((ti.size, len(Floats)))
+    lats = np.empty((ti.size, len(Floats)))
+    
+    for i, Float in enumerate(Floats):
+        lon = Float.lon_start 
+        lat = Float.lat_start 
+        t = Float.UTC_start
+        lons[:, i] = np.interp(ti, t, lon, left=np.nan, right=np.nan)
+        lats[:, i] = np.interp(ti, t, lat, left=np.nan, right=np.nan)
+
+    llcrnrlon = np.floor(np.nanmin(lons)) - 1.
+    llcrnrlat = np.floor(np.nanmin(lats)) - 1.
+    urcrnrlon = np.ceil(np.nanmax(lons)) + 1.
+    urcrnrlat = np.ceil(np.nanmax(lats)) + 1.
+
+    lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
+
+    lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat)
+    bathy_grid[bathy_grid > 0] = 0
+
+    m = bm.Basemap(projection='cyl', llcrnrlon=llcrnrlon,
+                   llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
+                   urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
+                   lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
+
+    plt.figure(figsize=(10,10))
+    x, y = m(lon_grid, lat_grid)
+    m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
+    m.fillcontinents()
+    m.drawcoastlines()
+    
+    r = np.abs((urcrnrlon-llcrnrlon)/(urcrnrlat-llcrnrlat))
+
+    if r > 1.:
+        Nm = 8
+        Np = max(3, np.round(Nm/r))
+#        orientation = 'horizontal'
+    elif r < 1.:
+        Np = 8
+        Nm = max(3, np.round(Nm/r))
+#        orientation = 'vertical'
+
+    parallels = np.round(np.linspace(llcrnrlat, urcrnrlat, Np), 1)
+    m.drawparallels(parallels, labels=[1, 0, 0, 0])
+    meridians = np.round(np.linspace(llcrnrlon, urcrnrlon, Nm), 1)
+    m.drawmeridians(meridians, labels=[0, 0, 0, 1])
+#    cbar = plt.colorbar(orientation=orientation)
+#    cbar.set_label('Depth (m)')
+    
+    colours = ['b', 'g', 'r', 'c', 'm', 'y']
+    
+    for i, (time, lonr, latr) in enumerate(zip(ti, lons, lats)):
+        
+        print('Creating... {i:03d}'.format(i=i))
+        plt.title(m2p.datenum_to_datetime(time).strftime('%Y-%m-%d %H:%M'))
+        
+        for j, (lon, lat) in enumerate(zip(lonr, latr)):
+            x, y = m(lon, lat)
+            m.plot(x, y, '.', color=colours[j])
+            
+        if i == 0: 
+            leg_str = [str(Float.floatID) for Float in Floats]
+            plt.legend(leg_str, loc=0)
+            
+        save_name = '../figures/animated_tracks/test{i:03d}.png'.format(i=i)
+        plt.savefig(save_name, bbox_inches='tight')
+    
+    print('Finished.')
