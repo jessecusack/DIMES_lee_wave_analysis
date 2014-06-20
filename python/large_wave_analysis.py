@@ -97,7 +97,10 @@ def plane_wave2(params, x):
 def cost(params, data, func, y):
     return (func(params, data) - y).flatten()
     
-res = []    
+res = []
+
+E76_hpids = np.arange(31, 33)
+E77_hpids = np.arange(26, 28)
     
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     
@@ -108,10 +111,23 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     t = Float.rUTC[:, idxs].flatten(order='F')*86400.
     W = Float.rWw[:, idxs].flatten(order='F')
     
-    nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -300)
-    data = np.array([z[~nans], x[~nans], t[~nans]]).T
+    nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -200)
+    data = np.array([x[~nans], z[~nans], t[~nans]]).T
     W = W[~nans]
     
-    res.append(op.leastsq(cost, x0=[0.01, 0.0001, 0.01, 0.],
-               args=(data, plane_wave2, W))[0])
-                          
+    x0 = [0.2, 0.00001, 0.01, 0.]
+    fit = op.leastsq(cost, x0=x0, args=(data, plane_wave2, W))[0]
+    print(fit)
+    res.append(fit)
+    
+    Wm = plane_wave2(fit, data)
+    Wm0 = plane_wave2(x0, data)
+    
+    plt.figure()
+    plt.subplot(3, 1, 1)
+    plt.plot(data[:,0], Wm, data[:,0], W, data[:,0], Wm0)
+    plt.subplot(3, 1, 2)
+    plt.plot(Wm, data[:,1], W, data[:,1], Wm0, data[:,1])
+    plt.subplot(3, 1, 3)
+    plt.plot(data[:,2], Wm, data[:,2], W, data[:,2], Wm0)
+    
