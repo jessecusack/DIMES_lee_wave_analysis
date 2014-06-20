@@ -99,8 +99,8 @@ def cost(params, data, func, y):
     
 res = []
 
-E76_hpids = np.arange(31, 33)
-E77_hpids = np.arange(26, 28)
+E76_hpids = np.arange(27, 34) # np.arange(31, 33)
+E77_hpids = np.arange(23, 30) # np.arange(26, 28)
     
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     
@@ -115,7 +115,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     data = np.array([x[~nans], z[~nans], t[~nans]]).T
     W = W[~nans]
     
-    x0 = [0.2, 0.00001, 0.01, 0.]
+    x0 = [0.15, 0.001, 0.003, 0.]
     fit = op.leastsq(cost, x0=x0, args=(data, plane_wave2, W))[0]
     print(fit)
     res.append(fit)
