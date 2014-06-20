@@ -125,9 +125,9 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     
     plt.figure()
     plt.subplot(3, 1, 1)
-    plt.plot(data[:,0], Wm, data[:,0], W, data[:,0], Wm0)
+    plt.plot(data[:,0], Wm, data[:,0], W)#, data[:,0], Wm0)
     plt.subplot(3, 1, 2)
-    plt.plot(Wm, data[:,1], W, data[:,1], Wm0, data[:,1])
+    plt.plot(Wm, data[:,1], W, data[:,1])#, Wm0, data[:,1])
     plt.subplot(3, 1, 3)
-    plt.plot(data[:,2], Wm, data[:,2], W, data[:,2], Wm0)
+    plt.plot(data[:,2], Wm, data[:,2], W)#, data[:,2], Wm0)
     
