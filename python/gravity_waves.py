@@ -12,9 +12,9 @@ import numpy as np
 
 
 def omega(N, k, m, l=None, f=None):
-    """Dispersion relation for an internal gravity wave in a continuously 
+    """Dispersion relation for an internal gravity wave in a continuously
     stratified fluid.
-    
+
     (Vallis 2012)
 
       Parameters
@@ -44,14 +44,14 @@ def omega(N, k, m, l=None, f=None):
 
       Examples
       --------
-    
-    
+
+
     """
-    
+
     N2 = N**2
     k2 = k**2
     m2 = m**2
-    
+
     if l is None and f is None:
         # 2D case without rotation.
         return np.sqrt(N2*k2/(k2 + m2))
