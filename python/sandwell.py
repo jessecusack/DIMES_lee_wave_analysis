@@ -45,6 +45,8 @@ def read_grid(lon_lat, file_path=None):
       bathygrid[longitude, latitude], where both are monotonically increasing
       with index.
 
+      This function has not been tested across the dateline. 
+
       Examples
       --------
       See code.
@@ -108,7 +110,7 @@ def read_grid(lon_lat, file_path=None):
     bathy_grid = np.ndarray(lat_grid.shape, dtype='i2')
 
     if file_path is None:
-        file_path = '../../data/sandwell_bathymetry/topo_16.1.img'
+        file_path = '../../data/sandwell_bathymetry/topo_17.1.img'
 
     with open(file_path, 'rb') as f:
         for i in xrange(Nlats):
