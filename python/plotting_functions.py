@@ -11,6 +11,8 @@ import mpl_toolkits.basemap as bm
 import sandwell
 import mat2py as m2p
 import scipy.signal as sig
+from glob import glob
+import scipy.io as io
 
 
 def dist_section(Float, hpids, var, plot_func=plt.contourf):
@@ -52,7 +54,7 @@ def scatter_section(Float, hpids, var, x_var='dist', cmap=plt.get_cmap('jet')):
     plt.colorbar(orientation='horizontal', extend='both')
 
 
-def depth_profile(Float, hpids, var, plot_func=plt.plot, hold='off', 
+def depth_profile(Float, hpids, var, plot_func=plt.plot, hold='off',
                   dlim=[-10000., 0]):
     """ """
     profiles = Float.get_profiles(hpids)
@@ -264,28 +266,29 @@ def welch_psd(Float, hpids, var, tz='z', hold='off'):
         freq, Pxx = sig.welch(x, 1./(m*df))
         plt.loglog(freq, Pxx)
 
+
 def spew_track(Floats, dt=12.):
-    """Given a sequence of floats this function plots a time-lapse of 
+    """Given a sequence of floats this function plots a time-lapse of
     their tracks onto bathymetry
-    
-    If you want it to work for one float you must put it in a sequence.   
+
+    If you want it to work for one float you must put it in a sequence.
     """
-    
+
 #    __, idxs = Float.get_profiles(np.arange(1,1000), ret_idxs=True)
     t_mins, t_maxs = [], []
     for Float in Floats:
         t_mins.append(np.min(Float.UTC_start))
         t_maxs.append(np.max(Float.UTC_start))
-    
+
     t_min = np.min(t_mins)
-    t_max = np.max(t_maxs) 
+    t_max = np.max(t_maxs)
     ti = np.arange(t_min, t_max, dt/24.)
     lons = np.empty((ti.size, len(Floats)))
     lats = np.empty((ti.size, len(Floats)))
-    
+
     for i, Float in enumerate(Floats):
-        lon = Float.lon_start 
-        lat = Float.lat_start 
+        lon = Float.lon_start
+        lat = Float.lat_start
         t = Float.UTC_start
         lons[:, i] = np.interp(ti, t, lon, left=np.nan, right=np.nan)
         lats[:, i] = np.interp(ti, t, lat, left=np.nan, right=np.nan)
@@ -305,12 +308,12 @@ def spew_track(Floats, dt=12.):
                    urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
                    lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
 
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(10, 10))
     x, y = m(lon_grid, lat_grid)
     m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
     m.fillcontinents()
     m.drawcoastlines()
-    
+
     r = np.abs((urcrnrlon-llcrnrlon)/(urcrnrlat-llcrnrlat))
 
     if r > 1.:
@@ -328,23 +331,92 @@ def spew_track(Floats, dt=12.):
     m.drawmeridians(meridians, labels=[0, 0, 0, 1])
 #    cbar = plt.colorbar(orientation=orientation)
 #    cbar.set_label('Depth (m)')
-    
+
     colours = ['b', 'g', 'r', 'c', 'm', 'y']
-    
+
     for i, (time, lonr, latr) in enumerate(zip(ti, lons, lats)):
-        
+
         print('Creating... {i:03d}'.format(i=i))
         plt.title(m2p.datenum_to_datetime(time).strftime('%Y-%m-%d %H:%M'))
-        
+
         for j, (lon, lat) in enumerate(zip(lonr, latr)):
             x, y = m(lon, lat)
             m.plot(x, y, '.', color=colours[j])
-            
-        if i == 0: 
+
+        if i == 0:
             leg_str = [str(Float.floatID) for Float in Floats]
             plt.legend(leg_str, loc=0)
-            
+
         save_name = '../figures/animated_tracks/test{i:03d}.png'.format(i=i)
         plt.savefig(save_name, bbox_inches='tight')
-    
+
     print('Finished.')
+
+
+def deployments():
+    """This function gets data on all float deployments and plots them up."""
+
+    files = glob('../../data/EM-APEX/allprof*.mat')
+    FIDs = np.array([])  # Stores all float IDs.
+    LONs = np.array([])
+    LATs = np.array([])
+    DATEs = np.array([])
+    var_keys = ['flid', 'lon_gps', 'lat_gps', 'utc_dep']
+
+    for f in files:
+
+        data = io.loadmat(f, squeeze_me=True, variable_names=var_keys)
+        fids = data['flid']
+        dates = data['utc_dep']
+        lons = data['lon_gps']
+        lats = data['lat_gps']
+
+        ufids = np.unique(fids[~np.isnan(fids)])
+
+        FIDs = np.hstack((FIDs, ufids))
+
+        for fid in ufids:
+            flons = lons[fids == fid]
+            flats = lats[fids == fid]
+            fdates = dates[fids == fid]
+            # Find the index of the
+            idx = list(lons).index(filter(lambda x: ~np.isnan(x), lons)[0])
+            LONs = np.hstack((LONs, flons[idx]))
+            LATs = np.hstack((LATs, flats[idx]))
+            DATEs = np.hstack((DATEs, fdates[idx]))
+
+#    DTs = m2p.datenum_to_datetime(DATEs)
+
+    # Plot map.
+
+    llcrnrlon = np.floor(np.nanmin(LONs)) - 8.
+    llcrnrlat = np.floor(np.nanmin(LATs)) - 1.
+    urcrnrlon = np.ceil(np.nanmax(LONs)) + 1.
+    urcrnrlat = np.ceil(np.nanmax(LATs)) + 8.
+
+    lon_lat = np.array([llcrnrlon, -20., -80, urcrnrlat])
+
+    lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat)
+    bathy_grid[bathy_grid > 0] = 0
+
+    m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
+                   llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
+                   urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
+                   lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
+
+    plt.figure(figsize=(10, 10))
+    x, y = m(lon_grid, lat_grid)
+    m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
+    m.fillcontinents()
+    m.drawcoastlines()
+
+    parallels = np.array([-64, -54])
+    m.drawparallels(parallels, labels=[1, 0, 0, 0])
+    meridians = np.array([-105, -95, -85, -75, -65, -55, -45])
+    m.drawmeridians(meridians, labels=[0, 0, 0, 1])
+
+    x, y = m(LONs, LATs)
+    m.scatter(x, y, s=60, c=DATEs, cmap=plt.get_cmap('spring'))
+
+    save_name = '../figures/deployments.png'
+    plt.savefig(save_name, bbox_inches='tight')
