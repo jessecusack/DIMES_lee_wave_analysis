@@ -15,8 +15,6 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
     """Generate smooth buoyancy frequency profile by applying the adiabatic
     levelling method of Bray and Fofonoff (1981).
 
-    TODO: Add optional parameter ignore_above.
-
       Parameters
       ----------
       P : 1-D ndarray
@@ -96,52 +94,10 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
     p = np.array(p)
 
     g = gsw.grav(lat, P_bar)
+    # The factor 1e-4 is needed for conversion from dbar to Pa. 
     N2_ref[~nans] = -1e-4*rho_bar**2*g**2*p[:, 0]
 
     return N2_ref
-
-
-def adiabatic_level2(P, SA, T, lat, P_bin_width=100.):
-    """Generate smooth buoyancy frequency profile by applying the adiabatic
-    levelling method of Bray and Fofonoff (1981) to gridded data where each
-    column is a profile.
-
-    TODO: Add optional parameter ignore_above.
-
-      Parameters
-      ----------
-      P : 2-D ndarray
-          Pressure [dbar]
-      SA : 2-D ndarray
-          Absolute salinity [g/kg]
-      T : 2-D ndarray
-          Temperature [degrees C]
-      lat : float
-          Latitude [-90...+90]
-      p_bin_width : float, optional
-          Pressure bin width [dbar]
-      deg : int, option
-          Degree of polynomial fit.
-
-      Returns
-      -------
-      N2_ref : 1-D ndarray
-          Reference buoyancy frequency [s-2]
-
-      Raises
-      ------
-
-      Notes
-      -----
-      Calls to the gibbs seawater toolbox are slow and therefore this function
-      is quite slow.
-
-      Examples
-      --------
-
-    """
-
-    pass
 
 
 def apply_strain(Float, P_bin_width=100.):
