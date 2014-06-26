@@ -68,3 +68,45 @@ def omega(N, k, m, l=None, f=None):
         f2 = f**2
         l2 = l**2
         return np.sqrt((f2*m2 + N2*(k2 + l2))/(k2 + l2 + m2))
+
+
+def m_topo(k, N, U, f):
+    """Relationship between vertical and horizontal wavenumbers for a
+    topographically generated internal wave.
+
+    (Vallis 2012)
+
+      Parameters
+      ----------
+      N : ndarray
+          Buoyancy frequency [s-1]
+      k : ndarray
+          Horizontal wavenumber [m-1]
+      U : ndarray
+          Bottom flow speed [m s-1]
+      f : ndarray
+          Coriolis parameter [s-1]
+
+      Returns
+      -------
+      m : ndarray
+          Vertical wavenumber [m-1]
+
+      Raises
+      ------
+
+      Notes
+      -----
+
+      Examples
+      --------
+
+
+    """
+
+    k2 = k**2.
+    N2 = N**2.
+    U2 = U**2.
+    f2 = f**2.
+
+    return np.sqrt((k2*N2 - U2*k2**2.)/(U2*k2 - f2))
