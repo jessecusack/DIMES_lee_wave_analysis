@@ -324,6 +324,7 @@ class EMApexFloat(object):
         print("Interpolating some variables onto regular grids.")
 
         z_vals = np.arange(-1400., 0., 5.)
+        self.__r_z_vals = z_vals
         self_dict = self.__dict__
         for key in self_dict.keys():
 
@@ -531,7 +532,7 @@ class EMApexFloat(object):
         return times, vals
 
     def apply_w_model(self, fit_info):
-        """Give a vv_fit_info object or path to pickle of such object."""
+        """Give a W_fit_info object or path to pickle of such object."""
         # Initially assume path to fit.
         try:
             with open(fit_info, 'rb') as f:
@@ -552,7 +553,9 @@ class EMApexFloat(object):
             data = [getattr(self, 'r' + data_name) for
                     data_name in wfi.data_names]
             self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
+            print("  Added: rWs.")
             self.rWw = self.rWz - self.rWs
+            print("  Added: rWw.")
 
         elif wfi.profiles == 'updown':
 
@@ -560,14 +563,43 @@ class EMApexFloat(object):
             data = [getattr(self, 'r' + data_name)[:, up] for
                     data_name in wfi.data_names]
             self.rWs[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
+            print("  Added: rWs. (ascents)")
 
             down = up_down_indices(self.hpid, 'down')
             data = [getattr(self, 'r' + data_name)[:, down] for
                     data_name in wfi.data_names]
             self.rWs[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
+            print("  Added: rWs. (descents)")
 
             self.rWw = self.rWz - self.rWs
+            print("  Added: rWw.")
 
+        self.update_profiles()
+
+
+    def apply_strain(self, N2_ref_file):
+        """Input the path to file that contains grid of adiabatically levelled 
+        N2."""
+        
+        with open(N2_ref_file) as f:
+            
+            N2_ref = pickle.load(f)
+            setattr(self, 'N2_ref', N2_ref)
+            print("  Added: 'N2_ref.")
+            setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
+            print("  Added: strain_z.")
+            
+        self.update_profiles()
+            
+        for key in ['N2_ref', 'strain_z']:
+
+            name = 'r' + key
+            __, __, var_grid = self.get_interp_grid(self.hpid, 
+                                                    self.__r_z_vals,
+                                                    'z', key)
+            setattr(self, name, var_grid)
+            print("  Added: {}.".format(name))
+    
         self.update_profiles()
 
 
