@@ -154,3 +154,9 @@ def GM(omega, f, N):
     buoyancy = N2/(N2 - om2)**b
 
     return continuum*inertial*buoyancy
+    
+def GM2():
+    pass
+# betastar=pi*jstar/b*sqrt(N2mean)/N0;
+# phi_zeta = E*b^3*N0^2/(2*jstar*pi*N2mean) ./(1+kzax/betastar).^2; % power spectral density of vertical displacement
+# phi_eta = kzax.^2.*phi_zeta; % power spectral density of vertical strain
