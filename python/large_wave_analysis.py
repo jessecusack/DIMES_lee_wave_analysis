@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import pylab as pyl
 import numpy as np
 import emapex
-import pickle
 
 
 try:
@@ -24,16 +23,11 @@ except NameError:
 
     E76 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4976)
     E76.apply_w_model('../../data/EM-APEX/4976_fix_p0k0M_fit_info.p')
+    E76.apply_strain('../../data/EM-APEX/4976_N2_ref_300dbar.p')
 
     E77 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4977)
     E77.apply_w_model('../../data/EM-APEX/4977_fix_p0k0M_fit_info.p')
-
-    for Float, fstr in zip([E76, E77], ['76', '77']):
-        with open('../../data/EM-APEX/49'+fstr+'_N2_ref_300dbar.p', 'rb') as f:
-            N2_ref = pickle.load(f)
-            setattr(Float, 'N2_ref', N2_ref)
-            setattr(Float, 'strain_z', (Float.N2 - N2_ref)/N2_ref)
-            Float.update_profiles()
+    E77.apply_strain('../../data/EM-APEX/4977_N2_ref_300dbar.p')
 
 
 def plane_wave(x, A, k, phase, C):
