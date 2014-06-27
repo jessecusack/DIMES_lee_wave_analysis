@@ -578,28 +578,28 @@ class EMApexFloat(object):
 
 
     def apply_strain(self, N2_ref_file):
-        """Input the path to file that contains grid of adiabatically levelled 
+        """Input the path to file that contains grid of adiabatically levelled
         N2."""
-        
+
         with open(N2_ref_file) as f:
-            
+
             N2_ref = pickle.load(f)
             setattr(self, 'N2_ref', N2_ref)
-            print("  Added: 'N2_ref.")
+            print("  Added: N2_ref.")
             setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
             print("  Added: strain_z.")
-            
+
         self.update_profiles()
-            
+
         for key in ['N2_ref', 'strain_z']:
 
             name = 'r' + key
-            __, __, var_grid = self.get_interp_grid(self.hpid, 
+            __, __, var_grid = self.get_interp_grid(self.hpid,
                                                     self.__r_z_vals,
                                                     'z', key)
             setattr(self, name, var_grid)
             print("  Added: {}.".format(name))
-    
+
         self.update_profiles()
 
 
