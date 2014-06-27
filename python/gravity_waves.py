@@ -109,4 +109,4 @@ def m_topo(k, N, U, f):
     U2 = U**2.
     f2 = f**2.
 
-    return np.sqrt((k2*N2 - U2*k2**2.)/(U2*k2 - f2))
+    return np.sqrt((k2*(N2 - U2*k2))/(U2*k2 - f2))
