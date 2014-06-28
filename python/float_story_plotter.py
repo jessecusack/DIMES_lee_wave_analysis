@@ -37,36 +37,47 @@ z_vals = np.arange(-1500., 0., 10.)
 vars = ['T', 'S', 'rho_1']
 texvars = ['$T$', '$S$', r'$\sigma_1$']
 units = [r'$^\circ$C', 'PSU', 'kg m$^{-3}$']
+clims = [(2., 6.), (34., 34.6), (31.2, 32.3)]
+cmaps = [plt.get_cmap(s) for s in ['rainbow', 'summer', 'spring']]
 
 for Float in [E76, E77]:
-    for var, texvar, unit in zip(vars, texvars, units):
-        __, z, C = Float.get_interp_grid(hpids, z_vals, 'z', var)
-        z = z.flatten(order='F')
-        C = C.flatten(order='F')
-        __, __, d = Float.get_interp_grid(hpids, z_vals, 'z',
-                                          'dist_ctd_data')
-        d = d.flatten(order='F')
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    z = getattr(Float, 'z')[:, idxs].flatten(order='F')
+    d = getattr(Float, 'dist_ctd_data')[:, idxs].flatten(order='F')
+
+    for var, texvar, unit, clim, cmap in zip(vars, texvars, units, clims,
+                                             cmaps):
+
+        C = getattr(Float, var)[:, idxs].flatten(order='F')
+
+        if var == 'rho_1':
+            C -= 1000.
+
+        nans = np.isnan(z) | np.isnan(d) | np.isnan(C)
+
         plt.figure(figsize=(6, 4))
-        plt.scatter(d, z, c=C, edgecolor='none')
-        plt.ylim(np.min(z), np.max(z))
-        plt.xlim(np.min(d), np.max(d))
+        plt.scatter(d[~nans], z[~nans], c=C[~nans], edgecolor='none',
+                    cmap=cmap)
+        cbar = plt.colorbar(orientation='horizontal', extend='both')
+        cbar.set_label(texvar+' ('+unit+')')
+        plt.clim(*clim)
+
+        plt.contour(*Float.get_griddata_grid(hpids, 'dist_ctd_data', 'z', var),
+                    N=6, colors='k')
+
+        plt.ylim(np.min(z[~nans]), np.max(z[~nans]))
+        plt.xlim(np.min(d[~nans]), np.max(d[~nans]))
         plt.xlabel('Distance (km)')
         plt.ylabel('Depth (m)')
         title_str = ("Float {}").format(Float.floatID)
         plt.title(title_str)
-        cbar = plt.colorbar(orientation='horizontal')
-        cbar.set_label(texvar+' ('+unit+')')
+
         my_savefig(Float.floatID, var)
 
+# %%
 
-import matplotlib.colors as mcolors
-rwb = mcolors.LinearSegmentedColormap.from_list(name='red_white_blue',
-                                                colors=[(0, 0, 1),
-                                                        (1, 1, 1),
-                                                        (1, 0, 0)],
-                                                N=40,
-                                                )
-
+rbw = plt.get_cmap('bwr')
 hpids = np.arange(1, 600)
 z_vals = np.arange(-1500., 0., 10.)
 
