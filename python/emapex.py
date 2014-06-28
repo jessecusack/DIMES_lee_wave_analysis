@@ -471,8 +471,8 @@ class EMApexFloat(object):
 
         if var_2_vals is None:
             var_2_arr = getattr(self, var_2_name)[:, idxs]
-            start = np.nanmax(np.nanmin(var_2_arr, axis=0))
-            stop = np.nanmin(np.nanmax(var_2_arr, axis=0))
+            start = np.nanmin(np.nanmin(var_2_arr, axis=0))
+            stop = np.nanmax(np.nanmax(var_2_arr, axis=0))
             var_2_vals = np.linspace(start, stop, 400)
 
         x_grid, y_grid = np.meshgrid(var_1_vals, var_2_vals)
@@ -487,7 +487,7 @@ class EMApexFloat(object):
 
         z_grid = griddata((x, y), z, (x_grid, y_grid), method=method)
 
-        return z_grid
+        return x_grid, y_grid, z_grid
 
     def get_timeseries(self, hpids, var_name):
         """TODO: Docstring..."""
