@@ -83,22 +83,31 @@ for Float in [E76, E77]:
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     z = getattr(Float, 'zef')[:, idxs].flatten(order='F')
-    d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
+    d = getattr(Float, 'dist_ef')[:, idxs].flatten(order='F')
 
     for comp in ['U_abs', 'V_abs']:
 
         V = getattr(Float, comp)[:, idxs].flatten(order='F')
-        plt.figure()
+
+        plt.figure(figsize=(6, 4))
         plt.scatter(d, z, c=V, edgecolor='none', cmap=bwr)
-        plt.ylim(np.min(z), np.max(z))
-        plt.xlim(np.min(d), np.max(d))
+        cbar = plt.colorbar(orientation='horizontal', extend='both')
+        cbar.set_label('${}$ (m s$^{{-1}}$)'.format(comp[0]))
+        plt.clim(-1., 1.)
+
+        Xg, Zg, Vg = Float.get_griddata_grid(hpids, 'dist_ef', 'zef', comp)
+        Vg = np.abs(Vg)
+        plt.contour(Xg, Zg, Vg, levels=[0.5], colors='k',
+                    linestyles='dashed')
+
+        plt.ylim(np.nanmin(z), np.nanmax(z))
+        plt.xlim(np.nanmin(Float.dist_ctd), np.nanmax(Float.dist_ctd))
         plt.xlabel('Distance (km)')
         plt.ylabel('Depth (m)')
         title_str = ("Float {}").format(Float.floatID)
         plt.title(title_str)
-        cbar = plt.colorbar(orientation='horizontal', extend='both')
-        cbar.set_label('${}$ (m s$^{{-1}}$)'.format(comp[0]))
-        plt.clim(-1.5, 1.5)
+
+        my_savefig(Float.floatID, comp)
 
 # %%
 
