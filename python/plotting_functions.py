@@ -102,7 +102,7 @@ def timeseries(Float, hpids, var_name):
     plt.plot(t, var)
 
 
-def track_on_bathy(Float, hpids, projection='cyl'):
+def track_on_bathy(Float, hpids, projection='cyl', bathy_file=None):
     """TODO: Docstring..."""
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
@@ -116,7 +116,7 @@ def track_on_bathy(Float, hpids, projection='cyl'):
 
     lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
 
-    lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat)
+    lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bathy_file)
     bathy_grid[bathy_grid > 0] = 0
 
     m = bm.Basemap(projection=projection, llcrnrlon=llcrnrlon,
@@ -153,14 +153,14 @@ def track_on_bathy(Float, hpids, projection='cyl'):
     cbar.set_label('Depth (m)')
 
 
-def bathy_along_track(Float, hpids):
+def bathy_along_track(Float, hpids, bathy_file=None):
     """TODO: Docstring..."""
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     lons = Float.lon_start[idxs]
     lats = Float.lat_start[idxs]
     dist = Float.dist[idxs]
-    bathy = sandwell.interp_track(lons, lats)
+    bathy = sandwell.interp_track(lons, lats, bathy_file)
 
     plt.figure()
     plt.plot(dist, bathy)
