@@ -4,11 +4,13 @@ Plot a LOT of things.
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import plotting_functions as pf
 import emapex
 import scipy.optimize as op
 import pylab as pyl
 import os
+import sandwell
 
 reload(emapex)
 
@@ -23,6 +25,11 @@ E77.apply_strain('../../data/EM-APEX/4977_N2_ref_300dbar.p')
 plot_dir = '../figures/large_wave_analysis'
 ftype = 'png'
 bwr = plt.get_cmap('bwr')
+bwr1 = mcolors.LinearSegmentedColormap.from_list(name='red_white_blue',
+                                                 colors=[(0, 0, 1),
+                                                         (1, 1, 1),
+                                                         (1, 0, 0)],
+                                                 N=40)
 
 
 def my_savefig(fid, fname):
@@ -132,58 +139,89 @@ my_savefig(Float.floatID, 'W_example')
 # %% Sections of Ww.
 
 hpids = np.arange(1, 600)
+xlims = [(0., 1200.), (0., 750.)]
 
-for Float in [E76, E77]:
-    __, z, Ww = Float.get_interp_grid(hpids, z_vals, 'z', 'rWw')
-    z = z.flatten(order='F')
-    Ww = Ww.flatten(order='F')
-    __, __, d = Float.get_interp_grid(hpids, z_vals, 'z',
-                                      'dist_ctd')
-    d = d.flatten(order='F')
-    plt.figure()
-    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=bwr)
-    plt.ylim(np.min(z), np.max(z))
-    plt.xlim(np.min(d), np.max(d))
+for Float, xlim in zip([E76, E77], xlims):
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    z = getattr(Float, 'z')[:, idxs].flatten(order='F')
+    d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
+    Ww = getattr(Float, 'Ww')[:, idxs].flatten(order='F')
+    # Remove dud values.
+    Ww[d > xlim[1]] = np.nan
+
+    plt.figure(figsize=(12, 4))
+    plt.scatter(d, z, c=Ww*100., edgecolor='none', cmap=bwr)
+
+    cbar = plt.colorbar(orientation='horizontal', extend='both')
+    cbar.set_label('$W_w$ (cm s$^{-1}$)')
+    plt.clim(-5, 5)
+
+    Xg, Zg, Wg = Float.get_griddata_grid(hpids, 'dist_ctd', 'z', 'Ww')
+    Wg[Xg > xlim[1]] = np.nan
+    Wg = np.abs(Wg)
+    plt.contour(Xg, Zg, Wg, levels=[0.025], colors='k',
+                linestyles='dashed')
+
+    plt.ylim(np.nanmin(z), np.nanmax(z))
+#    plt.xlim(np.nanmin(d), np.nanmax(d))
     plt.xlabel('Distance (km)')
     plt.ylabel('Depth (m)')
-    plt.xlim(np.min(Float.dist), np.max(Float.dist))
+    plt.xlim(*xlims[0])
     title_str = ("Float {}").format(Float.floatID)
     plt.title(title_str)
-    cbar = plt.colorbar(orientation='horizontal', extend='both')
-    cbar.set_label('$W_w$ (m s$^{-1}$)')
-    plt.clim(-0.15, 0.15)
+
+    my_savefig(Float.floatID, 'Ww_section')
 
 # %% Zoomed in variables near the wave.
 
-hpids = np.arange(10, 60)
-z_vals = np.arange(-1500., 0., 10.)
+hpids = np.arange(10, 50)
+bathy_file = '../../data/sandwell_bathymetry/topo_16.1.img'
+vars = ['Ww', 'U_abs', 'V_abs']
+zvars = ['z', 'zef', 'zef']
+dvars = ['dist_ctd', 'dist_ef', 'dist_ef']
+texvars = ['$W_w$', '$U$', '$V$']
+clims = [(-10., 10.), (-100., 100.), (-100, 100.)]
 
 for Float in [E76, E77]:
-    __, z, Ww = Float.get_interp_grid(hpids, z_vals, 'z', 'rWw')
-    z = z.flatten(order='F')
-    Ww = Ww.flatten(order='F')
-    __, __, d = Float.get_interp_grid(hpids, z_vals, 'z',
-                                      'dist_ctd')
-    d = d.flatten(order='F')
-    plt.figure()
-    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=bwr)
-    plt.ylim(np.min(z), np.max(z))
-    plt.xlim(np.min(d), np.max(d))
-    plt.xlabel('Distance (km)')
-    plt.ylabel('Depth (m)')
-    title_str = ("Float {}").format(Float.floatID)
-    plt.title(title_str)
-    cbar = plt.colorbar(orientation='horizontal', extend='both')
-    cbar.set_label('$W_w$ (m s$^{-1}$)')
-    plt.clim(-0.15, 0.15)
 
-    pf.bathy_along_track(Float, hpids)
-    plt.xlim(np.min(d), np.max(d))
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-    pf.track_on_bathy(Float, hpids)
+    for var, zvar, dvar, texvar, clim in zip(vars, zvars, dvars, texvars,
+                                             clims):
+
+        V = getattr(Float, var)[:, idxs].flatten(order='F')
+        z = getattr(Float, zvar)[:, idxs].flatten(order='F')
+        d = getattr(Float, dvar)[:, idxs].flatten(order='F')
+
+        plt.figure(figsize=(5, 7))
+        plt.scatter(d, z, s=50, c=V*100., edgecolor='none', cmap=bwr)
+        cbar = plt.colorbar(orientation='horizontal', extend='both')
+        cbar.set_label(texvar+' (cm s$^{-1}$)')
+        plt.clim(*clim)
+
+        plt.xlim(np.nanmin(d), np.nanmax(d))
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Depth (m)')
+        title_str = ("Float {}").format(Float.floatID)
+        plt.title(title_str)
+
+        lons = Float.lon_start[idxs]
+        lats = Float.lat_start[idxs]
+        dist = Float.dist[idxs]
+        bathy = sandwell.interp_track(lons, lats, bathy_file)
+        plt.plot(dist, bathy, 'k', linewidth=3)
+
+        plt.ylim(np.nanmin(bathy), np.nanmax(z))
+
+        my_savefig(Float.floatID, var + '_mountain')
+
+    pf.track_on_bathy(Float, hpids, bathy_file=bathy_file)
+    my_savefig(Float.floatID, 'mountain_area_track')
 
 
 
+# %%
 
 E76_hpids = np.arange(27, 34)
 E77_hpids = np.arange(23, 30)
