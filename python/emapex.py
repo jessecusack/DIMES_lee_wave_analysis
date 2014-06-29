@@ -69,6 +69,9 @@ class Profile(object):
           sorting has to be done so that interpolation points are monotonically
           increasing.
 
+          TODO: interp was recently changed in SciPy 0.14 and this sorting may
+          no longer be necessary.
+
           Examples
           --------
           The following example returns interpolated temperatures every 10
@@ -131,8 +134,7 @@ class Profile(object):
                                    ' array sizes.')
 
         except ValueError:
-#            print('Warning: Interpolation problem with half profile {}.'
-#                  ''.format(self.hpid))
+
             var_1_vals = np.NaN*np.zeros_like(var_2_vals)
 
         return var_1_vals
@@ -253,9 +255,11 @@ class EMApexFloat(object):
         lons = np.zeros((len(self.lon_start), 2))
         lats = lons.copy()
         times = lons.copy()
+
         lons[:, 0], lons[:, 1] = self.lon_start, self.lon_end
         lats[:, 0], lats[:, 1] = self.lat_start, self.lat_end
         times[:, 0], times[:, 1] = self.UTC_start, self.UTC_end
+
         self.dist_ctd_data = self.UTC.copy()
         nans = np.isnan(self.dist_ctd_data)
         for i, (lon, lat, time) in enumerate(zip(lons, lats, times)):
@@ -281,17 +285,21 @@ class EMApexFloat(object):
         self.V_abs = self.V + self.sub_surf_v
 
         # Derive some important thermodynamics variables.
+
         # Depth.
         self.z = gsw.z_from_p(self.P, self.lat_start)
         self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
         self.zef = gsw.z_from_p(self.Pef, self.lat_start)
+
         # Absolute salinity.
         self.SA = gsw.SA_from_SP(self.S, self.P, self.lon_start,
                                  self.lat_start)
         # Conservative temperature.
         self.CT = gsw.CT_from_t(self.SA, self.T, self.P)
+
         # Potential temperature with respect to 0 dbar.
         self.PT = gsw.pt_from_CT(self.SA, self.CT)
+
         # In-situ density.
         self.rho = gsw.rho(self.SA, self.CT, self.P)
 
@@ -300,22 +308,25 @@ class EMApexFloat(object):
 
         # Buoyancy frequency regridded onto ctd grid.
         N2_ca, __ = gsw.Nsquared(self.SA, self.CT, self.P, self.lat_start)
-        self.N2 = self.__regrid_from_ca_to_('ctd', N2_ca)
+        self.N2 = self.__regrid('ctd_ca', 'ctd', N2_ca)
 
         # Vertical velocity regridded onto ctd grid.
         dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
         Wz_ca = np.diff(self.z, axis=0)/dt
-        self.Wz = self.__regrid_from_ca_to_('ctd', Wz_ca)
+        self.Wz = self.__regrid('ctd_ca', 'ctd', Wz_ca)
 
         # Shear calculations.
         dUdz_ca = np.diff(self.U, axis=0)/np.diff(self.zef, axis=0)
         dVdz_ca = np.diff(self.V, axis=0)/np.diff(self.zef, axis=0)
-        self.dUdz = self.__regrid_from_ca_to_('ef', dUdz_ca)
-        self.dVdz = self.__regrid_from_ca_to_('ef', dVdz_ca)
+        self.dUdz = self.__regrid('ef_ca', 'ef', dUdz_ca)
+        self.dVdz = self.__regrid('ef_ca', 'ef', dVdz_ca)
 
         # Vertical water velocity.
         self.Wpef = self.Wp.copy()
         del self.Wp
+
+        # Regrid piston position.
+        self.ppos_ctd = self.__regrid('ef', 'ctd', self.ppos)
 
         print("Creating array of half profiles.")
 
@@ -369,26 +380,60 @@ class EMApexFloat(object):
         print("Updating half profiles.")
         [profile.update(self) for profile in self.Profiles]
 
-    def __regrid_from_ca_to_(self, grid, a):
-        """Take a centered grid and put it on a ctd/ef grid using time as the
-        interpolant. This will not work if flattened time is not monotonically
-        increasing."""
-        if grid == 'ctd':
-            Uf = self.UTC.flatten(order='F')
-            Ucf = ((self.UTC[1:, :] + self.UTC[:-1, :])/2.).flatten(order='F')
-            shape = self.UTC.shape
-        elif grid == 'ef':
-            Uf = self.UTCef.flatten(order='F')
-            Ucf = ((self.UTCef[1:, :] +
+    def __regrid(self, grid_from, grid_to, v):
+        """Take a gridded variable and put it on a ctd/ef grid using time as
+        the interpolant.
+
+          Parameters
+          ----------
+          grid_from : string.
+              Grid type which variable v is currently on: 'ctd', 'ef', 'ctd_ca'
+              or 'ef_ca'. Where _ca suffic indicates a centered array.
+          grid_to : string.
+              Grid type that you want that output to be on: 'ctd' or 'ef'.
+          v : 2-D numpy.ndarry.
+              The variable values that need regridding.
+
+          Returns
+          -------
+          x : 2-D numpy.ndarray.
+              The values of v at the interpolation times.
+
+          Notes
+          -----
+          This will not work if flattened time is not monotonically increasing.
+
+        """
+        if grid_from == grid_to:
+            return v
+
+        if grid_from == 'ctd':
+            pUTC = self.UTC.flatten(order='F')
+        elif grid_from == 'ef':
+            pUTC = self.UTCef.flatten(order='F')
+        elif grid_from == 'ctd_ca':
+            pUTC = ((self.UTC[1:, :] + self.UTC[:-1, :])/2.).flatten(order='F')
+        elif grid_from == 'ef_ca':
+            pUTC = ((self.UTCef[1:, :] +
                     self.UTCef[:-1, :])/2.).flatten(order='F')
+        else:
+            raise ValueError("Can only grid from 'ctd', 'ef', 'ctd_ca' or "
+                             "'ef_ca'.")
+
+        if grid_to == 'ctd':
+            xUTC = self.UTC.flatten(order='F')
+            shape = self.UTC.shape
+        elif grid_to == 'ef':
+            xUTC = self.UTCef.flatten(order='F')
             shape = self.UTCef.shape
         else:
-            raise ValueError("grid must be either 'ctd' or 'ef'")
-        a_flat = a.flatten(order='F')
-        nnans = ~np.isnan(Ucf) & ~np.isnan(a_flat)
-        x = Uf.copy()
-        unnans = ~np.isnan(x)
-        x[unnans] = np.interp(Uf[unnans], Ucf[nnans], a_flat[nnans])
+            raise ValueError("Can only grid to 'ctd' or 'ef'.")
+
+        v_flat = v.flatten(order='F')
+        nans = np.isnan(pUTC) | np.isnan(v_flat)
+        x = xUTC.copy()
+        xnans = np.isnan(x)
+        x[~xnans] = np.interp(xUTC[~xnans], pUTC[~nans], v_flat[~nans])
         return x.reshape(shape, order='F')
 
     def get_interp_grid(self, hpids, var_2_vals, var_2_name, var_1_name):
@@ -575,7 +620,6 @@ class EMApexFloat(object):
             print("  Added: rWw.")
 
         self.update_profiles()
-
 
     def apply_strain(self, N2_ref_file):
         """Input the path to file that contains grid of adiabatically levelled
