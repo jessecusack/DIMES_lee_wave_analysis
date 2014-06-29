@@ -30,7 +30,7 @@ def my_savefig(fid, fname):
     fname = os.path.join(plot_dir, fname) + '.' + ftype
     plt.savefig(fname, bbox_inches='tight')
 
-# %%
+# %% Sections of temperature, salinity and potential density.
 
 hpids = np.arange(1, 600)
 
@@ -75,7 +75,7 @@ for Float in [E76, E77]:
 
         my_savefig(Float.floatID, var)
 
-# %%
+# %% Sections of horizontal velocity.
 
 hpids = np.arange(1, 600)
 
@@ -109,10 +109,29 @@ for Float in [E76, E77]:
 
         my_savefig(Float.floatID, comp)
 
-# %%
+# %% A single profile showing Ws, Wf and Ww. Uses W hack.
+
+hpid = 88
+Float = E77
+
+pfl = Float.get_profiles(hpid)
+plt.figure(figsize=(4, 6))
+plt.plot(pfl.Ww*100., pfl.z, 'k')
+plt.plot(pfl.Wz*100., pfl.z, color='grey')
+plt.plot(pfl.Ws*100., pfl.z, 'r')
+
+plt.xlabel('$W_w$, $W_f$, $W_f$ (cm s$^{-1}$)')
+plt.xticks(rotation=35)
+plt.ylabel('Depth (m)')
+title_str = ("Float {}, half profile {}").format(Float.floatID, hpid)
+plt.title(title_str)
+plt.legend(['$W_w$', '$W_f$', '$W_f$'], loc=0)
+
+my_savefig(Float.floatID, 'W_example')
+
+# %% Sections of Ww.
 
 hpids = np.arange(1, 600)
-z_vals = np.arange(-1500., 0., 10.)
 
 for Float in [E76, E77]:
     __, z, Ww = Float.get_interp_grid(hpids, z_vals, 'z', 'rWw')
@@ -133,6 +152,8 @@ for Float in [E76, E77]:
     cbar = plt.colorbar(orientation='horizontal', extend='both')
     cbar.set_label('$W_w$ (m s$^{-1}$)')
     plt.clim(-0.15, 0.15)
+
+# %% Zoomed in variables near the wave.
 
 hpids = np.arange(10, 60)
 z_vals = np.arange(-1500., 0., 10.)
