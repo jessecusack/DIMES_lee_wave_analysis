@@ -605,11 +605,13 @@ class EMApexFloat(object):
             print("  Added: rWw.")
 
             # Hack to get Ww on ctd grid.
-            if data[0] == 'ppos' and data[1] == 'P' and data[2] == 'rho':
+            if ('ppos' in wfi.data_names and 'P' in wfi.data_names
+                and 'rho' in wfi.data_names):
+
                 data = [getattr(self, data_name) for
                         data_name in ['ppos_ctd', 'P', 'rho']]
                 self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
-                self.Ww = self.Ws - self.Wz
+                self.Ww = self.Wz - self.Ws
 
         elif wfi.profiles == 'updown':
 
