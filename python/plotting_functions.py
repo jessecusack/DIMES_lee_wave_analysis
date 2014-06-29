@@ -32,7 +32,7 @@ def scatter_section(Float, hpids, var, x_var='dist', cmap=plt.get_cmap('jet')):
 
     if x_var == 'dist':
 
-        __, __, d = Float.get_interp_grid(hpids, z_vals, 'z', 'dist_ctd_data')
+        __, __, d = Float.get_interp_grid(hpids, z_vals, 'z', 'dist_ctd')
         d = d.flatten(order='F')
 
     elif x_var == 'time':

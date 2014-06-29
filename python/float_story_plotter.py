@@ -22,6 +22,7 @@ E77.apply_strain('../../data/EM-APEX/4977_N2_ref_300dbar.p')
 
 plot_dir = '../figures/large_wave_analysis'
 ftype = 'png'
+bwr = plt.get_cmap('bwr')
 
 
 def my_savefig(fid, fname):
@@ -32,7 +33,6 @@ def my_savefig(fid, fname):
 # %%
 
 hpids = np.arange(1, 600)
-z_vals = np.arange(-1500., 0., 10.)
 
 vars = ['T', 'S', 'rho_1']
 texvars = ['$T$', '$S$', r'$\sigma_1$']
@@ -44,7 +44,7 @@ for Float in [E76, E77]:
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     z = getattr(Float, 'z')[:, idxs].flatten(order='F')
-    d = getattr(Float, 'dist_ctd_data')[:, idxs].flatten(order='F')
+    d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
 
     for var, texvar, unit, clim, cmap in zip(vars, texvars, units, clims,
                                              cmaps):
@@ -63,7 +63,7 @@ for Float in [E76, E77]:
         cbar.set_label(texvar+' ('+unit+')')
         plt.clim(*clim)
 
-        plt.contour(*Float.get_griddata_grid(hpids, 'dist_ctd_data', 'z', var),
+        plt.contour(*Float.get_griddata_grid(hpids, 'dist_ctd', 'z', var),
                     N=6, colors='k')
 
         plt.ylim(np.min(z[~nans]), np.max(z[~nans]))
@@ -77,7 +77,31 @@ for Float in [E76, E77]:
 
 # %%
 
-rbw = plt.get_cmap('bwr')
+hpids = np.arange(1, 600)
+
+for Float in [E76, E77]:
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    z = getattr(Float, 'zef')[:, idxs].flatten(order='F')
+    d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
+
+    for comp in ['U_abs', 'V_abs']:
+
+        V = getattr(Float, comp)[:, idxs].flatten(order='F')
+        plt.figure()
+        plt.scatter(d, z, c=V, edgecolor='none', cmap=bwr)
+        plt.ylim(np.min(z), np.max(z))
+        plt.xlim(np.min(d), np.max(d))
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Depth (m)')
+        title_str = ("Float {}").format(Float.floatID)
+        plt.title(title_str)
+        cbar = plt.colorbar(orientation='horizontal', extend='both')
+        cbar.set_label('${}$ (m s$^{{-1}}$)'.format(comp[0]))
+        plt.clim(-1.5, 1.5)
+
+# %%
+
 hpids = np.arange(1, 600)
 z_vals = np.arange(-1500., 0., 10.)
 
@@ -86,10 +110,10 @@ for Float in [E76, E77]:
     z = z.flatten(order='F')
     Ww = Ww.flatten(order='F')
     __, __, d = Float.get_interp_grid(hpids, z_vals, 'z',
-                                      'dist_ctd_data')
+                                      'dist_ctd')
     d = d.flatten(order='F')
     plt.figure()
-    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=rwb)
+    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=bwr)
     plt.ylim(np.min(z), np.max(z))
     plt.xlim(np.min(d), np.max(d))
     plt.xlabel('Distance (km)')
@@ -109,10 +133,10 @@ for Float in [E76, E77]:
     z = z.flatten(order='F')
     Ww = Ww.flatten(order='F')
     __, __, d = Float.get_interp_grid(hpids, z_vals, 'z',
-                                      'dist_ctd_data')
+                                      'dist_ctd')
     d = d.flatten(order='F')
     plt.figure()
-    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=rwb)
+    plt.scatter(d, z, c=Ww, edgecolor='none', cmap=bwr)
     plt.ylim(np.min(z), np.max(z))
     plt.xlim(np.min(d), np.max(d))
     plt.xlabel('Distance (km)')
@@ -129,25 +153,7 @@ for Float in [E76, E77]:
     pf.track_on_bathy(Float, hpids)
 
 
-for Float in [E76, E77]:
-    for comp in ['U_abs', 'V_abs']:
-        __, z, V = Float.get_interp_grid(hpids, z_vals, 'z', comp)
-        z = z.flatten(order='F')
-        V = V.flatten(order='F')
-        __, __, d = Float.get_interp_grid(hpids, z_vals, 'z',
-                                          'dist_ctd_data')
-        d = d.flatten(order='F')
-        plt.figure()
-        plt.scatter(d, z, c=V, edgecolor='none', cmap=rwb)
-        plt.ylim(np.min(z), np.max(z))
-        plt.xlim(np.min(d), np.max(d))
-        plt.xlabel('Distance (km)')
-        plt.ylabel('Depth (m)')
-        title_str = ("Float {}").format(Float.floatID)
-        plt.title(title_str)
-        cbar = plt.colorbar(orientation='horizontal', extend='both')
-        cbar.set_label('$'+comp[0]+'$ (m s$^{-1}$)')
-        plt.clim(-1.5, 1.5)
+
 
 E76_hpids = np.arange(27, 34)
 E77_hpids = np.arange(23, 30)
@@ -266,7 +272,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
     z = Float.rz[:,idxs].flatten(order='F')
-    x = Float.rdist_ctd_data[:, idxs].flatten(order='F')*1000.
+    x = Float.rdist_ctd[:, idxs].flatten(order='F')*1000.
     t = Float.rUTC[:, idxs].flatten(order='F')*86400.
     W = Float.rWw[:, idxs].flatten(order='F')
 

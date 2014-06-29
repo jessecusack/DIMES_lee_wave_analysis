@@ -260,8 +260,8 @@ class EMApexFloat(object):
         lats[:, 0], lats[:, 1] = self.lat_start, self.lat_end
         times[:, 0], times[:, 1] = self.UTC_start, self.UTC_end
 
-        self.dist_ctd_data = self.UTC.copy()
-        nans = np.isnan(self.dist_ctd_data)
+        self.dist_ctd = self.UTC.copy()
+        nans = np.isnan(self.dist_ctd)
         for i, (lon, lat, time) in enumerate(zip(lons, lats, times)):
             self.profile_ddist[i] = mptls.lldist(lon, lat)
             # Convert time from days to seconds.
@@ -269,7 +269,9 @@ class EMApexFloat(object):
 
             d = np.array([self.dist[i], self.dist[i] + self.profile_ddist[i]])
             idxs = ~nans[:, i]
-            self.dist_ctd_data[idxs, i] = np.interp(self.UTC[idxs, i], time, d)
+            self.dist_ctd[idxs, i] = np.interp(self.UTC[idxs, i], time, d)
+
+        self.dist_ef = self.__regrid('ctd', 'ef', self.dist_ctd)
 
         # Pythagorian approximation (?) of bearing.
         self.profile_bearing = np.arctan2(self.lon_end - self.lon_start,
@@ -601,6 +603,13 @@ class EMApexFloat(object):
             print("  Added: rWs.")
             self.rWw = self.rWz - self.rWs
             print("  Added: rWw.")
+
+            # Hack to get Ww on ctd grid.
+            if data[0] == 'ppos' and data[1] == 'P' and data[2] == 'rho':
+                data = [getattr(self, data_name) for
+                        data_name in ['ppos_ctd', 'P', 'rho']]
+                self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+                self.Ww = self.Ws - self.Wz
 
         elif wfi.profiles == 'updown':
 

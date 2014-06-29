@@ -103,7 +103,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
     z = Float.rz[:, idxs].flatten(order='F')
-    x = Float.rdist_ctd_data[:, idxs].flatten(order='F')*1000.
+    x = Float.rdist_ctd[:, idxs].flatten(order='F')*1000.
     t = Float.rUTC[:, idxs].flatten(order='F')*86400.
     W = Float.rWw[:, idxs].flatten(order='F')
 
