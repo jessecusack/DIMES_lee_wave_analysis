@@ -219,8 +219,6 @@ for Float in [E76, E77]:
     pf.track_on_bathy(Float, hpids, bathy_file=bathy_file)
     my_savefig(Float.floatID, 'mountain_area_track')
 
-
-
 # %%
 
 E76_hpids = np.arange(27, 34)
