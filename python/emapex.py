@@ -328,7 +328,7 @@ class EMApexFloat(object):
         del self.Wp
 
         # Regrid piston position.
-        self.ppos_ctd = self.__regrid('ef', 'ctd', self.ppos)
+        self.ppos_ctd = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
 
         print("Creating array of half profiles.")
 
