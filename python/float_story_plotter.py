@@ -139,7 +139,6 @@ my_savefig(Float.floatID, 'W_example')
 # %% Sections of Ww.
 
 hpids = np.arange(1, 600)
-xlims = [(0., 1200.), (0., 750.)]
 
 for Float, xlim in zip([E76, E77], xlims):
 
@@ -147,8 +146,6 @@ for Float, xlim in zip([E76, E77], xlims):
     z = getattr(Float, 'z')[:, idxs].flatten(order='F')
     d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
     Ww = getattr(Float, 'Ww')[:, idxs].flatten(order='F')
-    # Remove dud values.
-    Ww[d > xlim[1]] = np.nan
 
     plt.figure(figsize=(12, 4))
     plt.scatter(d, z, c=Ww*100., edgecolor='none', cmap=bwr)
@@ -158,7 +155,6 @@ for Float, xlim in zip([E76, E77], xlims):
     plt.clim(-5, 5)
 
     Xg, Zg, Wg = Float.get_griddata_grid(hpids, 'dist_ctd', 'z', 'Ww')
-    Wg[Xg > xlim[1]] = np.nan
     Wg = np.abs(Wg)
     plt.contour(Xg, Zg, Wg, levels=[0.025], colors='k',
                 linestyles='dashed')
@@ -167,7 +163,7 @@ for Float, xlim in zip([E76, E77], xlims):
 #    plt.xlim(np.nanmin(d), np.nanmax(d))
     plt.xlabel('Distance (km)')
     plt.ylabel('Depth (m)')
-    plt.xlim(*xlims[0])
+    plt.xlim(np.nanmin(d), np.nanmax(d))
     title_str = ("Float {}").format(Float.floatID)
     plt.title(title_str)
 
