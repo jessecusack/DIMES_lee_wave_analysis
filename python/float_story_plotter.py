@@ -140,7 +140,7 @@ my_savefig(Float.floatID, 'W_example')
 
 hpids = np.arange(1, 600)
 
-for Float, xlim in zip([E76, E77], xlims):
+for Float in E76, E77]:
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     z = getattr(Float, 'z')[:, idxs].flatten(order='F')
