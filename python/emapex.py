@@ -11,6 +11,7 @@ data.
 import numpy as np
 import scipy.io as io
 from scipy.interpolate import griddata
+from scipy.integrate import cumtrapz
 import gsw
 import mapping_tools as mptls
 import mat2py as m2p
@@ -282,9 +283,14 @@ class EMApexFloat(object):
         self.sub_surf_u = self.sub_surf_speed*np.sin(self.profile_bearing)
         self.sub_surf_v = self.sub_surf_speed*np.cos(self.profile_bearing)
 
-        # Absolute velocity.
+        # Absolute velocity defined as relative velocity plus mean velocity
+        # minus depth integrated relative velocity.
         self.U_abs = self.U + self.sub_surf_u
+        self.U_abs -= cumtrapz(self.U, self.UTCef*86400.,
+                               axis=0, initial=0.)/self.profile_dt
         self.V_abs = self.V + self.sub_surf_v
+        self.V_abs -= cumtrapz(self.V, self.UTCef*86400.,
+                               axis=0, initial=0.)/self.profile_dt
 
         # Derive some important thermodynamics variables.
 
