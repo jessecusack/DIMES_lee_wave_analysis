@@ -41,10 +41,10 @@ def my_savefig(fid, fname):
 
 hpids = np.arange(1, 600)
 
-vars = ['T', 'S', 'rho_1']
-texvars = ['$T$', '$S$', r'$\sigma_1$']
-units = [r'$^\circ$C', 'PSU', 'kg m$^{-3}$']
-clims = [(2., 6.), (34., 34.6), (31.2, 32.3)]
+vars = ['T', 'S']  # , 'rho_1']
+texvars = ['$T$', '$S$']  # , r'$\sigma_1$']
+units = [r'$^\circ$C', 'PSU']  # , 'kg m$^{-3}$']
+clims = [(2., 6.), (34., 34.6)]  # , (31.2, 32.3)]
 cmaps = [plt.get_cmap(s) for s in ['rainbow', 'summer', 'spring']]
 
 for Float in [E76, E77]:
@@ -53,13 +53,13 @@ for Float in [E76, E77]:
     z = getattr(Float, 'z')[:, idxs].flatten(order='F')
     d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
 
+    Xg, Zg, rho_1g = Float.get_griddata_grid(hpids, 'dist_ctd', 'z', 'rho_1')
+    rho_1g -= 1000.
+
     for var, texvar, unit, clim, cmap in zip(vars, texvars, units, clims,
                                              cmaps):
 
         C = getattr(Float, var)[:, idxs].flatten(order='F')
-
-        if var == 'rho_1':
-            C -= 1000.
 
         nans = np.isnan(z) | np.isnan(d) | np.isnan(C)
 
@@ -72,6 +72,8 @@ for Float in [E76, E77]:
 
         plt.contour(*Float.get_griddata_grid(hpids, 'dist_ctd', 'z', var),
                     N=6, colors='k')
+        CS = plt.contour(Xg, Zg, rho_1g, N=6, colors='w')
+#        plt.clabel(CS, inline=1, fontsize=8)
 
         plt.ylim(np.min(z[~nans]), np.max(z[~nans]))
         plt.xlim(np.min(d[~nans]), np.max(d[~nans]))
@@ -116,7 +118,7 @@ for Float in [E76, E77]:
 
         my_savefig(Float.floatID, comp)
 
-# %% A single profile showing Ws, Wf and Ww. Uses W hack.
+# %% A single profile showing Ws, Wf and Ww.
 
 hpid = 88
 Float = E77
@@ -140,7 +142,7 @@ my_savefig(Float.floatID, 'W_example')
 
 hpids = np.arange(1, 600)
 
-for Float in E76, E77]:
+for Float in [E76, E77]:
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     z = getattr(Float, 'z')[:, idxs].flatten(order='F')
@@ -217,23 +219,6 @@ for Float in [E76, E77]:
 
 # %%
 
-E76_hpids = np.arange(27, 34)
-E77_hpids = np.arange(23, 30)
-
-vars = ['rWw', 'U_abs', 'V_abs']
-texvars = ['$W_w$', '$U$', '$V$']
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-    for var, texvar in zip(vars, texvars):
-        pf.depth_profile(Float, hpids, var, hold='on', dlim=[-1500., -100.])
-        title_str = "Float {}".format(Float.floatID)
-        plt.title(title_str)
-        plt.xlabel(texvar+' (m s$^{-1}$)')
-        plt.ylabel('Depth (m)')
-        plt.legend(hpids, loc=0)
-
-import scipy.optimize as op
-import pylab as pyl
 
 def plane_wave(x, A, k, phase, C):
     return A*np.cos(2*np.pi*(k*x + phase)) + C
@@ -314,35 +299,35 @@ for Float in [E76, E77]:
         title_str = ("Float {}, {} ({})").format(Float.floatID, texvar, unit)
         plt.title(title_str)
 
+# %%
 
 def plane_wave2(params, x):
-    A, k, m, om = params
-    return A*np.cos(2*np.pi*(k*x[:,0] + m*x[:,1] + om*x[:,2]))
-
+    A, k, m, phi = params
+    return A*np.cos(k*x[:,0] + m*x[:,1] + phi)
 
 def cost(params, data, func, y):
     return (func(params, data) - y).flatten()
 
-
 res = []
 
-E76_hpids = np.arange(27, 34) # np.arange(31, 33)
-E77_hpids = np.arange(23, 30) # np.arange(26, 28)
+E76_hpids = 31  # np.arange(31, 33) # np.arange(31, 33)
+E77_hpids = 27  # np.arange(26, 28) # np.arange(26, 28)
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-    z = Float.rz[:,idxs].flatten(order='F')
-    x = Float.rdist_ctd[:, idxs].flatten(order='F')*1000.
-    t = Float.rUTC[:, idxs].flatten(order='F')*86400.
-    W = Float.rWw[:, idxs].flatten(order='F')
+    z = Float.z[:,idxs].flatten(order='F')
+    x = Float.dist_ctd[:, idxs].flatten(order='F')*1000.
+    t = Float.UTC[:, idxs].flatten(order='F')*86400.
+    t -= np.nanmin(t)
+    W = Float.Ww[:, idxs].flatten(order='F')
 
     nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -200)
     data = np.array([x[~nans], z[~nans], t[~nans]]).T
     W = W[~nans]
 
-    x0 = [0.15, 0.001, 0.003, 0.]
+    x0 = [0.05, 0.002, 0.01, 0.]
     fit = op.leastsq(cost, x0=x0, args=(data, plane_wave2, W))[0]
     print(fit)
     res.append(fit)
@@ -352,8 +337,9 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     plt.figure()
     plt.subplot(3, 1, 1)
-    plt.plot(data[:,0], Wm, data[:,0], W)#, data[:,0], Wm0)
+    plt.plot(data[:,0], Wm, data[:,0], W, data[:,0], Wm0)
     plt.subplot(3, 1, 2)
-    plt.plot(Wm, data[:,1], W, data[:,1])#, Wm0, data[:,1])
+    plt.plot(Wm, data[:,1], W, data[:,1], Wm0, data[:,1])
     plt.subplot(3, 1, 3)
-    plt.plot(data[:,2], Wm, data[:,2], W)#, data[:,2], Wm0)
+    plt.plot(data[:,2], Wm, data[:,2], W, data[:,2], Wm0)
+
