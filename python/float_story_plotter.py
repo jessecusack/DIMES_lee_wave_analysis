@@ -8,7 +8,7 @@ import matplotlib.colors as mcolors
 import plotting_functions as pf
 import emapex
 import scipy.optimize as op
-import pylab as pyl
+import gsw
 import os
 import sandwell
 from scipy.interpolate import griddata
@@ -221,61 +221,128 @@ for Float in [E76, E77]:
     my_savefig(Float.floatID, 'mountain_area_track')
 
 
-# %% Fitting in only one direction.
+# %% Fitting in only one direction. Vertical wavenumber.
 
-def plane_wave(x, A, k, phase, C):
-    return A*np.cos(2*np.pi*(k*x + phase)) + C
+def plane_wave(x, A, k, phase):
+    return A*np.cos((k*x + phase))
 
-dz = 5.
-dk = 1./dz
-
-E76_hpids = np.arange(27, 34)
-E77_hpids = np.arange(23, 30)
-
-var_names = ['rWw']  #['rU_abs', 'rV_abs', 'rWw']
+E76_hpids = np.arange(31, 33)
+E77_hpids = np.arange(23, 24)
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     for pfl in Float.get_profiles(hpids):
 
-        z = getattr(pfl, 'rz')
+        z = getattr(pfl, 'z')       
+        Ww = getattr(pfl, 'Ww')
+        
+        # Remove nans and the top 50 m. 
+        nans = np.isnan(z) | np.isnan(Ww) | (z > -50)
+        z, Ww = z[~nans], Ww[~nans]
+        
+        # Setting up the spectral analysis.
+        dz = np.abs(np.round(np.mean(np.diff(z))))
+        dk = 1./dz
+        iz = np.arange(np.min(z), np.max(z), dz)
+        idxs = np.argsort(z)
+        iWw = np.interp(iz, z[idxs], Ww[idxs])
+        diWw = sig.detrend(iWw)
+        
+        # Doing the spectral analysis.
+        m, Pw = sig.welch(iWw, fs=dk, detrend='linear')
 
-        for name in var_names:
+        # Try fitting plane wave.
+        popt, __ = op.curve_fit(plane_wave, iz, iWw, 
+                                p0=[0.15, 0.015, 0.])
+        mfit = popt[1]/(2.*np.pi)
 
-            var = getattr(pfl, name)
-            N = var.size
+        plt.figure(figsize=(4,6))
+        
+#        plt.subplot(1, 2, 1)            
+        plt.plot(iWw*100., iz, plane_wave(iz, *popt)*100., iz)
+        plt.xticks(rotation=45)
+        plt.xlabel('$W_w$ (cm s$^{-1}$)')
+        plt.ylabel('$z$ (m)')
+        title = ("Float {}, profile {}\nm_fit {:1.1e} m$^{{-1}}$"
+                 "\nlambda_fit {:4.0f} m"
+                 "").format(Float.floatID, pfl.hpid[0], mfit, 1./mfit)
+        plt.title(title)
+        plt.legend(['$W_w$', 'fit'])
+        my_savefig(Float.floatID, str(pfl.hpid) + '_mfit')
+#        plt.subplot(1, 2, 2)
+#        plt.loglog(m, Pw)
+#        mmax = m[Pw.argmax()]
+#        title = ("Float {}, profile {}\nm_max {:1.1e} m$^{{-1}}$"
+#                 "\nlambda_max {:4.0f} m"
+#                 "").format(Float.floatID, pfl.hpid, mmax, 1./mmax)
+#        ylim = plt.ylim()
+#        plt.plot(2*[mmax], ylim, 'r', 2*[mfit], ylim, 'g')
+#        plt.title(title)
+#        plt.xlabel('$m$ (m$^{-1}$)')
 
-            # Try fitting plane wave.
-            popt, __ = op.curve_fit(plane_wave, z, var,
-                                    p0=[0.1, 1.6e-3, 0., 0.])
-            mfit = popt[1]
+# %% Fitting in time only.
 
-            plt.figure()
-            plt.subplot(1, 2, 1)
+def plane_wave(x, A, k, phase):
+    return A*np.cos((k*x + phase))
 
-            plt.plot(var, z, plane_wave(z, *popt), z)
-            plt.xticks(rotation=45)
-            plt.xlabel('$W_w$ (m s$^{-1}$)')
-            plt.ylabel('$z$ (m)')
-            title = ("{}: Float {}, profile {}\nm_fit {:1.1e} m$^{{-1}}$"
-                     "\nlambda_fit {:4.0f} m"
-                     "").format(name, Float.floatID, pfl.hpid[0], mfit, 1./mfit)
-            plt.title(title)
+E76_hpids = np.arange(31, 33)
+E77_hpids = np.arange(23, 24)
 
-            plt.subplot(1, 2, 2)
-            # Try calculating power spectral density.
-            Pzz, ms = plt.psd(var, NFFT=N//2, Fs=dk,
-                              noverlap=int(0.2*N//2),
-                              detrend=pyl.detrend_linear)
-            plt.gca().set_xscale('log')
-            mmax = ms[Pzz.argmax()]
-            title = ("{}: Float {}, profile {}\nm_max {:1.1e} m$^{{-1}}$"
-                     "\nlambda_max {:4.0f} m"
-                     "").format(name, Float.floatID, pfl.hpid, mmax, 1./mmax)
-            ylim = plt.ylim()
-            plt.plot(2*[mmax], ylim, 'r', 2*[mfit], ylim, 'g')
-            plt.title(title)
-            plt.xlabel('$m$ (m$^{-1}$)')
+for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
+
+    for pfl in Float.get_profiles(hpids):
+
+        z = getattr(pfl, 'z')
+        t = getattr(pfl, 'UTC')
+        t = 24.*60.*(t - np.nanmin(t))  # Convert to minutes.
+        
+        Ww = getattr(pfl, 'Ww')
+        N2_ref = getattr(pfl, 'N2_ref')
+        
+        nans = np.isnan(z) | np.isnan(t) | np.isnan(Ww) | np.isnan(N2_ref) | (z > -50)
+        z, t, Ww, N2_ref = z[~nans], t[~nans], Ww[~nans], N2_ref[~nans]
+        
+        # Setting up the spectral analysis.
+        ts = 60.*t  # Convert to seconds.
+        dt = np.round(np.mean(np.diff(ts)))
+        fs = 1./dt
+        it = np.arange(np.min(ts), np.max(ts), dt)
+        iWw = np.interp(it, ts, Ww)
+        diWw = sig.detrend(iWw)
+
+        # Get an idea of the buoyancy frequency.
+        N_mean = np.mean(np.sqrt(N2_ref[z < -200]))/(2.*np.pi)
+        # The inertial frequency.
+        fcor = np.abs(gsw.f(-57.5))/(2.*np.pi)
+        
+        # Perform the spectral analysis.
+        freqs, Pw = sig.welch(iWw, fs=fs, detrend='linear')
+        
+        # Fit a curve.
+        popt, __ = op.curve_fit(plane_wave, it, diWw, 
+                                p0=[0.1, 0.002, 0.])
+        omfit = popt[1]/(2.*np.pi)
+        period = 1/omfit/60.
+
+        plt.figure(figsize=(4,6))
+    
+#        plt.subplot(1, 2, 1)            
+        plt.plot(diWw, it, plane_wave(it, *popt), it)
+        plt.xticks(rotation=45)
+        plt.xlabel('$W_w$ (m s$^{-1}$)')
+        plt.ylabel('$t$ (s)')
+        title = ("Float {}, profile {}\nperiod {} min").format(Float.floatID, pfl.hpid[0], period)
+        plt.title(title)
+        plt.legend(['$W_w$', 'fit'])
+        my_savefig(Float.floatID, str(pfl.hpid) + '_ofit')
+
+#        plt.subplot(1, 2, 2)
+#        plt.loglog(freqs, Pw)
+#        ylim = plt.ylim()
+#        plt.plot(2*[N_mean], ylim, 'r', 2*[fcor], ylim, 'r',  2*[omfit], ylim, 'g')
+#        plt.title(title)
+#        plt.xlabel('$f$ (s$^{-1}$)')
+#        title = ("Float {}, profile {}").format(Float.floatID, pfl.hpid[0])
 
 # %% A few waves
 
@@ -354,7 +421,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     data = np.array([x[~nans], z[~nans], t[~nans], Ws[~nans]]).T
     W2 = W[~nans]
 
-    x0 = [0.15, 0.004, 0.01, 0.0003, 0.]
+    x0 = [0.15, 0.004, 0.006, 0.0004, 0.]
 
     fit = op.leastsq(cost, x0=x0, args=(data, wave_3, W2))[0]
     print(fit)
@@ -373,10 +440,15 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     plt.figure()
     plt.subplot(2, 1, 1)
-    plt.plot(Wm, data[:,1], W, z)#, Wm0, data[:,1])
+    plt.plot(Wm*100., data[:,1], W*100., z)#, Wm0, data[:,1])
+    plt.xlabel('$W_w$ (cm s$^{-1}$)')
+    plt.ylabel('Depth (m)')
     plt.subplot(2, 1, 2)
-    plt.plot(data[:,2], Wm, t, W)#, data[:,2], Wm0)
-
+    plt.plot(data[:,2], Wm*100., t, W*100.)#, data[:,2], Wm0)
+    plt.xlabel('Time (s)')
+    plt.ylabel('$W_w$ (cm s$^{-1}$)')
+    
+    my_savefig(Float.floatID, 'wave_3_fit')
 # hpid 31 and 26
 #[ -1.30611467e-01   4.00000000e-03   5.37679530e-03  -5.51902074e-04
 #   4.99192551e+00  -1.07282887e+00   3.44287143e+00]
@@ -386,7 +458,6 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 #  -2.50568019e+00   6.85488386e-01  -8.23274676e+00]
 #Frequency = 0.000238259789373 s-1, Period = 69.951655336 min.
 #Wavenumber = 0.000993181117242 m-1, Wavelength = 1006.86569916 m.
-
 
 
 # %%
