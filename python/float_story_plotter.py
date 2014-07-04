@@ -11,6 +11,9 @@ import scipy.optimize as op
 import pylab as pyl
 import os
 import sandwell
+from scipy.interpolate import griddata
+from scipy.integrate import cumtrapz
+import scipy.signal as sig
 
 reload(emapex)
 
@@ -217,8 +220,8 @@ for Float in [E76, E77]:
     pf.track_on_bathy(Float, hpids, bathy_file=bathy_file)
     my_savefig(Float.floatID, 'mountain_area_track')
 
-# %%
 
+# %% Fitting in only one direction.
 
 def plane_wave(x, A, k, phase, C):
     return A*np.cos(2*np.pi*(k*x + phase)) + C
@@ -274,44 +277,66 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
             plt.title(title)
             plt.xlabel('$m$ (m$^{-1}$)')
 
+# %% A few waves
 
-hpids = np.arange(10, 60)
+hpids = np.arange(30, 33)
+Float = E76
+dttype = 'linear'
+xticks = [-20, 0, 20]
 
-vars = ['T', 'S', 'rho_1']
-units = ['$^\\circ$C', 'PSU', 'kg m$^{-3}$']
-texvars = ['$T$', '$S$', r'$\sigma_1$']
-Tvals = np.arange(2.5, 5.5, 0.5)
-Svals = np.arange(34.1, 34.6, 0.1)
-rhovals = np.arange(1031.5, 1032.3, 0.1)
-vals = [Tvals, Svals, rhovals]
+for hpid in hpids:
+    pfl = Float.get_profiles(hpid)
 
-for Float in [E76, E77]:
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-    dist = Float.dist[idxs]
-    for var, texvar, unit, val in zip(vars, texvars, units, vals):
+    uvnans = np.isnan(pfl.U) | np.isnan(pfl.V)
+    wnans = np.isnan(pfl.Ww)
 
-        __, __, var_1g = Float.get_interp_grid(hpids, val, var, 'z')
-        plt.figure()
-        plt.plot(dist, var_1g.T)
-        plt.xlabel('Distance (km)')
-        plt.ylabel('Depth (m)')
-        plt.legend(str(val).strip('[]').split(), loc=1)
-        title_str = ("Float {}, {} ({})").format(Float.floatID, texvar, unit)
-        plt.title(title_str)
+    fig, ax = plt.subplots(1, 3, sharey=True, figsize=(4, 6))
+    title_str = ("Float {}, half profile {}").format(Float.floatID, hpid)
+    plt.suptitle(title_str)
 
-# %%
+    ax[0].plot(pfl.Ww[~wnans]*100., pfl.z[~wnans], 'b')
+    ax[0].plot(2*[0.], [-1600, 0], 'k-')
+    ax[0].set_ylabel('Depth (m)')
+    ax[0].set_xlabel('$W_w$ (cm s$^{-1}$)')
+    ax[0].grid()
+    ax[0].set_xticklabels(ax[0].get_xticks(), rotation=60)
+
+    ax[1].plot(pfl.U[~uvnans]*100., pfl.zef[~uvnans], 'b')
+    ax[1].plot(2*[0.], [-1600, 0], 'k-')
+    ax[1].set_xlabel('$U$ (cm s$^{-1}$)')
+    ax[1].grid()
+    ax[1].set_xticklabels(ax[1].get_xticks(), rotation=60)
+
+    ax[2].plot(pfl.V[~uvnans]*100., pfl.zef[~uvnans], 'b')
+    ax[2].plot(2*[0.], [-1600, 0], 'k-')
+    ax[2].set_xlabel('$V$ (cm s$^{-1}$)')
+    ax[2].grid()
+    ax[2].set_xticklabels(ax[2].get_xticks(), rotation=60)
+
+    my_savefig(Float.floatID, 'WU_profile_' + str(hpid))
+
+# %% Fitting in all dimensions.
 
 def plane_wave2(params, x):
-    A, k, m, phi = params
-    return A*np.cos(k*x[:,0] + m*x[:,1] + phi)
+    A, k, m, om, phi = params
+    return A*np.cos(k*x[:, 0] + m*x[:, 1] + om*x[:, 2] + phi)
+
+
+def wave_3(params, x):
+    A, k, m, om, phi= params
+    x[:, 0] = 0.
+    z = cumtrapz(x[:, 3], x[:, 2], initial=0.) - \
+        A/om*np.sin(k*x[:, 0] + m*x[:, 1] - om*x[:, 2] + phi)
+    return A*np.cos(k*x[:, 0] + m*z - om*x[:, 2] + phi)
+
 
 def cost(params, data, func, y):
     return (func(params, data) - y).flatten()
 
 res = []
 
-E76_hpids = 31  # np.arange(31, 33) # np.arange(31, 33)
-E77_hpids = 27  # np.arange(26, 28) # np.arange(26, 28)
+E76_hpids = np.arange(31, 32) # np.arange(31, 33)
+E77_hpids = np.arange(26, 27) # np.arange(26, 28)
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
@@ -322,24 +347,160 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     t = Float.UTC[:, idxs].flatten(order='F')*86400.
     t -= np.nanmin(t)
     W = Float.Ww[:, idxs].flatten(order='F')
+    Ws = Float.Ws[:, idxs].flatten(order='F')
 
-    nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -200)
-    data = np.array([x[~nans], z[~nans], t[~nans]]).T
-    W = W[~nans]
+    nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -600)
 
-    x0 = [0.05, 0.002, 0.01, 0.]
-    fit = op.leastsq(cost, x0=x0, args=(data, plane_wave2, W))[0]
+    data = np.array([x[~nans], z[~nans], t[~nans], Ws[~nans]]).T
+    W2 = W[~nans]
+
+    x0 = [0.15, 0.004, 0.01, 0.0003, 0.]
+
+    fit = op.leastsq(cost, x0=x0, args=(data, wave_3, W2))[0]
     print(fit)
+    freq = fit[3]/(2.*np.pi)
+    period = 1./freq/60.
+    wavenum = fit[2]/(2.*np.pi)
+    wavelen = 1./wavenum
+
+    print("Frequency = {} s-1, Period = {} min.".format(freq, period))
+    print("Wavenumber = {} m-1, Wavelength = {} m.".format(wavenum, wavelen))
     res.append(fit)
 
-    Wm = plane_wave2(fit, data)
-    Wm0 = plane_wave2(x0, data)
+    Wm = wave_3(fit, data)
+    Wm2 = wave_3(fit, np.array([x, z, t, Ws]).T)
+    Wm0 = wave_3(x0, data)
 
     plt.figure()
-    plt.subplot(3, 1, 1)
-    plt.plot(data[:,0], Wm, data[:,0], W, data[:,0], Wm0)
-    plt.subplot(3, 1, 2)
-    plt.plot(Wm, data[:,1], W, data[:,1], Wm0, data[:,1])
-    plt.subplot(3, 1, 3)
-    plt.plot(data[:,2], Wm, data[:,2], W, data[:,2], Wm0)
+    plt.subplot(2, 1, 1)
+    plt.plot(Wm, data[:,1], W, z)#, Wm0, data[:,1])
+    plt.subplot(2, 1, 2)
+    plt.plot(data[:,2], Wm, t, W)#, data[:,2], Wm0)
 
+# hpid 31 and 26
+#[ -1.30611467e-01   4.00000000e-03   5.37679530e-03  -5.51902074e-04
+#   4.99192551e+00  -1.07282887e+00   3.44287143e+00]
+#Frequency = -8.78379431994e-05 s-1, Period = -189.743362146 min.
+#Wavenumber = 0.000855743550121 m-1, Wavelength = 1168.57439341 m.
+#[  1.56557333e-01   4.00000000e-03   6.24034100e-03   1.49703041e-03
+#  -2.50568019e+00   6.85488386e-01  -8.23274676e+00]
+#Frequency = 0.000238259789373 s-1, Period = 69.951655336 min.
+#Wavenumber = 0.000993181117242 m-1, Wavelength = 1006.86569916 m.
+
+
+
+# %%
+
+bwr = plt.get_cmap('bwr')
+E76_hpids = np.arange(20, 40) # np.arange(31, 33)
+E77_hpids = np.arange(15, 35) # np.arange(26, 28)
+bathy_file = '../../data/sandwell_bathymetry/topo_17.1.img'
+vars = ['Ww']#, 'U_abs', 'V_abs']
+zvars = ['z']#, 'zef', 'zef']
+dvars = ['dist_ctd']#, 'dist_ef', 'dist_ef']
+texvars = ['$W_w$']#, '$U$', '$V$']
+clims = [(-10., 10.)]#, (-100., 100.), (-100, 100.)]
+
+var_1_vals = np.linspace(-40., 40., 80)
+var_2_vals = np.linspace(-1500, 0, 500)
+Xg, Zg = np.meshgrid(var_1_vals, var_2_vals)
+
+Wgs = []
+ds = []
+zs = []
+
+for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+
+    for var, zvar, dvar, texvar, clim in zip(vars, zvars, dvars, texvars,
+                                             clims):
+
+        V = getattr(Float, var)[:, idxs].flatten(order='F')
+        z = getattr(Float, zvar)[:, idxs].flatten(order='F')
+        d = getattr(Float, dvar)[:, idxs].flatten(order='F')
+        zs.append(z.copy())
+
+        tgps = getattr(Float, 'UTC_start')[idxs]
+        lon = getattr(Float, 'lon_start')[idxs]
+        lat = getattr(Float, 'lat_start')[idxs]
+        tctd = getattr(Float, 'UTC')[:, idxs].flatten(order='F')
+        nans = np.isnan(d) | np.isnan(tctd)
+        tctd = tctd[~nans]
+        dctd = d[~nans]
+        lonctd = np.interp(tctd, tgps, lon)
+        latctd = np.interp(tctd, tgps, lat)
+        bathy = sandwell.interp_track(lonctd, latctd, bathy_file)
+
+        d -= dctd[bathy.argmax()]
+        ds.append(d.copy())
+
+        nans = np.isnan(d) | np.isnan(z) | np.isnan(V)
+
+        Wg = griddata((d[~nans], z[~nans]), V[~nans], (Xg, Zg), method='linear')
+        Wgs.append(Wg.copy())
+
+        dctd -= dctd[bathy.argmax()]
+        # Spectral analysis of bathymetry.
+        dx = np.mean(np.diff(dctd))
+        dk = 1./dx
+        ix = np.arange(-40., 40., dx)
+        ibathy = np.interp(ix, dctd, bathy)
+        k, Pbathy = sig.welch(ibathy, fs=dk/1000., detrend='linear')
+
+        plt.figure()
+        mWg = np.ma.masked_where(np.isnan(Wg), Wg)
+        plt.pcolormesh(Xg, Zg, mWg*100., cmap=bwr)
+        plt.plot(dctd, bathy, 'k', linewidth=2)
+        cbar = plt.colorbar(orientation='horizontal', extend='both')
+        cbar.set_label(texvar+' (cm s$^{-1}$)')
+        plt.clim(*clim)
+        plt.scatter(d, z, s=1, edgecolor='none', color='grey')
+
+        plt.ylabel('Depth (m)')
+        title_str = ("Float {}").format(Float.floatID)
+        plt.title(title_str)
+        plt.xlim(-10., np.nanmax(d))
+        plt.ylim(np.nanmin(bathy), np.nanmax(z))
+        plt.grid()
+
+        plt.figure()
+        plt.scatter(d, z, s=50, c=V*100., edgecolor='none', cmap=bwr)
+        cbar = plt.colorbar(orientation='horizontal', extend='both')
+        cbar.set_label(texvar+' (cm s$^{-1}$)')
+        plt.clim(*clim)
+
+        plt.xlim(-10., np.nanmax(d))
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Depth (m)')
+        title_str = ("Float {}").format(Float.floatID)
+        plt.title(title_str)
+
+        plt.plot(dctd, bathy, 'k', linewidth=2)
+
+        plt.ylim(np.nanmin(bathy), np.nanmax(z))
+
+        plt.grid()
+
+        my_savefig(Float.floatID, 'mountain_closeup')
+
+        plt.figure(figsize=(5, 7))
+        plt.loglog(k, Pbathy)
+
+
+
+Wg_diff = Wgs[0] - Wgs[1]
+mWg_diff = np.ma.masked_where(np.isnan(Wg_diff), Wg_diff)
+
+plt.figure()
+plt.pcolormesh(Xg, Zg, Wg_diff*100., cmap=bwr)
+plt.plot(dctd, bathy, 'k', linewidth=2)
+cbar = plt.colorbar(orientation='horizontal', extend='both')
+cbar.set_label('$W_w$ difference (cm s$^{-1}$)')
+plt.clim(*clim)
+plt.scatter(ds[0], zs[0], s=1, edgecolor='none', color='grey')
+plt.scatter(ds[0], zs[0], s=1, edgecolor='none', color='grey')
+
+plt.ylabel('Depth (m)')
+plt.xlim(np.nanmin(d), np.nanmax(d))
+plt.ylim(np.nanmin(bathy), np.nanmax(z))
