@@ -218,10 +218,10 @@ def welch_psd(Float, hpids, var, tz='z', hold='off'):
     """Compute power spectral density of some variable using Welch method.
     Variables are first interpolated onto a regular grid in either time or
     depth which can be specified using the tz optional argument. A time
-    interval of 30 seconds is used and a depth interval of 6m."""
+    interval of 25 seconds is used and a depth interval of 4m."""
 
-    dz = 6.
-    dt = 30./86400.
+    dz = 4.
+    dt = 25./86400.
 
     if tz == 'z':
         df = dz
