@@ -94,7 +94,7 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
     p = np.array(p)
 
     g = gsw.grav(lat, P_bar)
-    # The factor 1e-4 is needed for conversion from dbar to Pa. 
+    # The factor 1e-4 is needed for conversion from dbar to Pa.
     N2_ref[~nans] = -1e-4*rho_bar**2*g**2*p[:, 0]
 
     return N2_ref
@@ -126,8 +126,15 @@ def apply_strain(Float, P_bin_width=100.):
     setattr(Float, 'strain_z', strain_z)
 
 
-def h(R):
+def h_gregg(R=3.):
+    """Gregg 2003 implimentation."""
     return 3.*(R + 1)/(2.*R*np.sqrt(2*(R - 1)))
+
+
+def h_whalen(R=3.):
+    """Whalen 2012 implimentation based on Kunze 2006 implimentation (which
+    is based on Gregg yet equations are different)."""
+    return R*(R + 1)/(6.*np.sqrt(2*(R - 1)))
 
 
 def L(f, N):
@@ -154,7 +161,7 @@ def GM(omega, f, N):
     buoyancy = N2/(N2 - om2)**b
 
     return continuum*inertial*buoyancy
-    
+
 def GM2():
     pass
 # betastar=pi*jstar/b*sqrt(N2mean)/N0;
