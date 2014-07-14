@@ -552,8 +552,8 @@ class EMApexFloat(object):
             vals = v[:, idxs].flatten(order='F')[nnans]
             times, jdxs = np.unique(times, return_index=True)
             vals = vals[jdxs]
-            # Convert to datetime objects.
-            times = m2p.datenum_to_datetime(times)
+#            # Convert to datetime objects.
+#            times = m2p.datenum_to_datetime(times)
             return times, vals
 
         # Shorten some names.
