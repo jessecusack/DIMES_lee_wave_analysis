@@ -3,6 +3,8 @@
 Created on Mon Jul 14 14:42:44 2014
 
 @author: jc3e13
+
+
 """
 
 import numpy as np
@@ -30,7 +32,7 @@ def H(j, j_star=3., N_sum=100000):
 
 
 def B(om, f=f_30):
-
+    """The frequency part of the GM spectrum."""
     return 2.*f/(np.pi*om*np.sqrt(om**2 + f**2))
 
 
@@ -52,12 +54,22 @@ def F_eng(om, N, j):
     """Energy per unit mass spectra."""
     return b**2*N_0*N*E(om, j)
 
+#def F_str(om, N, j, f=f_30):
+#
+#def F_she(om, N, j, f=f_30):
+#
+#
+# case upper('Str')
+#  R = (2*pi*kz).^2*(b.^2*N0/N.*(om.^2-f.^2)./om.^2);
+# case upper('She')
+#  R = (2*pi*kz).^2*(b.^2*N0*N*(om.^2+f.^2)./om.^2);
+
 
 def m(om, N, j):
     """Convert from frequency space to vertical wavenumber space."""
-    return np.pi/b*np.sqrt((N**2 - om**2)/(N_0**2 - om**2))*j
+    return (np.pi/b)*np.sqrt((N**2 - om**2)/(N_0**2 - om**2))*j
 
 
 def k(om, N, j, f=f_30):
     """Convert from frequency space to horizontal wavenumber space."""
-    return np.pi/b*np.sqrt((om**2 - f**2)/(N_0**2 - om**2))*j
+    return (np.pi/b)*np.sqrt((om**2 - f**2)/(N_0**2 - om**2))*j
