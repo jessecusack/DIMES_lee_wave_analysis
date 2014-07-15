@@ -119,4 +119,8 @@ def m_topo(k, N, U, f):
 
 
 def witch_of_agnesi(x, a=1., h=1.):
-    return h*a**2/(a**2 - x**2)
+    return h*a**2/(a**2 + x**2)
+
+
+if __name__ == '__main__':
+    pass
