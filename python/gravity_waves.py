@@ -116,3 +116,7 @@ def m_topo(k, N, U, f):
     f2 = f**2.
 
     return np.sqrt((k2*(N2 - U2*k2))/(U2*k2 - f2))
+
+
+def witch_of_agnesi(x, a=1., h=1.):
+    return h*a**2/(a**2 - x**2)
