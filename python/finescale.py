@@ -9,6 +9,7 @@ A place for finescale parameterisation functions.
 
 import numpy as np
 import gsw
+import scipy.signal as sig
 
 
 def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
@@ -141,6 +142,13 @@ def L(f, N):
     f30 = 7.292115e-5  # rad s-1
     N0 = 5.2e-3  # rad s-1
     return f*np.arccosh(N/f)/(f30*np.arccosh(N0/f30))
+
+
+def integrated_variance(x, fs, m_c, m_0):
+    """Integrated variance of quantity x."""
+
+    # Calculate the power spectral density.
+    m, spec = sig.periodogram(x, fs=fs)
 
 
 #def GM(omega, f, N):
