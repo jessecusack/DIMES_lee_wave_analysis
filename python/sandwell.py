@@ -16,40 +16,40 @@ import numpy as np
 def read_grid(lon_lat, file_path=None):
     """Read in Smith and Sandwell bathymetry data.
 
-      Parameters
-      ----------
-      lon_lat : array_like
-          [lonmin lonmax lat_min lat_max].
-           west   east   south   north
-      file_path : string, optional
-          Path to the Smith and Sandwell data file.
+    Parameters
+    ----------
+    lon_lat : array_like
+        [lonmin lonmax lat_min lat_max].
+         west   east   south   north
+    file_path : string, optional
+        Path to the Smith and Sandwell data file.
 
-      Returns
-      -------
-      lon_grid : 2-D numpy.ndarray of floats
-          Longitude values.
-      lat_grid : 2-D numpy.ndarray of floats
-          Latitude values.
-      bathy_grid : 2-D numpy.ndarray of 16 bit integers.
-          Bathymetry values.
+    Returns
+    -------
+    lon_grid : 2-D numpy.ndarray of floats
+        Longitude values.
+    lat_grid : 2-D numpy.ndarray of floats
+        Latitude values.
+    bathy_grid : 2-D numpy.ndarray of 16 bit integers.
+        Bathymetry values.
 
-      Raises
-      ------
-      ValueError
-          If lon_lat bounds are not in the range -180 to +180 or
-          -80.738 to +80.738.
+    Raises
+    ------
+    ValueError
+        If lon_lat bounds are not in the range -180 to +180 or
+        -80.738 to +80.738.
 
-      Notes
-      -----
-      The returned bathymetry array indexing is as follows,
-      bathygrid[longitude, latitude], where both are monotonically increasing
-      with index.
+    Notes
+    -----
+    The returned bathymetry array indexing is as follows,
+    bathygrid[longitude, latitude], where both are monotonically increasing
+    with index.
 
-      This function has not been tested across the dateline. 
+    This function has not been tested across the dateline.
 
-      Examples
-      --------
-      See code.
+    Examples
+    --------
+    See code.
 
     """
 
@@ -140,37 +140,37 @@ def read_grid(lon_lat, file_path=None):
 def bilinear_interpolation(xa, ya, fg, x, y):
     """Because, bizarrely, this doesn't exist in numpy.
 
-      Parameters
-      ----------
-      xa : 1-D numpy.ndarray of floats
-          x values of fg, must be monotonically increasing.
-      ya : 1-D numpy.ndarray of floats
-          y values of fg, must be monotonically increasing.
-      fg : 2-D numpy.ndarray of floats
-          values to be interpolated, formatted such that first index (rows)
-          correspond to x and second index (columns) correspond to y, f[x,y]
-      x : 1-D numpy.ndarray of floats
-          x values of interpolation points.
-      y : 1-D numpy.ndarray of floats
-          y values of interpolation points.
+    Parameters
+    ----------
+    xa : 1-D numpy.ndarray of floats
+        x values of fg, must be monotonically increasing.
+    ya : 1-D numpy.ndarray of floats
+        y values of fg, must be monotonically increasing.
+    fg : 2-D numpy.ndarray of floats
+        values to be interpolated, formatted such that first index (rows)
+        correspond to x and second index (columns) correspond to y, f[x,y]
+    x : 1-D numpy.ndarray of floats
+        x values of interpolation points.
+    y : 1-D numpy.ndarray of floats
+        y values of interpolation points.
 
-      Returns
-      -------
-      fi : 1-D numpy.ndarray of floats
-          Interpolated values of fg.
+    Returns
+    -------
+    fi : 1-D numpy.ndarray of floats
+        Interpolated values of fg.
 
-      Raises
-      ------
-      None.
+    Raises
+    ------
+    None.
 
-      Notes
-      -----
-      Currently no error checking.
-      Source: wikipedia.
+    Notes
+    -----
+    Currently no error checking.
+    Source: wikipedia.
 
-      Examples
-      --------
-      None.
+    Examples
+    --------
+    None.
 
     """
 
@@ -196,31 +196,31 @@ def bilinear_interpolation(xa, ya, fg, x, y):
 def interp_track(lons, lats, file_path=None):
     """Interpolate bathymetry data to given longitude and latitude coordinates.
 
-      Parameters
-      ----------
-      lons : 1-D numpy.ndarray of floats
-          Longitude values.
-      lats : 1-D numpy.ndarray of floats
-          Latitude values.
-      file_path : string, optional
-          Path to the Smith and Sandwell data file.
+    Parameters
+    ----------
+    lons : 1-D numpy.ndarray of floats
+        Longitude values.
+    lats : 1-D numpy.ndarray of floats
+        Latitude values.
+    file_path : string, optional
+        Path to the Smith and Sandwell data file.
 
-      Returns
-      -------
-      b : 1-D numpy.ndarray of floats
-          Interpolated values of Smith and Sandwell bathymetry.
+    Returns
+    -------
+    b : 1-D numpy.ndarray of floats
+        Interpolated values of Smith and Sandwell bathymetry.
 
-      Raises
-      ------
-      None.
+    Raises
+    ------
+    None.
 
-      Notes
-      -----
-      Currently no error checking except that which occurs in read_grid.
+    Notes
+    -----
+    Currently no error checking except that which occurs in read_grid.
 
-      Examples
-      --------
-      See code.
+    Examples
+    --------
+    See code.
 
     """
 

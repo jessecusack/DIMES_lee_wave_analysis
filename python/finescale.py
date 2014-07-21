@@ -16,36 +16,30 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
     """Generate smooth buoyancy frequency profile by applying the adiabatic
     levelling method of Bray and Fofonoff (1981).
 
-      Parameters
-      ----------
-      P : 1-D ndarray
-          Pressure [dbar]
-      SA : 1-D ndarray
-          Absolute salinity [g/kg]
-      T : 1-D ndarray
-          Temperature [degrees C]
-      lat : float
-          Latitude [-90...+90]
-      p_bin_width : float, optional
-          Pressure bin width [dbar]
-      deg : int, option
-          Degree of polynomial fit.
+    Parameters
+    ----------
+    P : 1-D ndarray
+        Pressure [dbar]
+    SA : 1-D ndarray
+        Absolute salinity [g/kg]
+    T : 1-D ndarray
+        Temperature [degrees C]
+    lat : float
+        Latitude [-90...+90]
+    p_bin_width : float, optional
+        Pressure bin width [dbar]
+    deg : int, option
+        Degree of polynomial fit.
 
-      Returns
-      -------
-      N2_ref : 1-D ndarray
-          Reference buoyancy frequency [s-2]
+    Returns
+    -------
+    N2_ref : 1-D ndarray
+        Reference buoyancy frequency [s-2]
 
-      Raises
-      ------
-
-      Notes
-      -----
-      Calls to the gibbs seawater toolbox are slow and therefore this function
-      is quite slow.
-
-      Examples
-      --------
+    Notes
+    -----
+    Calls to the gibbs seawater toolbox are slow and therefore this function
+    is quite slow.
 
     """
 

@@ -14,19 +14,19 @@ import numpy as np
 def plane_wave(amplitude, wavevector, position):
     """Simple equation for a plane wave.
 
-      Parameters
-      ----------
-      amplitude : float
-          The wave amplitude.
-      wavevector : ndarray
-          Shape (1, N) array, e.g. (k, l, m, omega).
-      position : ndarray
-          Shape (N, M) array, e.g. (x, y, z, t).
+    Parameters
+    ----------
+    amplitude : float
+        The wave amplitude.
+    wavevector : ndarray
+        Shape (1, N) array, e.g. (k, l, m, omega).
+    position : ndarray
+        Shape (N, M) array, e.g. (x, y, z, t).
 
-      Returns
-      -------
-      wave : ndarray
-          Wave amplitude at given positions. Shape (1, M).
+    Returns
+    -------
+    wave : ndarray
+        Wave amplitude at given positions. Shape (1, M).
 
     """
 
@@ -40,27 +40,27 @@ def omega(N, k, m, l=None, f=None):
 
     (Vallis 2012)
 
-      Parameters
-      ----------
-      N : ndarray
-          Buoyancy frequency [s-1]
-      k : ndarray
-          Horizontal wavenumber (x) [m-1]
-      m : ndarray
-          Vertical wavenumber (z) [m-1]
-      l : ndarray, optional
-          Horizontal wavenumber (y) [m-1]
-      f : ndarray, optional
-          Coriolis parameter [s-1]
+    Parameters
+    ----------
+    N : ndarray
+        Buoyancy frequency [s-1]
+    k : ndarray
+        Horizontal wavenumber (x) [m-1]
+    m : ndarray
+        Vertical wavenumber (z) [m-1]
+    l : ndarray, optional
+        Horizontal wavenumber (y) [m-1]
+    f : ndarray, optional
+        Coriolis parameter [s-1]
 
-      Returns
-      -------
-      omega : ndarray
-          Frequency [s-1]
+    Returns
+    -------
+    omega : ndarray
+        Frequency [s-1]
 
-      Notes
-      -----
-      The appropriate equation will be used based on the function arguments.
+    Notes
+    -----
+    The appropriate equation will be used based on the function arguments.
 
     """
 
@@ -92,21 +92,21 @@ def m_topo(k, N, U, f):
 
     (Vallis 2012)
 
-      Parameters
-      ----------
-      N : ndarray
-          Buoyancy frequency [s-1]
-      k : ndarray
-          Horizontal wavenumber [m-1]
-      U : ndarray
-          Bottom flow speed [m s-1]
-      f : ndarray
-          Coriolis parameter [s-1]
+    Parameters
+    ----------
+    N : ndarray
+        Buoyancy frequency [s-1]
+    k : ndarray
+        Horizontal wavenumber [m-1]
+    U : ndarray
+        Bottom flow speed [m s-1]
+    f : ndarray
+        Coriolis parameter [s-1]
 
-      Returns
-      -------
-      m : ndarray
-          Vertical wavenumber [m-1]
+    Returns
+    -------
+    m : ndarray
+        Vertical wavenumber [m-1]
 
     """
 

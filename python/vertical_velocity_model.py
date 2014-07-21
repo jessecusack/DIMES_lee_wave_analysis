@@ -222,27 +222,27 @@ def cost(params, fixed, model, wf, data, cf_key):
     """The cost function should be minimised when the model parameters are
     optimised.
 
-      Parameters
-      ----------
-      params : 1-D numpy.ndarray.
-          The profile ID numbers at for which to construct grid.
-      model : function.
-          A model of the float in still water.
-      wf : numpy.ndarray
-          The float absolute velocity.
-      model_args : tuple.
-          Additional arguments to model, (model(params, *model_args)).
-      cf_key : string.
-          Dictionary key to select cost function.
+    Parameters
+    ----------
+    params : 1-D numpy.ndarray.
+        The profile ID numbers at for which to construct grid.
+    model : function.
+        A model of the float in still water.
+    wf : numpy.ndarray
+        The float absolute velocity.
+    model_args : tuple.
+        Additional arguments to model, (model(params, *model_args)).
+    cf_key : string.
+        Dictionary key to select cost function.
 
-      Returns
-      -------
-      c : numpy.ndarray
-          The cost calculated from cost_func.
+    Returns
+    -------
+    c : numpy.ndarray
+        The cost calculated from cost_func.
 
-      Notes
-      -----
-      Uses the Profile.interp function.
+    Notes
+    -----
+    Uses the Profile.interp function.
 
 
     """

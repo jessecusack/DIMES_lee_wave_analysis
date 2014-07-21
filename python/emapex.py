@@ -38,50 +38,50 @@ class Profile(object):
     def interp(self, var_2_vals, var_2_name, var_1_name):
         """Linear 1-D interpolation of variables stored by a Profile.
 
-          Parameters
-          ----------
-          var_2_vals : 1-D numpy.ndarray of floats
-              The values at which to return interpolant.
-          var_2_name : string
-              The variable to which var_2_vals correspond.
-          var_1_name : string
-              The variable to be interpolated.
+        Parameters
+        ----------
+        var_2_vals : 1-D numpy.ndarray of floats
+            The values at which to return interpolant.
+        var_2_name : string
+            The variable to which var_2_vals correspond.
+        var_1_name : string
+            The variable to be interpolated.
 
-          Returns
-          -------
-          var_1_vals : 1-D numpy.ndarray of floats
-              The interpolated values of variable 1 at given positions in
-              variable 2.
+        Returns
+        -------
+        var_1_vals : 1-D numpy.ndarray of floats
+            The interpolated values of variable 1 at given positions in
+            variable 2.
 
-          Raises
-          ------
-          ValueError
-              If array sizes cannot be matched with eachother, the ctd time or
-              the ef time.
-          RuntimeWarning
-              If numpy.interp raises a value error which could be because an
-              empty array was passed.
-              TODO: Make this work properly without exiting program.
+        Raises
+        ------
+        ValueError
+            If array sizes cannot be matched with eachother, the ctd time or
+            the ef time.
+        RuntimeWarning
+            If numpy.interp raises a value error which could be because an
+            empty array was passed.
+            TODO: Make this work properly without exiting program.
 
-          Notes
-          -----
-          There may be issues with the orientation of the returned array
-          because numpy.interp insists on increasing points a certain amount of
-          sorting has to be done so that interpolation points are monotonically
-          increasing.
+        Notes
+        -----
+        There may be issues with the orientation of the returned array
+        because numpy.interp insists on increasing points a certain amount of
+        sorting has to be done so that interpolation points are monotonically
+        increasing.
 
-          TODO: interp was recently changed in SciPy 0.14 and this sorting may
-          no longer be necessary.
+        TODO: interp was recently changed in SciPy 0.14 and this sorting may
+        no longer be necessary.
 
-          Examples
-          --------
-          The following example returns interpolated temperatures every 10
-          meters from -1000 m to -100 m depth.
-          >>> import emapex
-          >>> Float = emapex.EMApexFloat('allprofs11.mat',4977)
-          >>> P = Float.get_profiles(100)
-          >>> z_vals = np.arange(-1000., -100., 10)
-          >>> T10 = P.interp(z_vals, 'z', 'T')
+        Examples
+        --------
+        The following example returns interpolated temperatures every 10
+        meters from -1000 m to -100 m depth.
+        >>> import emapex
+        >>> Float = emapex.EMApexFloat('allprofs11.mat',4977)
+        >>> P = Float.get_profiles(100)
+        >>> z_vals = np.arange(-1000., -100., 10)
+        >>> T10 = P.interp(z_vals, 'z', 'T')
         """
 
         # Shorten some names.
@@ -392,24 +392,24 @@ class EMApexFloat(object):
         """Take a gridded variable and put it on a ctd/ef grid using time as
         the interpolant.
 
-          Parameters
-          ----------
-          grid_from : string.
-              Grid type which variable v is currently on: 'ctd', 'ef', 'ctd_ca'
-              or 'ef_ca'. Where _ca suffic indicates a centered array.
-          grid_to : string.
-              Grid type that you want that output to be on: 'ctd' or 'ef'.
-          v : 2-D numpy.ndarry.
-              The variable values that need regridding.
+        Parameters
+        ----------
+        grid_from : string.
+            Grid type which variable v is currently on: 'ctd', 'ef', 'ctd_ca'
+            or 'ef_ca'. Where _ca suffic indicates a centered array.
+        grid_to : string.
+            Grid type that you want that output to be on: 'ctd' or 'ef'.
+        v : 2-D numpy.ndarry.
+            The variable values that need regridding.
 
-          Returns
-          -------
-          x : 2-D numpy.ndarray.
-              The values of v at the interpolation times.
+        Returns
+        -------
+        x : 2-D numpy.ndarray.
+            The values of v at the interpolation times.
 
-          Notes
-          -----
-          This will not work if flattened time is not monotonically increasing.
+        Notes
+        -----
+        This will not work if flattened time is not monotonically increasing.
 
         """
         if grid_from == grid_to:
@@ -448,40 +448,40 @@ class EMApexFloat(object):
         """Grid data from multiple profiles into a matrix. Linear interpolation
         is performed on, but not across profiles.
 
-          Parameters
-          ----------
-          hpids : 1-D numpy.ndarray of integers or floats.
-              The profile ID numbers at for which to construct grid.
-          var_2_vals : 1-D numpy.ndarray of floats
-              The values at which to return interpolant.
-          var_2_name : string
-              The variable to which var_2_vals correspond.
-          var_1_name : string
-              The variable to be interpolated.
+        Parameters
+        ----------
+        hpids : 1-D numpy.ndarray of integers or floats.
+            The profile ID numbers at for which to construct grid.
+        var_2_vals : 1-D numpy.ndarray of floats
+            The values at which to return interpolant.
+        var_2_name : string
+            The variable to which var_2_vals correspond.
+        var_1_name : string
+            The variable to be interpolated.
 
-          Returns
-          -------
-          number_grid : 2-D numpy.ndarray of integers.
-              A meshgrid of numbers from 0 to len(hpids). (May be less if some
-              hpids are missing.)
-          var_2_grid : 2-D numpy.ndarray of floats.
-              A meshed grid of var_2_vals.
-          var_1_grid : 2-D numpy.ndarray of floats.
-              The interpolated grid of variable 1 at given positions of
-          variable 2.
+        Returns
+        -------
+        number_grid : 2-D numpy.ndarray of integers.
+            A meshgrid of numbers from 0 to len(hpids). (May be less if some
+            hpids are missing.)
+        var_2_grid : 2-D numpy.ndarray of floats.
+            A meshed grid of var_2_vals.
+        var_1_grid : 2-D numpy.ndarray of floats.
+            The interpolated grid of variable 1 at given positions of
+        variable 2.
 
-          Notes
-          -----
-          Uses the Profile.interp function.
+        Notes
+        -----
+        Uses the Profile.interp function.
 
-          Examples
-          --------
-          The following example returns and interpolated temperature grid.
-          >>> import emapex
-          >>> Float = emapex.EMApexFloat('allprofs11.mat',4977)
-          >>> hpids = np.arange(10,40)
-          >>> z_vals = np.arange(-1000., -100., 10)
-          >>> T10 = Float.get_interp_grid(hpids, z_vals, 'z', 'T')
+        Examples
+        --------
+        The following example returns and interpolated temperature grid.
+        >>> import emapex
+        >>> Float = emapex.EMApexFloat('allprofs11.mat',4977)
+        >>> hpids = np.arange(10,40)
+        >>> z_vals = np.arange(-1000., -100., 10)
+        >>> T10 = Float.get_interp_grid(hpids, z_vals, 'z', 'T')
         """
 
         profiles = self.get_profiles(hpids)
@@ -500,17 +500,17 @@ class EMApexFloat(object):
                           var_1_vals=None, var_2_vals=None, method='linear'):
         """
 
-          Parameters
-          ----------
+        Parameters
+        ----------
 
-          Returns
-          -------
+        Returns
+        -------
 
-          Notes
-          -----
+        Notes
+        -----
 
-          Examples
-          --------
+        Examples
+        --------
 
         """
 
