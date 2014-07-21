@@ -144,6 +144,63 @@ def L(f, N):
     return f*np.arccosh(N/f)/(f30*np.arccosh(N0/f30))
 
 
+def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
+          return_onesided=True, scaling='density'):
+    """Co-power spectral density estimated using a periodogram."""
+
+    x, y = np.asarray(x), np.asarray(y)
+
+    if (x.size == 0) or (y.size == 0):
+        raise ValueError('At least one of the inputs is empty.')
+
+    if len(x) != len(y):
+        raise ValueError('x and y must have the same length.')
+
+    if nfft is None:
+        nfft = len(x)
+
+    if window is None:
+        window = 'boxcar'
+
+    win = sig.get_window(window, nfft)
+
+    if scaling == 'density':
+        scale = 1.0/(fs*(win*win).sum())
+    elif scaling == 'spectrum':
+        scale = 1.0/win.sum()**2
+    else:
+        raise ValueError('Unknown scaling: %r' % scaling)
+
+    x_dt = sig.detrend(x, type=detrend)
+    y_dt = sig.detrend(y, type=detrend)
+
+    xft = np.fft.fft(win*x_dt, nfft)
+    yft = np.fft.fft(win*y_dt, nfft)
+
+    Pxx = (xft*xft.conj()).real
+    Pyy = (yft*yft.conj()).real
+    Pxy = (xft*yft.conj())
+
+    M = nfft/2 + 1
+
+    # Chop spectrum in half.
+    Pxx, Pyy, Pxy = Pxx[:M], Pyy[:M], Pxy[:M]
+
+    # Multiply spectrum by 2 except for the Nyquist and constant elements.
+    Pxx[..., 1:-1] *= 2*scale
+    Pxx[..., (0,-1)] *= scale
+
+    Pyy[..., 1:-1] *= 2*scale
+    Pyy[..., (0,-1)] *= scale
+
+    Pxy[..., 1:-1] *= 2*scale
+    Pxy[..., (0,-1)] *= scale
+
+    f = np.arange(Pxx.shape[-1])*(fs/nfft)
+
+    return f, Pxx, Pyy, Pxy
+
+
 def integrated_variance(x, fs, m_c, m_0):
     """Integrated variance of quantity x."""
 
