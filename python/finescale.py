@@ -145,8 +145,50 @@ def L(f, N):
 
 
 def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
-          return_onesided=True, scaling='density'):
-    """Co-power spectral density estimated using a periodogram."""
+                  scaling='density'):
+    """
+    Estimate co-power spectral density using periodogram method.
+
+    Parameters
+    ----------
+    x : array_like
+        Time series of measurement values
+    y : array_like
+        Time series of measurement values
+    fs : float, optional
+        Sampling frequency of the `x` time series in units of Hz. Defaults
+        to 1.0.
+    window : str or tuple or array_like, optional
+        Desired window to use. See `get_window` for a list of windows and
+        required parameters. If `window` is array_like it will be used
+        directly as the window and its length will be used for nperseg.
+        Defaults to 'boxcar'. New window option 'sin2taper' is available.
+    nfft : int, optional
+        Length of the FFT used, if a zero padded FFT is desired.  If None,
+        the FFT length is `len(x)`. Defaults to None.
+    detrend : str or function, optional
+        Specifies how to detrend each segment. If `detrend` is a string,
+        it is passed as the ``type`` argument to `detrend`. If it is a
+        function, it takes a segment and returns a detrended segment.
+        Defaults to 'linear'.
+    scaling : { 'density', 'spectrum' }, optional
+        Selects between computing the power spectral density ('density')
+        where Pxx has units of V**2/Hz if x is measured in V and computing
+        the power spectrum ('spectrum') where Pxx has units of V**2 if x is
+        measured in V. Defaults to 'density'.
+
+    Returns
+    -------
+    f : ndarray
+        Array of sample frequencies.
+    Pxx : ndarray
+        Power spectral density or power spectrum of x.
+    Pyy : ndarray
+        Power spectral density or power spectrum of y.
+    Pxy : ndarray (complex)
+        Co-power spectral density or power spectrum of x.
+
+    """
 
     x, y = np.asarray(x), np.asarray(y)
 
@@ -161,8 +203,15 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
 
     if window is None:
         window = 'boxcar'
-
-    win = sig.get_window(window, nfft)
+        win = sig.get_window(window, nfft)
+    elif window == 'sin2taper':
+        win = np.ones(nfft)
+        idx10 = int(np.ceil(nfft/10.))
+        idxs = np.arange(idx10)
+        win[:idx10] = np.sin(np.pi*idxs/(2.*idx10))**2
+        win[-idx10:] = np.cos(np.pi*(idxs - nfft)/(2.*idx10))**2
+    else:
+        win = sig.get_window(window, nfft)
 
     if scaling == 'density':
         scale = 1.0/(fs*(win*win).sum())
@@ -177,6 +226,7 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     xft = np.fft.fft(win*x_dt, nfft)
     yft = np.fft.fft(win*y_dt, nfft)
 
+    # Power spectral density in x, y and xy.
     Pxx = (xft*xft.conj()).real
     Pyy = (yft*yft.conj()).real
     Pxy = (xft*yft.conj())
@@ -186,7 +236,8 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     # Chop spectrum in half.
     Pxx, Pyy, Pxy = Pxx[:M], Pyy[:M], Pxy[:M]
 
-    # Multiply spectrum by 2 except for the Nyquist and constant elements.
+    # Multiply spectrum by 2 except for the Nyquist and constant elements to
+    # account for the loss of negative frequencies.
     Pxx[..., 1:-1] *= 2*scale
     Pxx[..., (0,-1)] *= scale
 
