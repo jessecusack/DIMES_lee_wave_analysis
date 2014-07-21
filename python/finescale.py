@@ -146,17 +146,17 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     Parameters
     ----------
     x : array_like
-        Time series of measurement values
+        Measurement values
     y : array_like
-        Time series of measurement values
+        Measurement values
     fs : float, optional
-        Sampling frequency of the `x` time series in units of Hz. Defaults
-        to 1.0.
+        Sampling frequency of `x` and `y`. e.g. If the measurements are a time
+        series then `fs` in units of Hz. Defaults to 1.0.
     window : str or tuple or array_like, optional
         Desired window to use. See `get_window` for a list of windows and
         required parameters. If `window` is array_like it will be used
         directly as the window and its length will be used for nperseg.
-        Defaults to 'boxcar'. New window option 'sin2taper' is available.
+        Defaults to `boxcar`. New window option `sin2taper` is available.
     nfft : int, optional
         Length of the FFT used, if a zero padded FFT is desired.  If None,
         the FFT length is `len(x)`. Defaults to None.
@@ -180,7 +180,7 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     Pyy : ndarray
         Power spectral density or power spectrum of y.
     Pxy : ndarray (complex)
-        Co-power spectral density or power spectrum of x.
+        Co-power spectral density or co-power spectrum of x.
 
     """
 
@@ -246,11 +246,60 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     return f, Pxx, Pyy, Pxy
 
 
-def integrated_variance(x, fs, m_c, m_0):
+def CW_ps(Pxx, Pyy, Pxy):
+    """Clockwise power spectrum."""
+    QS = -Pxy.imag()
+    return (Pxx + Pyy - 2.*QS)/2.
+
+
+def CCW_ps(Pxx, Pyy, Pxy):
+    """Counter clockwise power spectrum."""
+    QS = -Pxy.imag()
+    return (Pxx + Pyy + 2*QS)/2.
+
+
+def integrated_ps(x, fs, m_c, m_0):
     """Integrated variance of quantity x."""
 
     # Calculate the power spectral density.
     m, spec = sig.periodogram(x, fs=fs)
+
+
+def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
+                        use_tilt=True, dzt=16., dzr=16., dzfd=16., dzg=20.,
+                        ddash=9.):
+    """Spectral corrections for LADCP data - see Polzin et. al. 2002.
+
+    m is vertical wavenumber. Needs factor of 2 pi.
+
+    See Sheen/Shuckburgh MATLAB code for comments.
+    """
+
+    # Range averaging.
+    if use_range:
+        C_range = np.sinc(m*dzt/(2.*np.pi))**2 * np.sinc(m*dzr/(2.*np.pi))**2
+    else:
+        C_range = 1.
+
+    # First differencing.
+    if use_diff:
+        C_diff = np.sinc(m*dzfd/(2.*np.pi))**2
+    else:
+        C_diff = 1.
+
+    # Interpolation.
+    if use_interp:
+        C_interp = np.sinc(m*dzr/(2.*np.pi))**4 * np.sinc(m*dzg/(2.*np.pi))**2
+    else:
+        C_interp = 1.
+
+    # Tilting.
+    if use_tilt:
+        C_tilt = np.sinc(m*ddash/(2.*np.pi))**2
+    else:
+        C_tilt = 1.
+
+    return C_range*C_diff*C_interp*C_tilt
 
 
 #def GM(omega, f, N):
