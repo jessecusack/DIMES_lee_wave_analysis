@@ -258,11 +258,11 @@ def CCW_ps(Pxx, Pyy, Pxy):
     return (Pxx + Pyy + 2*QS)/2.
 
 
-def integrated_ps(x, fs, m_c, m_0):
-    """Integrated variance of quantity x."""
+def integrated_ps(m, P, m_c, m_0):
+    """Integrates power spectrum P between wavenumbers m_c and m_0."""
 
-    # Calculate the power spectral density.
-    m, spec = sig.periodogram(x, fs=fs)
+    idxs = (m < m_c) & (m > m_0)
+    return np.trapz(P[idxs], x=m[idxs])
 
 
 def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
