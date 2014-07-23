@@ -73,3 +73,10 @@ def m(om, N, j):
 def k(om, N, j, f=f_30):
     """Convert from frequency space to horizontal wavenumber space."""
     return (np.pi/b)*np.sqrt((om**2 - f**2)/(N_0**2 - om**2))*j
+
+
+def Emk(k, m, E_star, N=N_0, f=f_30, m_star=0.0048):
+
+    num = 3*f*N*E_star*m/m_star
+    den = np.pi*(1 + m/m_star)**(2.5) * (N**2 * k**2 + f**2 * m**2)
+    return num/den
