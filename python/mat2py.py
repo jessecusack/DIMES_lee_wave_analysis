@@ -11,13 +11,22 @@ import datetime as dt
 
 def datenum_to_datetime(datenum):
     """
-    Convert a MATLAB datenum, or an array of datenums into a python datetime
-    object or array of objects.
+    Convert a MATLAB datenums into python datetimes.
 
-    If conversion fails the output is nan.
+    Generate smooth buoyancy frequency profile by applying the adiabatic
+    levelling method of Bray and Fofonoff (1981).
 
-    TODO: rewrite function more explicitly, not clear what second exceptions
-    are dealing with.
+    Parameters
+    ----------
+    datenum : array_like
+        MATLAB datenumber which is the number of days since 0001-01-01.
+
+    Returns
+    -------
+    pydt : ndarray
+        Python datetime. See datetime module.
+
+
     """
 
     def convert(datenum):
@@ -28,7 +37,8 @@ def datenum_to_datetime(datenum):
             return np.nan
 
     try:
-
+        # If datenum is not iterable it will raise a TypeError. I could just
+        # check whether it is iterable first... !
         pydt = np.array([convert(el) for el in datenum])
 
     except TypeError:
