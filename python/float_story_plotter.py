@@ -233,13 +233,13 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     for pfl in Float.get_profiles(hpids):
 
-        z = getattr(pfl, 'z')       
+        z = getattr(pfl, 'z')
         Ww = getattr(pfl, 'Ww')
-        
-        # Remove nans and the top 50 m. 
+
+        # Remove nans and the top 50 m.
         nans = np.isnan(z) | np.isnan(Ww) | (z > -50)
         z, Ww = z[~nans], Ww[~nans]
-        
+
         # Setting up the spectral analysis.
         dz = np.abs(np.round(np.mean(np.diff(z))))
         dk = 1./dz
@@ -247,18 +247,18 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
         idxs = np.argsort(z)
         iWw = np.interp(iz, z[idxs], Ww[idxs])
         diWw = sig.detrend(iWw)
-        
+
         # Doing the spectral analysis.
         m, Pw = sig.welch(iWw, fs=dk, detrend='linear')
 
         # Try fitting plane wave.
-        popt, __ = op.curve_fit(plane_wave, iz, iWw, 
+        popt, __ = op.curve_fit(plane_wave, iz, iWw,
                                 p0=[0.15, 0.015, 0.])
         mfit = popt[1]/(2.*np.pi)
 
         plt.figure(figsize=(4,6))
-        
-#        plt.subplot(1, 2, 1)            
+
+#        plt.subplot(1, 2, 1)
         plt.plot(iWw*100., iz, plane_wave(iz, *popt)*100., iz)
         plt.xticks(rotation=45)
         plt.xlabel('$W_w$ (cm s$^{-1}$)')
@@ -295,13 +295,13 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
         z = getattr(pfl, 'z')
         t = getattr(pfl, 'UTC')
         t = 24.*60.*(t - np.nanmin(t))  # Convert to minutes.
-        
+
         Ww = getattr(pfl, 'Ww')
         N2_ref = getattr(pfl, 'N2_ref')
-        
+
         nans = np.isnan(z) | np.isnan(t) | np.isnan(Ww) | np.isnan(N2_ref) | (z > -50)
         z, t, Ww, N2_ref = z[~nans], t[~nans], Ww[~nans], N2_ref[~nans]
-        
+
         # Setting up the spectral analysis.
         ts = 60.*t  # Convert to seconds.
         dt = np.round(np.mean(np.diff(ts)))
@@ -314,19 +314,19 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
         N_mean = np.mean(np.sqrt(N2_ref[z < -200]))/(2.*np.pi)
         # The inertial frequency.
         fcor = np.abs(gsw.f(-57.5))/(2.*np.pi)
-        
+
         # Perform the spectral analysis.
         freqs, Pw = sig.welch(iWw, fs=fs, detrend='linear')
-        
+
         # Fit a curve.
-        popt, __ = op.curve_fit(plane_wave, it, diWw, 
+        popt, __ = op.curve_fit(plane_wave, it, diWw,
                                 p0=[0.1, 0.002, 0.])
         omfit = popt[1]/(2.*np.pi)
         period = 1/omfit/60.
 
         plt.figure(figsize=(4,6))
-    
-#        plt.subplot(1, 2, 1)            
+
+#        plt.subplot(1, 2, 1)
         plt.plot(diWw, it, plane_wave(it, *popt), it)
         plt.xticks(rotation=45)
         plt.xlabel('$W_w$ (m s$^{-1}$)')
@@ -358,7 +358,7 @@ for hpid in hpids:
     wnans = np.isnan(pfl.Ww)
 
     fig, ax = plt.subplots(1, 3, sharey=True, figsize=(4, 6))
-    title_str = ("Float {}, half profile {}").format(Float.floatID, hpid)
+    title_str = ("Float {}, profile {}").format(Float.floatID, hpid)
     plt.suptitle(title_str)
 
     ax[0].plot(pfl.Ww[~wnans]*100., pfl.z[~wnans], 'b')
@@ -366,19 +366,22 @@ for hpid in hpids:
     ax[0].set_ylabel('Depth (m)')
     ax[0].set_xlabel('$W_w$ (cm s$^{-1}$)')
     ax[0].grid()
-    ax[0].set_xticklabels(ax[0].get_xticks(), rotation=60)
+    ax[0].set_xticks(ax[0].get_xlim())
+    ax[0].set_xticklabels(ax[0].get_xticks(), rotation=45)
 
     ax[1].plot(pfl.U[~uvnans]*100., pfl.zef[~uvnans], 'b')
     ax[1].plot(2*[0.], [-1600, 0], 'k-')
     ax[1].set_xlabel('$U$ (cm s$^{-1}$)')
     ax[1].grid()
-    ax[1].set_xticklabels(ax[1].get_xticks(), rotation=60)
+    ax[1].set_xticks(ax[1].get_xlim())
+    ax[1].set_xticklabels(ax[1].get_xticks(), rotation=45)
 
     ax[2].plot(pfl.V[~uvnans]*100., pfl.zef[~uvnans], 'b')
     ax[2].plot(2*[0.], [-1600, 0], 'k-')
     ax[2].set_xlabel('$V$ (cm s$^{-1}$)')
     ax[2].grid()
-    ax[2].set_xticklabels(ax[2].get_xticks(), rotation=60)
+    ax[2].set_xticks(ax[2].get_xlim())
+    ax[2].set_xticklabels(ax[2].get_xticks(), rotation=45)
 
     my_savefig(Float.floatID, 'WU_profile_' + str(hpid))
 
@@ -447,7 +450,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     plt.plot(data[:,2], Wm*100., t, W*100.)#, data[:,2], Wm0)
     plt.xlabel('Time (s)')
     plt.ylabel('$W_w$ (cm s$^{-1}$)')
-    
+
     my_savefig(Float.floatID, 'wave_3_fit')
 # hpid 31 and 26
 #[ -1.30611467e-01   4.00000000e-03   5.37679530e-03  -5.51902074e-04
