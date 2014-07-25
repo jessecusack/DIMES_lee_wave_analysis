@@ -250,13 +250,13 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
 
 def CW_ps(Pxx, Pyy, Pxy):
     """Clockwise power spectrum."""
-    QS = -Pxy.imag()
+    QS = -Pxy.imag
     return (Pxx + Pyy - 2.*QS)/2.
 
 
 def CCW_ps(Pxx, Pyy, Pxy):
     """Counter clockwise power spectrum."""
-    QS = -Pxy.imag()
+    QS = -Pxy.imag
     return (Pxx + Pyy + 2*QS)/2.
 
 
@@ -316,11 +316,9 @@ def analyse_profile(Pfl, plot=False):
     strain = Pfl.interp(z, 'z', 'strain_z')
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
 
-    # Collect variables into a list.
-    X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
-    X = [U, V, dUdz, dVdz, strain, N2_ref]
-
     if plot:
+        X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
+        X = [U, V, dUdz, dVdz, strain, N2_ref]
         for x, name in zip(X, X_names):
             plt.figure()
             plt.plot(x, z)
@@ -329,17 +327,54 @@ def analyse_profile(Pfl, plot=False):
     # Split varables into overlapping window segments, bare in mind the last
     # window may not be full.
     width = 300.
-    overlap = width/2.
+    overlap = 200.
     WDW = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
-    U_WDW, V_WDW, dUdz_WDW, dVdz_WDW, strain_WDW, N2_ref_WDW = WDW
 
-    # Next normalise shear by mean N and then get spectra for everything.
+    N = WDW[0].shape[0]
+    z_mean = np.empty(N)
+    EK = np.empty(N)
+    Rpol = np.empty(N)
+    Rom = np.empty(N)
 
+    # Next normalise shear by mean N and then get spectra for everything. The
+    # for loop goes over each segment.
+    for i, (wU, wV, wdUdz, wdVdz, wstrain, wN2_ref) in enumerate(zip(*WDW)):
+        # Bad code I know but simplyfy what variables contain by removing the
+        # z values.
+        wz = wU[0]
+        z_mean[i] = np.mean(wz)
+        wU, wV, wdUdz, wdVdz, wstrain, wN2_ref = \
+            wU[1], wV[1], wdUdz[1], wdVdz[1], wstrain[1], wN2_ref[1]
 
+        # Normalise the shear by the mean buoyancy frequency.
+        ndUdz = wdUdz/np.mean(np.sqrt(wN2_ref))
+        ndVdz = wdVdz/np.mean(np.sqrt(wN2_ref))
 
+        # Compute the (co)power spectral density.
+        m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz)
+        __, PU, PV, __ = coperiodogram(wU, wV, fs=1./dz)
+        __, Pstrain = sig.periodogram(wstrain, fs=1./dz, detrend='linear')
+        PCW = CW_ps(PdU, PdV, PdUdV)
+        PCCW = CCW_ps(PdU, PdV, PdUdV)
+        Pshear = PdU + PdV
 
+        # Plotting here generates a crazy number of plots.
+#        if plot:
+#            X_names = ['U', 'V', 'shear', 'strain', 'CW', 'CCW']
+#            X = [PU, PV, Pshear, Pstrain, PCW, PCCW]
+#            for x, name in zip(X, X_names):
+#                plt.figure()
+#                plt.loglog(m, x)
+#                plt.title(name)
 
+        # Integrate the spectra.
+        m_0 = 1./200.
+        m_c = 1./10.
 
+        I = [integrated_ps(m, P, m_c, m_0) for P in [PU, PV, Pshear, Pstrain,
+                                                     PCW, PCCW]]
+        IU, IV, Ishear, Istrain, ICW, ICCW = I
 
-
-
+        EK[i] = (IU + IV)/2.
+        Rpol[i] = ICCW/ICW
+        Rom[i] = Ishear/Istrain
