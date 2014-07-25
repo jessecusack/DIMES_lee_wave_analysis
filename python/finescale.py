@@ -10,6 +10,8 @@ A place for finescale parameterisation functions.
 import numpy as np
 import gsw
 import scipy.signal as sig
+import matplotlib.pyplot as plt
+import window as wdw
 
 
 def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
@@ -300,4 +302,44 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
         C_tilt = 1.
 
     return C_range*C_diff*C_interp*C_tilt
+
+
+def analyse_profile(Pfl, plot=False):
+
+    # First remove NaN values and interpolate variables onto a regular grid.
+    dz = 4.  # Depth [m]
+    z = np.arange(np.nanmin(Pfl.z), 0., dz)
+    U = Pfl.interp(z, 'zef', 'U_abs')
+    V = Pfl.interp(z, 'zef', 'V_abs')
+    dUdz = Pfl.interp(z, 'zef', 'dUdz')
+    dVdz = Pfl.interp(z, 'zef', 'dVdz')
+    strain = Pfl.interp(z, 'z', 'strain_z')
+    N2_ref = Pfl.interp(z, 'z', 'N2_ref')
+
+    # Collect variables into a list.
+    X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
+    X = [U, V, dUdz, dVdz, strain, N2_ref]
+
+    if plot:
+        for x, name in zip(X, X_names):
+            plt.figure()
+            plt.plot(x, z)
+            plt.title(name)
+
+    # Split varables into overlapping window segments, bare in mind the last
+    # window may not be full.
+    width = 300.
+    overlap = width/2.
+    WDW = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
+    U_WDW, V_WDW, dUdz_WDW, dVdz_WDW, strain_WDW, N2_ref_WDW = WDW
+
+    # Next normalise shear by mean N and then get spectra for everything.
+
+
+
+
+
+
+
+
 
