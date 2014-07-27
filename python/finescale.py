@@ -235,13 +235,13 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     # Multiply spectrum by 2 except for the Nyquist and constant elements to
     # account for the loss of negative frequencies.
     Pxx[..., 1:-1] *= 2*scale
-    Pxx[..., (0,-1)] *= scale
+    Pxx[..., (0, -1)] *= scale
 
     Pyy[..., 1:-1] *= 2*scale
-    Pyy[..., (0,-1)] *= scale
+    Pyy[..., (0, -1)] *= scale
 
     Pxy[..., 1:-1] *= 2*scale
-    Pxy[..., (0,-1)] *= scale
+    Pxy[..., (0, -1)] *= scale
 
     f = np.arange(Pxx.shape[-1])*(fs/nfft)
 
@@ -275,6 +275,8 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     m is vertical wavenumber. Needs factor of 2 pi.
 
     See Sheen/Shuckburgh MATLAB code for comments.
+
+    There is a fith possible correction which isn't used.
     """
 
     # Range averaging.
