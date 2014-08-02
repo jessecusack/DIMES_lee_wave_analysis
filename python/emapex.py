@@ -740,3 +740,27 @@ def what_floats_are_in_here(fname):
     """Finds all unique float ID numbers from a given allprofs##.mat file."""
     fs = io.loadmat(fname, squeeze_me=True, variable_names='flid')['flid']
     return np.unique(fs[~np.isnan(fs)])
+ 
+
+def integrated_dist(Pfl):
+    """Testing..."""
+    
+    import matplotlib.pyplot as plt
+
+    U = Pfl.U_abs - Pfl.U
+    V = Pfl.V_abs - Pfl.V
+    T = Pfl.UTCef*86400
+    D = np.nanmax(Pfl.dist_ef) - np.nanmin(Pfl.dist_ef)
+    
+    x = cumtrapz(U, T, initial=0.)/1e3
+    y = cumtrapz(V, T, initial=0.)/1e3
+    
+    nans = np.isnan(x) | np.isnan(y)
+    d = np.sqrt(x[~nans][-1]**2 + y[~nans][-1]**2)
+    
+    print("Distance travelled (km)\n"
+          "GPS: {}\n"
+          "VEL: {}".format(D, d))
+          
+    plt.plot(T, x, T, y)
+    
