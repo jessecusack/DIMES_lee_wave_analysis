@@ -213,6 +213,8 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         scale = 1.0/(fs*(win*win).sum())
     elif scaling == 'spectrum':
         scale = 1.0/win.sum()**2
+    elif scaling == 'waterman':
+        scale = 1.0/(2.*np.pi*len(x))
     else:
         raise ValueError('Unknown scaling: %r' % scaling)
 
