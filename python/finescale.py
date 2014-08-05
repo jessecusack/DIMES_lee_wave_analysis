@@ -354,9 +354,10 @@ def analyse_profile(Pfl, plot=False):
     strain = Pfl.interp(z, 'z', 'strain_z')
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
 
+    X = [U, V, dUdz, dVdz, strain, N2_ref]
+
     if plot:
         X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
-        X = [U, V, dUdz, dVdz, strain, N2_ref]
         for x, name in zip(X, X_names):
             plt.figure()
             plt.plot(x, z)
