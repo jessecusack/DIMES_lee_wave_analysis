@@ -14,6 +14,17 @@ import matplotlib.pyplot as plt
 import window as wdw
 
 
+def sin2taper(L):
+    """A boxcar window that tapers the last 10% of points of both ends using a
+    sin^2 function."""
+    win = np.ones(L)
+    idx10 = int(np.ceil(L/10.))
+    idxs = np.arange(idx10)
+    win[:idx10] = np.sin(np.pi*idxs/(2.*idx10))**2
+    win[-idx10:] = np.cos(np.pi*(idxs + 1 - L)/(2.*idx10))**2
+    return win
+
+
 def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
     """Generate smooth buoyancy frequency profile by applying the adiabatic
     levelling method of Bray and Fofonoff (1981).
@@ -198,14 +209,9 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         nfft = len(x)
 
     if window is None:
-        window = 'boxcar'
-        win = sig.get_window(window, nfft)
+        win = sig.get_window('boxcar', nfft)
     elif window == 'sin2taper':
-        win = np.ones(nfft)
-        idx10 = int(np.ceil(nfft/10.))
-        idxs = np.arange(idx10)
-        win[:idx10] = np.sin(np.pi*idxs/(2.*idx10))**2
-        win[-idx10:] = np.cos(np.pi*(idxs - nfft)/(2.*idx10))**2
+        win = sin2taper(nfft)
     else:
         win = sig.get_window(window, nfft)
 
@@ -233,6 +239,9 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
 
     # Chop spectrum in half.
     Pxx, Pyy, Pxy = Pxx[:M], Pyy[:M], Pxy[:M]
+
+    # Make sure the zero frequency is really zero.
+    Pxx[0], Pyy[0], Pxy[0] = 0., 0., 0.
 
     # Multiply spectrum by 2 except for the Nyquist and constant elements to
     # account for the loss of negative frequencies.
@@ -342,7 +351,43 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     return C_range*C_diff*C_interp*C_tilt*C_bin
 
 
+def analyse_window(dz, U, V, dUdz, dVdz, strain, N2_ref, window='sin2taper',
+                   plot=False):
+    """Apply finescale parameterisations to a window of data."""
+
+    # Normalise the shear by the mean buoyancy frequency.
+    ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
+    ndVdz = dVdz/np.mean(np.sqrt(N2_ref))
+
+    # Compute the (co)power spectral density.
+    m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz, window=window)
+    # We only really want the cospectrum for shear so the next two lines are
+    # something of a hack where we ignore unwanted output.
+    __, PU, PV, __ = coperiodogram(U, V, fs=1./dz, window=window)
+    __, Pstrain, __, __ = coperiodogram(strain, U, fs=1./dz, window=window)
+
+    # Clockwise and counter clockwise spectra.
+    PCW = CW_ps(PdU, PdV, PdUdV)
+    PCCW = CCW_ps(PdU, PdV, PdUdV)
+    # Shear spectra.
+    Pshear = PdU + PdV
+    # Kinetic energy spectra.
+    PEK = (PU + PV)/2.
+
+    # Plotting here generates a crazy number of plots.
+    if plot:
+        X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
+        X = [PEK, Pshear, Pstrain, PCW, PCCW]
+        for x, name in zip(X, X_names):
+            plt.figure()
+            plt.loglog(m, x)
+            plt.title(name)
+
+    return m, Pshear, Pstrain, PCW, PCCW, PEK
+
+
 def analyse_profile(Pfl, plot=False):
+    """"""
 
     # First remove NaN values and interpolate variables onto a regular grid.
     dz = 4.  # Depth [m]
@@ -367,53 +412,33 @@ def analyse_profile(Pfl, plot=False):
     # window may not be full.
     width = 300.
     overlap = 200.
-    WDW = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
+    wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
 
-    N = WDW[0].shape[0]
+    N = wdws[0].shape[0]
     z_mean = np.empty(N)
     EK = np.empty(N)
     Rpol = np.empty(N)
     Rom = np.empty(N)
 
-    # Next normalise shear by mean N and then get spectra for everything. The
-    # for loop goes over each segment.
-    for i, (wU, wV, wdUdz, wdVdz, wstrain, wN2_ref) in enumerate(zip(*WDW)):
-        # Bad code I know but simplyfy what variables contain by removing the
-        # z values.
-        wz = wU[0]
+    for i, w in enumerate(zip(*wdws)):
+
+        # This takes the z values from the horizontal velocity.
+        wz = w[0][0]
         z_mean[i] = np.mean(wz)
-        wU, wV, wdUdz, wdVdz, wstrain, wN2_ref = \
-            wU[1], wV[1], wdUdz[1], wdVdz[1], wstrain[1], wN2_ref[1]
+        # (Terrible code) removes the z values from windowed variables.
+        w = [var[1] for var in w]
 
-        # Normalise the shear by the mean buoyancy frequency.
-        ndUdz = wdUdz/np.mean(np.sqrt(wN2_ref))
-        ndVdz = wdVdz/np.mean(np.sqrt(wN2_ref))
-
-        # Compute the (co)power spectral density.
-        m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz)
-        __, PU, PV, __ = coperiodogram(wU, wV, fs=1./dz)
-        __, Pstrain = sig.periodogram(wstrain, fs=1./dz, detrend='linear')
-        PCW = CW_ps(PdU, PdV, PdUdV)
-        PCCW = CCW_ps(PdU, PdV, PdUdV)
-        Pshear = PdU + PdV
-
-        # Plotting here generates a crazy number of plots.
-#        if plot:
-#            X_names = ['U', 'V', 'shear', 'strain', 'CW', 'CCW']
-#            X = [PU, PV, Pshear, Pstrain, PCW, PCCW]
-#            for x, name in zip(X, X_names):
-#                plt.figure()
-#                plt.loglog(m, x)
-#                plt.title(name)
+        # Get the useful power spectra.
+        m, PCW, PCCW, Pshear, Pstrain, PEk = analyse_window(dz, *w)
 
         # Integrate the spectra.
         m_0 = 1./200.
-        m_c = 1./10.
+        m_c = 1./20.
 
-        I = [integrated_ps(m, P, m_c, m_0) for P in [PU, PV, Pshear, Pstrain,
-                                                     PCW, PCCW]]
-        IU, IV, Ishear, Istrain, ICW, ICCW = I
+        I = [integrated_ps(m, P, m_c, m_0) for P in [Pshear, Pstrain,
+                                                     PCW, PCCW, PEk]]
+        Ishear, Istrain, ICW, ICCW, IEK = I
 
-        EK[i] = (IU + IV)/2.
+        EK[i] = IEK
         Rpol[i] = ICCW/ICW
         Rom[i] = Ishear/Istrain
