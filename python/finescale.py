@@ -252,13 +252,16 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
 
 def CW_ps(Pxx, Pyy, Pxy):
     """Clockwise power spectrum."""
-    QS = -Pxy.imag
+    # NOTE that in the MATLAB code QS = -Pxy.imag because they take the
+    # conjugate transpose of Pxy first meaning that the imaginary parts are
+    # multiplied by -1.
+    QS = Pxy.imag
     return (Pxx + Pyy - 2.*QS)/2.
 
 
 def CCW_ps(Pxx, Pyy, Pxy):
     """Counter clockwise power spectrum."""
-    QS = -Pxy.imag
+    QS = Pxy.imag
     return (Pxx + Pyy + 2*QS)/2.
 
 
