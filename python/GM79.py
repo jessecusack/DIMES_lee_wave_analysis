@@ -80,3 +80,26 @@ def Emk(k, m, E_star=E_0, N=N_0, f=f_30, m_star=3*np.pi/b):
     num = 3*f*N*E_star*m/m_star
     den = np.pi*(1 + m/m_star)**(2.5) * (N**2 * k**2 + f**2 * m**2)
     return num/den
+
+
+#% for normalization purposes compute power spectral density of
+#% normalized vertical shear for the GM76 model
+#%epsilon0=7.8e-10;
+#epsilon0=6.73*10^(-10);
+#N0=5.2e-3;
+#f0=sw_f(30);
+#
+#N2mean = n_mean^2;
+#
+#% power spectral density of vertical shear normalised by N for the GM76 model
+#E=6.3e-5; % dimensionless energy level
+#b=1300; % scale depth of thermocline
+#jstar=3; % mode number
+#
+#%betastar=pi*jstar/b*sqrt(nanmean(N2mean^2))/N0;
+#betastar=pi*jstar/b*sqrt(N2mean)/N0;
+#
+#
+#clear phi_u phi_sn
+#phi_u = 3*E*b^3*N0^2/(2*jstar*pi) ./(1+kzax/betastar).^2; % power spectral density of horizontal velocity
+#phi_sn = kzax.^2.*phi_u/N2mean; % power spectral density of vertical shear normalised by N
