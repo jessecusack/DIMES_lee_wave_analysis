@@ -270,13 +270,40 @@ def integrated_ps(m, P, m_c, m_0):
 
 
 def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
-                        use_tilt=True, dzt=16., dzr=16., dzfd=16., dzg=20.,
-                        ddash=9.):
+                        use_tilt=True, use_bin=True, dzt=8., dzr=8.,
+                        dzfd=8., dzg=8., ddash=5.4, dzs=8.):
     """Spectral corrections for LADCP data - see Polzin et. al. 2002.
 
     m is vertical wavenumber. Needs factor of 2 pi.
 
     See Sheen/Shuckburgh MATLAB code for comments.
+
+    dzt: transmitted sound pulse length projected on the vertical
+    dzr: receiver processing bin length
+    dzfd: first-differencing interval (=dzr)
+    dzg: interval of depth grid onto which single-ping piecewise-linear
+        continuous profiles of vertical shear are binned
+    dzs: superensemble pre-averaging interval, usually chosen to be dzg
+
+    Notes
+    -----
+
+    A quadratic fit to the range-maxima (rmax) ? d? pairs given by Polzin et
+    al. (2002) yields ddash = -1.2+0.0857r_{max} - 0.000136r_{max}^2 ,
+    (5) max max
+    which has an intercept near rmax = 14 m. It should be noted that
+    expressions (4) and (5) are semi-empirical and apply strictly only to the
+    data set of Polzin et al. (2002). Estimating rmax ? 255 m as the range at
+    which 80% of all ensembles have valid velocities yields d? ? 11.8 m in case
+    of this data set (i.e as in Thurherr 2011 NOT DIMES - nede to updaye!!).
+    ddash is determined empirically by Polzin et al. (2002) and is dependent
+    on range and the following assumptions:
+       + small tilts (~ 3 deg)
+       + instrument tilt and orientation are constant over measurement period
+       + instrument tilt and orientation are independent
+       + tilt attenuation is limited by bin-mapping capabilities of
+       RDI (1996) processing
+
     """
 
     # Range averaging.
@@ -303,7 +330,13 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     else:
         C_tilt = 1.
 
-    return C_range*C_diff*C_interp*C_tilt
+    # Binning
+    if use_bin:
+        C_bin = np.sinc(m*dzg/(2.*np.pi))**2 * np.sinc(m*dzs/(2.*np.pi))**2
+    else:
+        C_bin = 1.
+
+    return C_range*C_diff*C_interp*C_tilt*C_bin
 
 
 def analyse_profile(Pfl, plot=False):
