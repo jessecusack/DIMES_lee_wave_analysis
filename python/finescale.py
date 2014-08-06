@@ -12,6 +12,19 @@ import gsw
 import scipy.signal as sig
 import matplotlib.pyplot as plt
 import window as wdw
+from utils import Bunch
+
+
+default_params = Bunch(
+    window = 'sin2taper',
+    dz = 4.,
+    bin_width = 300.,
+    bin_overlap = 200.,
+    plot = False,
+    plot_dir = '../figures/finescale',
+    m_0 = 1./150.,
+    m_c = 1./15.
+    )
 
 
 def sin2taper(L):
@@ -351,9 +364,11 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     return C_range*C_diff*C_interp*C_tilt*C_bin
 
 
-def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, window='sin2taper',
-              plot=False):
+def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     """Calculate the power spectra for a window of data."""
+
+    window = params.window
+    plot = params.plot
 
     # Normalise the shear by the mean buoyancy frequency.
     ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
@@ -386,11 +401,13 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, window='sin2taper',
     return m, Pshear, Pstrain, PCW, PCCW, PEK
 
 
-def analyse_profile(Pfl, plot=False):
+def analyse_profile(Pfl, params=default_params):
     """"""
 
+    plot = params.plot
+
     # First remove NaN values and interpolate variables onto a regular grid.
-    dz = 4.  # Depth [m]
+    dz = params.dz
     z = np.arange(np.nanmin(Pfl.z), 0., dz)
     U = Pfl.interp(z, 'zef', 'U_abs')
     V = Pfl.interp(z, 'zef', 'V_abs')
@@ -410,8 +427,8 @@ def analyse_profile(Pfl, plot=False):
 
     # Split varables into overlapping window segments, bare in mind the last
     # window may not be full.
-    width = 300.
-    overlap = 200.
+    width = params.bin_width
+    overlap = params.bin_overlap
     wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
 
     N = wdws[0].shape[0]
@@ -429,16 +446,18 @@ def analyse_profile(Pfl, plot=False):
         w = [var[1] for var in w]
 
         # Get the useful power spectra.
-        m, PCW, PCCW, Pshear, Pstrain, PEk = window_ps(dz, *w)
+        m, PCW, PCCW, Pshear, Pstrain, PEK = window_ps(dz, *w, params=params)
 
         # Integrate the spectra.
-        m_0 = 1./200.
-        m_c = 1./20.
+        m_0 = params.m_0
+        m_c = params.m_c
 
         I = [integrated_ps(m, P, m_c, m_0) for P in [Pshear, Pstrain,
-                                                     PCW, PCCW, PEk]]
+                                                     PCW, PCCW, PEK]]
         Ishear, Istrain, ICW, ICCW, IEK = I
 
         EK[i] = IEK
         Rpol[i] = ICCW/ICW
         Rom[i] = Ishear/Istrain
+
+    return z_mean, EK, Rpol, Rom
