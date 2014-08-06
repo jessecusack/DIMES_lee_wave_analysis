@@ -13,8 +13,7 @@ Less specific bits of code:
 objects and to calculate the distance between lat lon points as well as the
 Bunch class.
 * sandwell.py: contains functions to read areas or tracks of bathymetry from the 
-Smith and Sandwell binary file.
-* window.py: contains functions that apply moving windows and binning to data.
+Smith and Sandwell binary file. 
 
 More specific bits of oceanography code:
 
