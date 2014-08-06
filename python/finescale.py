@@ -351,9 +351,9 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     return C_range*C_diff*C_interp*C_tilt*C_bin
 
 
-def analyse_window(dz, U, V, dUdz, dVdz, strain, N2_ref, window='sin2taper',
-                   plot=False):
-    """Apply finescale parameterisations to a window of data."""
+def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, window='sin2taper',
+              plot=False):
+    """Calculate the power spectra for a window of data."""
 
     # Normalise the shear by the mean buoyancy frequency.
     ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
@@ -429,7 +429,7 @@ def analyse_profile(Pfl, plot=False):
         w = [var[1] for var in w]
 
         # Get the useful power spectra.
-        m, PCW, PCCW, Pshear, Pstrain, PEk = analyse_window(dz, *w)
+        m, PCW, PCCW, Pshear, Pstrain, PEk = window_ps(dz, *w)
 
         # Integrate the spectra.
         m_0 = 1./200.
