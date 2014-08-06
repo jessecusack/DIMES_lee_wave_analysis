@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import mpl_toolkits.basemap as bm
 import sandwell
-import mat2py as m2p
+import utils
 import scipy.signal as sig
 from glob import glob
 import scipy.io as io
@@ -39,7 +39,7 @@ def scatter_section(Float, hpids, var, x_var='dist', cmap=plt.get_cmap('jet')):
 
         __, __, d = Float.get_interp_grid(hpids, z_vals, 'z', 'UTC')
         d = d.flatten(order='F')
-        d = m2p.datenum_to_datetime(d)
+        d = utils.datenum_to_datetime(d)
 
     else:
         raise ValueError("Input x_var should be 'dist' or 'time'.")
@@ -333,7 +333,7 @@ def spew_track(Floats, dt=12., fstr='test'):
     for i, (time, lonr, latr) in enumerate(zip(ti, lons, lats)):
 
         print('Creating... {i:03d}'.format(i=i))
-        plt.title(m2p.datenum_to_datetime(time).strftime('%Y-%m-%d %H:%M'))
+        plt.title(utils.datenum_to_datetime(time).strftime('%Y-%m-%d %H:%M'))
 
         for j, (lon, lat) in enumerate(zip(lonr, latr)):
             x, y = m(lon, lat)
@@ -382,7 +382,7 @@ def deployments():
             LATs = np.hstack((LATs, flats[idx]))
             DATEs = np.hstack((DATEs, fdates[idx]))
 
-#    DTs = m2p.datenum_to_datetime(DATEs)
+#    DTs = utils.datenum_to_datetime(DATEs)
 
     # Plot map.
 
