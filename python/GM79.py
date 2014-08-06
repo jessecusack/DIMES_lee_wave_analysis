@@ -14,6 +14,7 @@ N_0 = 5.2  # Buoyancy frequency (angular).
 b = 1300.  # e-folding scale of N with depth [m].
 E_0 = 6.3e-5  # Internal wave energy parameter.
 f_30 = 7.3e-5  # Coriolis frequency (angular) at 30N.
+epsilon_0 = 6.73e-10  # GM energy dissipation rate.
 
 
 def H(j, j_star=3., N_sum=100000):
@@ -54,11 +55,15 @@ def F_eng(om, N, j):
     """Energy per unit mass spectra."""
     return b**2*N_0*N*E(om, j)
 
-#def F_str(om, N, j, f=f_30):
-#
-#def F_she(om, N, j, f=f_30):
-#
-#
+
+def F_str(om, N, j, f=f_30):
+    pass
+
+
+def F_she(om, N, j, f=f_30):
+    pass
+
+
 # case upper('Str')
 #  R = (2*pi*kz).^2*(b.^2*N0/N.*(om.^2-f.^2)./om.^2);
 # case upper('She')
@@ -82,24 +87,22 @@ def Emk(k, m, E_star=E_0, N=N_0, f=f_30, m_star=3*np.pi/b):
     return num/den
 
 
-#% for normalization purposes compute power spectral density of
-#% normalized vertical shear for the GM76 model
-#%epsilon0=7.8e-10;
-#epsilon0=6.73*10^(-10);
-#N0=5.2e-3;
-#f0=sw_f(30);
-#
-#N2mean = n_mean^2;
-#
-#% power spectral density of vertical shear normalised by N for the GM76 model
-#E=6.3e-5; % dimensionless energy level
-#b=1300; % scale depth of thermocline
-#jstar=3; % mode number
-#
-#%betastar=pi*jstar/b*sqrt(nanmean(N2mean^2))/N0;
-#betastar=pi*jstar/b*sqrt(N2mean)/N0;
-#
-#
-#clear phi_u phi_sn
-#phi_u = 3*E*b^3*N0^2/(2*jstar*pi) ./(1+kzax/betastar).^2; % power spectral density of horizontal velocity
-#phi_sn = kzax.^2.*phi_u/N2mean; % power spectral density of vertical shear normalised by N
+def beta_star(N, j_star=3.):
+    return np.pi*j_star*N/(b*N_0)
+
+
+def E_vel_z(m, N, j_star=3.):
+    return 3*E_0*b**3*N_0**2/(2*j_star*np.pi*(1 + m/beta_star(N, j_star))**2)
+
+
+def E_she_z(m, N, j_star=3.):
+    """To normalise by N, divide return by N."""
+    return m**2 * E_vel_z(m, N, j_star)/N
+
+
+def E_disp_z(m, N, j_star=3.):
+    return E_0*b**3*N_0**2/(2*j_star*np.pi*N**2(1 + m/beta_star(N, j_star))**2)
+
+
+def E_str_z(m, N, j_star=3.):
+    return m**2 * E_disp_z(m, N, j_star)
