@@ -4,15 +4,14 @@ I put code here that I use to analyse data from EM-APEX floats.
 
 Python
 ------
-Certain bits may require numpy, scipy, the gibbs seawater toolbox (gsw),
+Certain modules may require numpy, scipy, the gibbs seawater toolbox (gsw),
 matplotlib, basemap and various other bits and bobs.
 
 Less specific bits of code:
 
-* mat2py.py: contains a function to convert MATLAB datenumbers to python datetime 
-objects.
-* mapping_tools.py: contains a function to calculate the distance between lat lon 
-points. 
+* utils.py: contains functions to convert MATLAB datenumbers to python datetime 
+objects and to calculate the distance between lat lon points as well as the
+Bunch class.
 * sandwell.py: contains functions to read areas or tracks of bathymetry from the 
 Smith and Sandwell binary file. 
 
@@ -26,11 +25,11 @@ form.(Work in progress)
 * gravity_waves.py: all things related to internal gravity waves i.e. dispersion 
 relations, polarisation relations etc. (Work in progress)
 
-Everything else is related to my own analysis of the data and is probably messy.
+Everything else is related to my own analysis of the data and is messy.
 
 
 MATLAB
 ------
 
-So I've stopped using MATLAB completely but I leave the mess of functions here 
-for posterity. Bits require the gibbs seawater toolbox (gsw) and m_map toolbox.
+I've stopped using MATLAB completely but I leave the mess of functions here for 
+posterity. Scripts require the gibbs seawater toolbox (gsw) and m_map toolbox.
