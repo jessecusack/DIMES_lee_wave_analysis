@@ -434,8 +434,8 @@ def analyse_profile(Pfl, params=default_params):
     N = wdws[0].shape[0]
     z_mean = np.empty(N)
     EK = np.empty(N)
-    Rpol = np.empty(N)
-    Rom = np.empty(N)
+    R_pol = np.empty(N)
+    R_om = np.empty(N)
 
     for i, w in enumerate(zip(*wdws)):
 
@@ -457,7 +457,12 @@ def analyse_profile(Pfl, params=default_params):
         Ishear, Istrain, ICW, ICCW, IEK = I
 
         EK[i] = IEK
-        Rpol[i] = ICCW/ICW
-        Rom[i] = Ishear/Istrain
+        R_pol[i] = ICCW/ICW
+        R_om[i] = Ishear/Istrain
 
-    return z_mean, EK, Rpol, Rom
+    return z_mean, EK, R_pol, R_om
+
+
+def analyse_float(Float):
+    """"""
+    pass
