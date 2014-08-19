@@ -463,6 +463,8 @@ def analyse_profile(Pfl, params=default_params):
     return z_mean, EK, R_pol, R_om
 
 
-def analyse_float(Float):
+def analyse_float(Float, hpids):
     """"""
-    pass
+    # Nothing special for now.
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    return [analyse_profile(Pfl) for Pfl in Float.Profiles[idxs]]
