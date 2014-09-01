@@ -12,6 +12,7 @@ import gsw
 import scipy.signal as sig
 import matplotlib.pyplot as plt
 import window as wdw
+import GM79
 from utils import Bunch
 
 
@@ -165,7 +166,7 @@ def L(f, N):
 
 
 def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
-                  scaling='density'):
+                  scaling='density', windowing='after_detrend'):
     """
     Estimate co-power spectral density using periodogram method.
 
@@ -196,6 +197,11 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         where Pxx has units of V**2/Hz if x is measured in V and computing
         the power spectrum ('spectrum') where Pxx has units of V**2 if x is
         measured in V. Defaults to 'density'.
+    windowing : { 'after_detrend', 'before_detrend' }, optional
+        Either applies the window after detrending the signal as is most
+        commonly done, or applies it beforehand. This will alter the scaling
+        used to be density no matter what argument has been supplied for the
+        scaling.
 
     Returns
     -------
@@ -237,16 +243,24 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     else:
         raise ValueError('Unknown scaling: %r' % scaling)
 
-    x_dt = sig.detrend(x, type=detrend)
-    y_dt = sig.detrend(y, type=detrend)
-
-    xft = np.fft.fft(win*x_dt, nfft)
-    yft = np.fft.fft(win*y_dt, nfft)
+    if windowing == 'after_detrend':
+        x_dt = sig.detrend(x, type=detrend)
+        y_dt = sig.detrend(y, type=detrend)
+        xft = np.fft.fft(win*x_dt, nfft)
+        yft = np.fft.fft(win*y_dt, nfft)
+    elif windowing == 'before_detrend':
+        x_dt = sig.detrend(win*x, type=detrend)
+        y_dt = sig.detrend(win*y, type=detrend)
+        xft = np.fft.fft(x_dt, nfft)
+        yft = np.fft.fft(y_dt, nfft)
+        scale = 1.0/(fs*len(x))
+    else:
+        raise ValueError('Unknown scaling: %r' % windowing)
 
     # Power spectral density in x, y and xy.
     Pxx = (xft*xft.conj()).real
     Pyy = (yft*yft.conj()).real
-    Pxy = (xft*yft.conj())
+    Pxy = xft*yft.conj()
 
     M = nfft/2 + 1
 
@@ -467,6 +481,6 @@ def analyse_profile(Pfl, params=default_params):
 
 def analyse_float(Float, hpids):
     """"""
-    # Nothing special for now.
+    # Nothing special for now. It doesn't even work.
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     return [analyse_profile(Pfl) for Pfl in Float.Profiles[idxs]]
