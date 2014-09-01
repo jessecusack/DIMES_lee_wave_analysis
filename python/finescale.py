@@ -16,14 +16,14 @@ from utils import Bunch
 
 
 default_params = Bunch(
-    window = 'sin2taper',
-    dz = 4.,
-    bin_width = 300.,
-    bin_overlap = 200.,
-    plot = False,
-    plot_dir = '../figures/finescale',
-    m_0 = 1./150.,
-    m_c = 1./15.
+    window='sin2taper',
+    dz=4.,
+    bin_width=300.,
+    bin_overlap=200.,
+    plot=False,
+    plot_dir='../figures/finescale',
+    m_0=1./150.,
+    m_c=1./15.
     )
 
 
