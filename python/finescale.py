@@ -310,8 +310,8 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
         continuous profiles of vertical shear are binned
     dzs: superensemble pre-averaging interval, usually chosen to be dzg
 
-    Notes
-    -----
+    Notes from MATLAB code
+    ----------------------
 
     A quadratic fit to the range-maxima (rmax) ? d? pairs given by Polzin et
     al. (2002) yields ddash = -1.2+0.0857r_{max} - 0.000136r_{max}^2 ,
@@ -368,7 +368,6 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     """Calculate the power spectra for a window of data."""
 
     window = params.window
-    plot = params.plot
 
     # Normalise the shear by the mean buoyancy frequency.
     ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
@@ -390,7 +389,7 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     PEK = (PU + PV)/2.
 
     # Plotting here generates a crazy number of plots.
-    if plot:
+    if params.plot:
         X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
         X = [PEK, Pshear, Pstrain, PCW, PCCW]
         for x, name in zip(X, X_names):
@@ -401,24 +400,12 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     return m, Pshear, Pstrain, PCW, PCCW, PEK
 
 
-def analyse_profile(Pfl, params=default_params):
+def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     """"""
-
-    plot = params.plot
-
-    # First remove NaN values and interpolate variables onto a regular grid.
-    dz = params.dz
-    z = np.arange(np.nanmin(Pfl.z), 0., dz)
-    U = Pfl.interp(z, 'zef', 'U_abs')
-    V = Pfl.interp(z, 'zef', 'V_abs')
-    dUdz = Pfl.interp(z, 'zef', 'dUdz')
-    dVdz = Pfl.interp(z, 'zef', 'dVdz')
-    strain = Pfl.interp(z, 'z', 'strain_z')
-    N2_ref = Pfl.interp(z, 'z', 'N2_ref')
 
     X = [U, V, dUdz, dVdz, strain, N2_ref]
 
-    if plot:
+    if params.plot:
         X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
         for x, name in zip(X, X_names):
             plt.figure()
@@ -442,18 +429,17 @@ def analyse_profile(Pfl, params=default_params):
         # This takes the z values from the horizontal velocity.
         wz = w[0][0]
         z_mean[i] = np.mean(wz)
-        # (Terrible code) removes the z values from windowed variables.
+        # This (poor code) removes the z values from windowed variables.
         w = [var[1] for var in w]
 
         # Get the useful power spectra.
-        m, PCW, PCCW, Pshear, Pstrain, PEK = window_ps(dz, *w, params=params)
+        m, PCW, PCCW, Pshear, Pstrain, PEK = \
+            window_ps(params.dz, *w, params=params)
 
         # Integrate the spectra.
-        m_0 = params.m_0
-        m_c = params.m_c
+        I = [integrated_ps(m, P, params.m_c, params.m_0)
+             for P in [Pshear, Pstrain, PCW, PCCW, PEK]]
 
-        I = [integrated_ps(m, P, m_c, m_0) for P in [Pshear, Pstrain,
-                                                     PCW, PCCW, PEK]]
         Ishear, Istrain, ICW, ICCW, IEK = I
 
         EK[i] = IEK
@@ -461,6 +447,22 @@ def analyse_profile(Pfl, params=default_params):
         R_om[i] = Ishear/Istrain
 
     return z_mean, EK, R_pol, R_om
+
+
+def analyse_profile(Pfl, params=default_params):
+    """"""
+
+    # First remove NaN values and interpolate variables onto a regular grid.
+    z = np.arange(np.nanmin(Pfl.z), 0., params.dz)
+    U = Pfl.interp(z, 'zef', 'U_abs')
+    V = Pfl.interp(z, 'zef', 'V_abs')
+    dUdz = Pfl.interp(z, 'zef', 'dUdz')
+    dVdz = Pfl.interp(z, 'zef', 'dVdz')
+    strain = Pfl.interp(z, 'z', 'strain_z')
+    N2_ref = Pfl.interp(z, 'z', 'N2_ref')
+
+    return analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
+
 
 
 def analyse_float(Float, hpids):
