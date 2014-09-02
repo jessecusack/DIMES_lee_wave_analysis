@@ -432,11 +432,12 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     overlap = params.bin_overlap
     wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
 
-    N = wdws[0].shape[0]
-    z_mean = np.empty(N)
-    EK = np.empty(N)
-    R_pol = np.empty(N)
-    R_om = np.empty(N)
+    n = wdws[0].shape[0]
+    z_mean = np.empty(n)
+    EK = np.empty(n)
+    R_pol = np.empty(n)
+    R_om = np.empty(n)
+    epsilon = np.empty(n)
 
     for i, w in enumerate(zip(*wdws)):
 
@@ -445,6 +446,8 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
         z_mean[i] = np.mean(wz)
         # This (poor code) removes the z values from windowed variables.
         w = [var[1] for var in w]
+        N2_mean = np.mean(w[-1])
+        N_mean = np.sqrt(N2_mean)
 
         # Get the useful power spectra.
         m, PCW, PCCW, Pshear, Pstrain, PEK = \
@@ -456,11 +459,16 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
         Ishear, Istrain, ICW, ICCW, IEK = I
 
+        # TODO: Check that this normalisation by N is needed!!!
+        GMshear = GM79.E_she_z(m, N_mean)/N_mean
+        IGMshear = integrated_ps(m, GMshear, params.m_c, params.m_0)
+
         EK[i] = IEK
         R_pol[i] = ICCW/ICW
         R_om[i] = Ishear/Istrain
+        epsilon[i] = GM79.epsilon_0*N2_mean/GM79.N_0**2*Ishear**2/IGMshear**2
 
-    return z_mean, EK, R_pol, R_om
+    return z_mean, EK, R_pol, R_om, epsilon
 
 
 def analyse_profile(Pfl, params=default_params):
