@@ -10,18 +10,24 @@ A place for finescale parameterisation functions.
 import numpy as np
 import gsw
 import scipy.signal as sig
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import window as wdw
 import GM79
 from utils import Bunch
 
+# Define some standard parameters.
+mixing_efficiency = 0.2
 
 default_params = Bunch(
     window='sin2taper',
     dz=4.,
     bin_width=300.,
     bin_overlap=200.,
-    plot=False,
+    fine_grid_spectra=False,
+    plot_profiles=False,
+    plot_spectra=False,
     plot_dir='../figures/finescale',
     m_0=1./150.,
     m_c=1./15.
@@ -402,15 +408,6 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     # Kinetic energy spectra.
     PEK = (PU + PV)/2.
 
-    # Plotting here generates a crazy number of plots.
-    if params.plot:
-        X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
-        X = [PEK, Pshear, Pstrain, PCW, PCCW]
-        for x, name in zip(X, X_names):
-            plt.figure()
-            plt.loglog(m, x)
-            plt.title(name)
-
     return m, Pshear, Pstrain, PCW, PCCW, PEK
 
 
@@ -419,7 +416,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
     X = [U, V, dUdz, dVdz, strain, N2_ref]
 
-    if params.plot:
+    if params.plot_profiles:
         X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
         for x, name in zip(X, X_names):
             plt.figure()
@@ -438,6 +435,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     R_pol = np.empty(n)
     R_om = np.empty(n)
     epsilon = np.empty(n)
+    kappa = np.empty(n)
 
     for i, w in enumerate(zip(*wdws)):
 
@@ -459,16 +457,28 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
         Ishear, Istrain, ICW, ICCW, IEK = I
 
-        # TODO: Check that this normalisation by N is needed!!!
-        GMshear = GM79.E_she_z(m, N_mean)/N_mean
+        # Garrett-Munk shear power spectral density normalised.
+        GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
         IGMshear = integrated_ps(m, GMshear, params.m_c, params.m_0)
 
         EK[i] = IEK
         R_pol[i] = ICCW/ICW
         R_om[i] = Ishear/Istrain
         epsilon[i] = GM79.epsilon_0*N2_mean/GM79.N_0**2*Ishear**2/IGMshear**2
+        # Apply correcting factors
+        epsilon[i] *= L(-57.5, N_mean)*h_gregg(R_om[i])
+        kappa[i] = mixing_efficiency*epsilon[i]/N2_mean
 
-    return z_mean, EK, R_pol, R_om, epsilon
+        # Plotting here generates a crazy number of plots.
+        if params.plot_spectra:
+            X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
+            X = [PEK, Pshear, Pstrain, PCW, PCCW]
+            for x, name in zip(X, X_names):
+                plt.figure()
+                plt.loglog(m, x)
+                plt.title(name)
+
+    return z_mean, EK, R_pol, R_om, epsilon, kappa
 
 
 def analyse_profile(Pfl, params=default_params):
@@ -484,7 +494,6 @@ def analyse_profile(Pfl, params=default_params):
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
 
     return analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
-
 
 
 def analyse_float(Float, hpids):
