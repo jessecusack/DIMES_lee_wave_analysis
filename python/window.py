@@ -22,7 +22,8 @@ def chunk(x, x_range, y):
     return x[s], y[s]
 
 
-def window(x, y, width=25, overlap=None):
+def window(x, y, width=25, overlap=None, expansion=0.):
+    """Can't currently deal with expanding windows..."""
 
     if x.size != y.size:
         raise ValueError('x and y must be of equal size.')

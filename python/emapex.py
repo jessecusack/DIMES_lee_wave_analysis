@@ -13,8 +13,7 @@ import scipy.io as io
 from scipy.interpolate import griddata
 from scipy.integrate import cumtrapz
 import gsw
-import mapping_tools as mptls
-import mat2py as m2p
+import utils
 import pickle
 import copy
 
@@ -246,7 +245,7 @@ class EMApexFloat(object):
                                  self.lat_gps[idxs])
 
         # Distance along track from first half profile.
-        self.__ddist = mptls.lldist(self.lon_start, self.lat_start)
+        self.__ddist = utils.lldist(self.lon_start, self.lat_start)
         self.dist = np.hstack((0., np.cumsum(self.__ddist)))
 
         # Distances, velocities and speeds of each half profile.
@@ -264,7 +263,7 @@ class EMApexFloat(object):
         self.dist_ctd = self.UTC.copy()
         nans = np.isnan(self.dist_ctd)
         for i, (lon, lat, time) in enumerate(zip(lons, lats, times)):
-            self.profile_ddist[i] = mptls.lldist(lon, lat)
+            self.profile_ddist[i] = utils.lldist(lon, lat)
             # Convert time from days to seconds.
             self.profile_dt[i] = np.diff(time)*86400.
 
@@ -553,7 +552,7 @@ class EMApexFloat(object):
             times, jdxs = np.unique(times, return_index=True)
             vals = vals[jdxs]
 #            # Convert to datetime objects.
-#            times = m2p.datenum_to_datetime(times)
+#            times = utils.datenum_to_datetime(times)
             return times, vals
 
         # Shorten some names.
@@ -740,3 +739,26 @@ def what_floats_are_in_here(fname):
     """Finds all unique float ID numbers from a given allprofs##.mat file."""
     fs = io.loadmat(fname, squeeze_me=True, variable_names='flid')['flid']
     return np.unique(fs[~np.isnan(fs)])
+
+
+def integrated_dist(Pfl):
+    """Testing..."""
+
+    import matplotlib.pyplot as plt
+
+    U = Pfl.U_abs - Pfl.U
+    V = Pfl.V_abs - Pfl.V
+    T = Pfl.UTCef*86400
+    D = np.nanmax(Pfl.dist_ef) - np.nanmin(Pfl.dist_ef)
+
+    x = cumtrapz(U, T, initial=0.)/1e3
+    y = cumtrapz(V, T, initial=0.)/1e3
+
+    nans = np.isnan(x) | np.isnan(y)
+    d = np.sqrt(x[~nans][-1]**2 + y[~nans][-1]**2)
+
+    print("Distance travelled (km)\n"
+          "GPS: {}\n"
+          "VEL: {}".format(D, d))
+
+    plt.plot(T, x, T, y)

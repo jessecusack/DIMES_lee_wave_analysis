@@ -5,7 +5,6 @@ Created on Wed Apr 16 16:48:46 2014
 @author: jc3e13
 """
 
-import scipy.signal as sig
 import scipy.optimize as op
 import matplotlib.pyplot as plt
 import pylab as pyl

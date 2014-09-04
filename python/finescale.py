@@ -12,6 +12,31 @@ import gsw
 import scipy.signal as sig
 import matplotlib.pyplot as plt
 import window as wdw
+import GM79
+from utils import Bunch
+
+
+default_params = Bunch(
+    window='sin2taper',
+    dz=4.,
+    bin_width=300.,
+    bin_overlap=200.,
+    plot=False,
+    plot_dir='../figures/finescale',
+    m_0=1./150.,
+    m_c=1./15.
+    )
+
+
+def sin2taper(L):
+    """A boxcar window that tapers the last 10% of points of both ends using a
+    sin^2 function."""
+    win = np.ones(L)
+    idx10 = int(np.ceil(L/10.))
+    idxs = np.arange(idx10)
+    win[:idx10] = np.sin(np.pi*idxs/(2.*idx10))**2
+    win[-idx10:] = np.cos(np.pi*(idxs + 1 - L)/(2.*idx10))**2
+    return win
 
 
 def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
@@ -141,7 +166,7 @@ def L(f, N):
 
 
 def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
-                  scaling='density'):
+                  scaling='density', windowing='after_detrend'):
     """
     Estimate co-power spectral density using periodogram method.
 
@@ -172,6 +197,11 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         where Pxx has units of V**2/Hz if x is measured in V and computing
         the power spectrum ('spectrum') where Pxx has units of V**2 if x is
         measured in V. Defaults to 'density'.
+    windowing : { 'after_detrend', 'before_detrend' }, optional
+        Either applies the window after detrending the signal as is most
+        commonly done, or applies it beforehand. This will alter the scaling
+        used to be density no matter what argument has been supplied for the
+        scaling.
 
     Returns
     -------
@@ -198,14 +228,9 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         nfft = len(x)
 
     if window is None:
-        window = 'boxcar'
-        win = sig.get_window(window, nfft)
+        win = sig.get_window('boxcar', nfft)
     elif window == 'sin2taper':
-        win = np.ones(nfft)
-        idx10 = int(np.ceil(nfft/10.))
-        idxs = np.arange(idx10)
-        win[:idx10] = np.sin(np.pi*idxs/(2.*idx10))**2
-        win[-idx10:] = np.cos(np.pi*(idxs - nfft)/(2.*idx10))**2
+        win = sin2taper(nfft)
     else:
         win = sig.get_window(window, nfft)
 
@@ -213,24 +238,37 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         scale = 1.0/(fs*(win*win).sum())
     elif scaling == 'spectrum':
         scale = 1.0/win.sum()**2
+    elif scaling == 'waterman':
+        scale = 1.0/(2.*np.pi*len(x))
     else:
         raise ValueError('Unknown scaling: %r' % scaling)
 
-    x_dt = sig.detrend(x, type=detrend)
-    y_dt = sig.detrend(y, type=detrend)
-
-    xft = np.fft.fft(win*x_dt, nfft)
-    yft = np.fft.fft(win*y_dt, nfft)
+    if windowing == 'after_detrend':
+        x_dt = sig.detrend(x, type=detrend)
+        y_dt = sig.detrend(y, type=detrend)
+        xft = np.fft.fft(win*x_dt, nfft)
+        yft = np.fft.fft(win*y_dt, nfft)
+    elif windowing == 'before_detrend':
+        x_dt = sig.detrend(win*x, type=detrend)
+        y_dt = sig.detrend(win*y, type=detrend)
+        xft = np.fft.fft(x_dt, nfft)
+        yft = np.fft.fft(y_dt, nfft)
+        scale = 1.0/(fs*len(x))
+    else:
+        raise ValueError('Unknown scaling: %r' % windowing)
 
     # Power spectral density in x, y and xy.
     Pxx = (xft*xft.conj()).real
     Pyy = (yft*yft.conj()).real
-    Pxy = (xft*yft.conj())
+    Pxy = xft*yft.conj()
 
     M = nfft/2 + 1
 
     # Chop spectrum in half.
     Pxx, Pyy, Pxy = Pxx[:M], Pyy[:M], Pxy[:M]
+
+    # Make sure the zero frequency is really zero.
+    Pxx[0], Pyy[0], Pxy[0] = 0., 0., 0.
 
     # Multiply spectrum by 2 except for the Nyquist and constant elements to
     # account for the loss of negative frequencies.
@@ -250,13 +288,16 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
 
 def CW_ps(Pxx, Pyy, Pxy):
     """Clockwise power spectrum."""
-    QS = -Pxy.imag
+    # NOTE that in the MATLAB code QS = -Pxy.imag because they take the
+    # conjugate transpose of Pxy first meaning that the imaginary parts are
+    # multiplied by -1.
+    QS = Pxy.imag
     return (Pxx + Pyy - 2.*QS)/2.
 
 
 def CCW_ps(Pxx, Pyy, Pxy):
     """Counter clockwise power spectrum."""
-    QS = -Pxy.imag
+    QS = Pxy.imag
     return (Pxx + Pyy + 2*QS)/2.
 
 
@@ -268,15 +309,42 @@ def integrated_ps(m, P, m_c, m_0):
 
 
 def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
-                        use_tilt=True, dzt=16., dzr=16., dzfd=16., dzg=20.,
-                        ddash=9.):
+                        use_tilt=True, use_bin=True, dzt=8., dzr=8.,
+                        dzfd=8., dzg=8., ddash=5.4, dzs=8.):
     """Spectral corrections for LADCP data - see Polzin et. al. 2002.
 
     m is vertical wavenumber. Needs factor of 2 pi.
 
     See Sheen/Shuckburgh MATLAB code for comments.
 
-    There is a fith possible correction which isn't used.
+    There is a sixth possible correction which isn't used.
+
+    dzt: transmitted sound pulse length projected on the vertical
+    dzr: receiver processing bin length
+    dzfd: first-differencing interval (=dzr)
+    dzg: interval of depth grid onto which single-ping piecewise-linear
+        continuous profiles of vertical shear are binned
+    dzs: superensemble pre-averaging interval, usually chosen to be dzg
+
+    Notes from MATLAB code
+    ----------------------
+
+    A quadratic fit to the range-maxima (rmax) ? d? pairs given by Polzin et
+    al. (2002) yields ddash = -1.2+0.0857r_{max} - 0.000136r_{max}^2 ,
+    (5) max max
+    which has an intercept near rmax = 14 m. It should be noted that
+    expressions (4) and (5) are semi-empirical and apply strictly only to the
+    data set of Polzin et al. (2002). Estimating rmax ? 255 m as the range at
+    which 80% of all ensembles have valid velocities yields d? ? 11.8 m in case
+    of this data set (i.e as in Thurherr 2011 NOT DIMES - nede to updaye!!).
+    ddash is determined empirically by Polzin et al. (2002) and is dependent
+    on range and the following assumptions:
+       + small tilts (~ 3 deg)
+       + instrument tilt and orientation are constant over measurement period
+       + instrument tilt and orientation are independent
+       + tilt attenuation is limited by bin-mapping capabilities of
+       RDI (1996) processing
+
     """
 
     # Range averaging.
@@ -303,24 +371,58 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     else:
         C_tilt = 1.
 
-    return C_range*C_diff*C_interp*C_tilt
+    # Binning
+    if use_bin:
+        C_bin = np.sinc(m*dzg/(2.*np.pi))**2 * np.sinc(m*dzs/(2.*np.pi))**2
+    else:
+        C_bin = 1.
+
+    return C_range*C_diff*C_interp*C_tilt*C_bin
 
 
-def analyse_profile(Pfl, plot=False):
+def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
+    """Calculate the power spectra for a window of data."""
 
-    # First remove NaN values and interpolate variables onto a regular grid.
-    dz = 4.  # Depth [m]
-    z = np.arange(np.nanmin(Pfl.z), 0., dz)
-    U = Pfl.interp(z, 'zef', 'U_abs')
-    V = Pfl.interp(z, 'zef', 'V_abs')
-    dUdz = Pfl.interp(z, 'zef', 'dUdz')
-    dVdz = Pfl.interp(z, 'zef', 'dVdz')
-    strain = Pfl.interp(z, 'z', 'strain_z')
-    N2_ref = Pfl.interp(z, 'z', 'N2_ref')
+    window = params.window
 
-    if plot:
+    # Normalise the shear by the mean buoyancy frequency.
+    ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
+    ndVdz = dVdz/np.mean(np.sqrt(N2_ref))
+
+    # Compute the (co)power spectral density.
+    m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz, window=window)
+    # We only really want the cospectrum for shear so the next two lines are
+    # something of a hack where we ignore unwanted output.
+    __, PU, PV, __ = coperiodogram(U, V, fs=1./dz, window=window)
+    __, Pstrain, __, __ = coperiodogram(strain, U, fs=1./dz, window=window)
+
+    # Clockwise and counter clockwise spectra.
+    PCW = CW_ps(PdU, PdV, PdUdV)
+    PCCW = CCW_ps(PdU, PdV, PdUdV)
+    # Shear spectra.
+    Pshear = PdU + PdV
+    # Kinetic energy spectra.
+    PEK = (PU + PV)/2.
+
+    # Plotting here generates a crazy number of plots.
+    if params.plot:
+        X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
+        X = [PEK, Pshear, Pstrain, PCW, PCCW]
+        for x, name in zip(X, X_names):
+            plt.figure()
+            plt.loglog(m, x)
+            plt.title(name)
+
+    return m, Pshear, Pstrain, PCW, PCCW, PEK
+
+
+def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
+    """"""
+
+    X = [U, V, dUdz, dVdz, strain, N2_ref]
+
+    if params.plot:
         X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
-        X = [U, V, dUdz, dVdz, strain, N2_ref]
         for x, name in zip(X, X_names):
             plt.figure()
             plt.plot(x, z)
@@ -328,55 +430,67 @@ def analyse_profile(Pfl, plot=False):
 
     # Split varables into overlapping window segments, bare in mind the last
     # window may not be full.
-    width = 300.
-    overlap = 200.
-    WDW = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
+    width = params.bin_width
+    overlap = params.bin_overlap
+    wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
 
-    N = WDW[0].shape[0]
-    z_mean = np.empty(N)
-    EK = np.empty(N)
-    Rpol = np.empty(N)
-    Rom = np.empty(N)
+    n = wdws[0].shape[0]
+    z_mean = np.empty(n)
+    EK = np.empty(n)
+    R_pol = np.empty(n)
+    R_om = np.empty(n)
+    epsilon = np.empty(n)
 
-    # Next normalise shear by mean N and then get spectra for everything. The
-    # for loop goes over each segment.
-    for i, (wU, wV, wdUdz, wdVdz, wstrain, wN2_ref) in enumerate(zip(*WDW)):
-        # Bad code I know but simplyfy what variables contain by removing the
-        # z values.
-        wz = wU[0]
+    for i, w in enumerate(zip(*wdws)):
+
+        # This takes the z values from the horizontal velocity.
+        wz = w[0][0]
         z_mean[i] = np.mean(wz)
-        wU, wV, wdUdz, wdVdz, wstrain, wN2_ref = \
-            wU[1], wV[1], wdUdz[1], wdVdz[1], wstrain[1], wN2_ref[1]
+        # This (poor code) removes the z values from windowed variables.
+        w = [var[1] for var in w]
+        N2_mean = np.mean(w[-1])
+        N_mean = np.sqrt(N2_mean)
 
-        # Normalise the shear by the mean buoyancy frequency.
-        ndUdz = wdUdz/np.mean(np.sqrt(wN2_ref))
-        ndVdz = wdVdz/np.mean(np.sqrt(wN2_ref))
-
-        # Compute the (co)power spectral density.
-        m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz)
-        __, PU, PV, __ = coperiodogram(wU, wV, fs=1./dz)
-        __, Pstrain = sig.periodogram(wstrain, fs=1./dz, detrend='linear')
-        PCW = CW_ps(PdU, PdV, PdUdV)
-        PCCW = CCW_ps(PdU, PdV, PdUdV)
-        Pshear = PdU + PdV
-
-        # Plotting here generates a crazy number of plots.
-#        if plot:
-#            X_names = ['U', 'V', 'shear', 'strain', 'CW', 'CCW']
-#            X = [PU, PV, Pshear, Pstrain, PCW, PCCW]
-#            for x, name in zip(X, X_names):
-#                plt.figure()
-#                plt.loglog(m, x)
-#                plt.title(name)
+        # Get the useful power spectra.
+        m, PCW, PCCW, Pshear, Pstrain, PEK = \
+            window_ps(params.dz, *w, params=params)
 
         # Integrate the spectra.
-        m_0 = 1./200.
-        m_c = 1./10.
+        I = [integrated_ps(m, P, params.m_c, params.m_0)
+             for P in [Pshear, Pstrain, PCW, PCCW, PEK]]
 
-        I = [integrated_ps(m, P, m_c, m_0) for P in [PU, PV, Pshear, Pstrain,
-                                                     PCW, PCCW]]
-        IU, IV, Ishear, Istrain, ICW, ICCW = I
+        Ishear, Istrain, ICW, ICCW, IEK = I
 
-        EK[i] = (IU + IV)/2.
-        Rpol[i] = ICCW/ICW
-        Rom[i] = Ishear/Istrain
+        # TODO: Check that this normalisation by N is needed!!!
+        GMshear = GM79.E_she_z(m, N_mean)/N_mean
+        IGMshear = integrated_ps(m, GMshear, params.m_c, params.m_0)
+
+        EK[i] = IEK
+        R_pol[i] = ICCW/ICW
+        R_om[i] = Ishear/Istrain
+        epsilon[i] = GM79.epsilon_0*N2_mean/GM79.N_0**2*Ishear**2/IGMshear**2
+
+    return z_mean, EK, R_pol, R_om, epsilon
+
+
+def analyse_profile(Pfl, params=default_params):
+    """"""
+
+    # First remove NaN values and interpolate variables onto a regular grid.
+    z = np.arange(np.nanmin(Pfl.z), 0., params.dz)
+    U = Pfl.interp(z, 'zef', 'U_abs')
+    V = Pfl.interp(z, 'zef', 'V_abs')
+    dUdz = Pfl.interp(z, 'zef', 'dUdz')
+    dVdz = Pfl.interp(z, 'zef', 'dVdz')
+    strain = Pfl.interp(z, 'z', 'strain_z')
+    N2_ref = Pfl.interp(z, 'z', 'N2_ref')
+
+    return analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
+
+
+
+def analyse_float(Float, hpids):
+    """"""
+    # Nothing special for now. It doesn't even work.
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+    return [analyse_profile(Pfl) for Pfl in Float.Profiles[idxs]]

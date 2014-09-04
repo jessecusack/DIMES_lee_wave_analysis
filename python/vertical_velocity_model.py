@@ -8,11 +8,7 @@ Created on Tue Apr 08 14:33:17 2014
 import emapex
 import scipy.optimize as op
 import numpy as np
-
-
-class Bunch(object):
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+from utils import Bunch
 
 
 def fitter(Float, params0, fixed, model='1', hpids=None,
