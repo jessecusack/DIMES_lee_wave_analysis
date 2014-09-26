@@ -15,23 +15,39 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import window as wdw
 import GM79
-from utils import Bunch
 
 # Define some standard parameters.
 mixing_efficiency = 0.2
 
-default_params = Bunch(
-    window='sin2taper',
-    dz=4.,
-    bin_width=300.,
-    bin_overlap=200.,
-    fine_grid_spectra=False,
-    plot_profiles=False,
-    plot_spectra=False,
-    plot_dir='../figures/finescale',
-    m_0=1./150.,
-    m_c=1./15.
-    )
+default_corrections = {
+    'use_range': True,
+    'use_diff': True,
+    'use_interp': True,
+    'use_tilt': True,
+    'use_bin': True,
+    'dzt': 8.,
+    'dzr': 8.,
+    'dzfd': 8.,
+    'dzg': 8.,
+    'ddash': 5.4,
+    'dzs': 8.
+    }
+
+default_params = {
+    'window': 'sin2taper',
+    'dz': 4.,
+    'bin_width': 300.,
+    'bin_overlap': 200.,
+    'fine_grid_spectra': False,
+    'plot_profiles': False,
+    'plot_spectra': False,
+    'plot_results': False,
+    'plot_dir': '../figures/finescale',
+    'm_0': 1./150.,
+    'm_c': 1./15.,
+    'correct_ladcp': False,
+    'ladcp_corrections': default_corrections
+    }
 
 
 def sin2taper(L):
@@ -279,13 +295,13 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     # Multiply spectrum by 2 except for the Nyquist and constant elements to
     # account for the loss of negative frequencies.
     Pxx[..., 1:-1] *= 2*scale
-    Pxx[..., (0,-1)] *= scale
+    Pxx[..., (0, -1)] *= scale
 
     Pyy[..., 1:-1] *= 2*scale
-    Pyy[..., (0,-1)] *= scale
+    Pyy[..., (0, -1)] *= scale
 
     Pxy[..., 1:-1] *= 2*scale
-    Pxy[..., (0,-1)] *= scale
+    Pxy[..., (0, -1)] *= scale
 
     f = np.arange(Pxx.shape[-1])*(fs/nfft)
 
@@ -387,7 +403,7 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
 def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     """Calculate the power spectra for a window of data."""
 
-    window = params.window
+    window = params['window']
 
     # Normalise the shear by the mean buoyancy frequency.
     ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
@@ -405,6 +421,16 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     PCCW = CCW_ps(PdU, PdV, PdUdV)
     # Shear spectra.
     Pshear = PdU + PdV
+
+    if params['correct_ladcp']:
+        C = spectral_correction(m, **params['ladcp_corrections'])
+        PCW /= C
+        PCCW /= C
+        Pshear /= C
+        # TODO: Note sure if velocity spectra also need correcting...
+        PU /= C
+        PV /= C
+
     # Kinetic energy spectra.
     PEK = (PU + PV)/2.
 
@@ -416,17 +442,17 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
     X = [U, V, dUdz, dVdz, strain, N2_ref]
 
-    if params.plot_profiles:
+    if params['plot_profiles']:
         X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
-        for x, name in zip(X, X_names):
-            plt.figure()
-            plt.plot(x, z)
-            plt.title(name)
+        fig, axs = plt.subplots(1, 5, sharey=True)
+        for ax, x, name in zip(axs, X, X_names):
+            ax.plot(x, z)
+            ax.set_title(name)
 
     # Split varables into overlapping window segments, bare in mind the last
     # window may not be full.
-    width = params.bin_width
-    overlap = params.bin_overlap
+    width = params['bin_width']
+    overlap = params['bin_overlap']
     wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
 
     n = wdws[0].shape[0]
@@ -449,17 +475,17 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
         # Get the useful power spectra.
         m, PCW, PCCW, Pshear, Pstrain, PEK = \
-            window_ps(params.dz, *w, params=params)
+            window_ps(params['dz'], *w, params=params)
 
         # Integrate the spectra.
-        I = [integrated_ps(m, P, params.m_c, params.m_0)
+        I = [integrated_ps(m, P, params['m_c'], params['m_0'])
              for P in [Pshear, Pstrain, PCW, PCCW, PEK]]
 
         Ishear, Istrain, ICW, ICCW, IEK = I
 
         # Garrett-Munk shear power spectral density normalised.
         GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
-        IGMshear = integrated_ps(m, GMshear, params.m_c, params.m_0)
+        IGMshear = integrated_ps(m, GMshear, params['m_c'], params['m_0'])
 
         EK[i] = IEK
         R_pol[i] = ICCW/ICW
@@ -470,7 +496,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
         kappa[i] = mixing_efficiency*epsilon[i]/N2_mean
 
         # Plotting here generates a crazy number of plots.
-        if params.plot_spectra:
+        if params['plot_spectra']:
             X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
             X = [PEK, Pshear, Pstrain, PCW, PCCW]
             for x, name in zip(X, X_names):
@@ -485,7 +511,7 @@ def analyse_profile(Pfl, params=default_params):
     """"""
 
     # First remove NaN values and interpolate variables onto a regular grid.
-    z = np.arange(np.nanmin(Pfl.z), 0., params.dz)
+    z = np.arange(np.nanmin(Pfl.z), 0., params['dz'])
     U = Pfl.interp(z, 'zef', 'U_abs')
     V = Pfl.interp(z, 'zef', 'V_abs')
     dUdz = Pfl.interp(z, 'zef', 'dUdz')
@@ -493,7 +519,17 @@ def analyse_profile(Pfl, params=default_params):
     strain = Pfl.interp(z, 'z', 'strain_z')
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
 
-    return analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
+    results = analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
+
+    if params['plot_profiles']:
+        result_names = ['EK', 'R_pol', 'R_om', 'epsilon', 'kappa']
+        z_mean = results[0]
+        fig, axs = plt.subplots(1, 5, sharey=True)
+        for ax, x, name in zip(axs, results[1:], result_names):
+            ax.plot(x, z_mean)
+            ax.set_title(name)
+
+    return results
 
 
 def analyse_float(Float, hpids):
