@@ -10,15 +10,13 @@ A place for finescale parameterisation functions.
 import numpy as np
 import gsw
 import scipy.signal as sig
-import matplotlib
-matplotlib.use('Agg')
+# import matplotlib
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import window as wdw
 import GM79
 
 # Define some standard parameters.
-mixing_efficiency = 0.2
-
 default_corrections = {
     'use_range': True,
     'use_diff': True,
@@ -33,8 +31,15 @@ default_corrections = {
     'dzs': 8.
     }
 
-default_params = {
+default_periodogram_params = {
     'window': 'sin2taper',
+    'nfft': 256,
+    'detrend': 'linear',
+    'scaling': 'density',
+    'windowing': 'after_detrend'
+}
+
+default_params = {
     'dz': 4.,
     'bin_width': 300.,
     'bin_overlap': 200.,
@@ -46,7 +51,9 @@ default_params = {
     'm_0': 1./150.,
     'm_c': 1./15.,
     'correct_ladcp': False,
-    'ladcp_corrections': default_corrections
+    'ladcp_corrections': default_corrections,
+    'periodogram_params': default_periodogram_params,
+    'mixing_efficiency': 0.2
     }
 
 
@@ -250,11 +257,11 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         nfft = len(x)
 
     if window is None:
-        win = sig.get_window('boxcar', nfft)
+        win = sig.get_window('boxcar', len(x))
     elif window == 'sin2taper':
-        win = sin2taper(nfft)
+        win = sin2taper(len(x))
     else:
-        win = sig.get_window(window, nfft)
+        win = sig.get_window(window, len(x))
 
     if scaling == 'density':
         scale = 1.0/(fs*(win*win).sum())
@@ -403,18 +410,19 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
 def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     """Calculate the power spectra for a window of data."""
 
-    window = params['window']
-
     # Normalise the shear by the mean buoyancy frequency.
     ndUdz = dUdz/np.mean(np.sqrt(N2_ref))
     ndVdz = dVdz/np.mean(np.sqrt(N2_ref))
 
     # Compute the (co)power spectral density.
-    m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz, window=window)
+    m, PdU, PdV, PdUdV = coperiodogram(ndUdz, ndVdz, fs=1./dz,
+                                       **params['periodogram_params'])
     # We only really want the cospectrum for shear so the next two lines are
     # something of a hack where we ignore unwanted output.
-    __, PU, PV, __ = coperiodogram(U, V, fs=1./dz, window=window)
-    __, Pstrain, __, __ = coperiodogram(strain, U, fs=1./dz, window=window)
+    __, PU, PV, __ = coperiodogram(U, V, fs=1./dz,
+                                   **params['periodogram_params'])
+    __, Pstrain, __, __ = coperiodogram(strain, U, fs=1./dz,
+                                        **params['periodogram_params'])
 
     # Clockwise and counter clockwise spectra.
     PCW = CW_ps(PdU, PdV, PdUdV)
@@ -493,7 +501,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
         epsilon[i] = GM79.epsilon_0*N2_mean/GM79.N_0**2*Ishear**2/IGMshear**2
         # Apply correcting factors
         epsilon[i] *= L(-57.5, N_mean)*h_gregg(R_om[i])
-        kappa[i] = mixing_efficiency*epsilon[i]/N2_mean
+        kappa[i] = params['mixing_efficiency']*epsilon[i]/N2_mean
 
         # Plotting here generates a crazy number of plots.
         if params['plot_spectra']:
@@ -528,6 +536,9 @@ def analyse_profile(Pfl, params=default_params):
         for ax, x, name in zip(axs, results[1:], result_names):
             ax.plot(x, z_mean)
             ax.set_title(name)
+
+        # This is necessary to overcome a bug - may become redundant soon.
+        plt.ylim(np.min(z_mean), np.max(z_mean))
 
     return results
 
