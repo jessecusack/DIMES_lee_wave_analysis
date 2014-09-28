@@ -75,6 +75,9 @@ def lldist(lon, lat):
         Distance between lon and lat positions. [km]
     """
 
+    lon = np.asarray(lon)
+    lat = np.asarray(lat)
+
     pi180 = np.pi/180.
     earth_radius = 6378.137  # [km]
 

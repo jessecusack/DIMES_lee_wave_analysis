@@ -143,6 +143,10 @@ def track_on_bathy(Float, hpids, projection='cyl', bathy_file=None):
         Np = 8
         Nm = max(3, np.round(Nm/r))
         orientation = 'vertical'
+    else:
+        Np = 4
+        Nm = 4
+        orientation = 'horizontal'
 
     parallels = np.round(np.linspace(llcrnrlat, urcrnrlat, Np), 1)
     m.drawparallels(parallels, labels=[1, 0, 0, 0])
