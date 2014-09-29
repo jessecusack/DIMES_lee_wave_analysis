@@ -36,7 +36,6 @@ default_periodogram_params = {
     'nfft': 256,
     'detrend': 'linear',
     'scaling': 'density',
-    'windowing': 'after_detrend'
 }
 
 default_params = {
@@ -84,8 +83,8 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
         Latitude [-90...+90]
     p_bin_width : float, optional
         Pressure bin width [dbar]
-    deg : int, option
-        Degree of polynomial fit.
+    deg : int, optional
+        Degree of polynomial fit. (DEGREES HIGHER THAN 1 NOT YET TESTED)
 
     Returns
     -------
@@ -195,7 +194,7 @@ def L(f, N):
 
 
 def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
-                  scaling='density', windowing='after_detrend'):
+                  scaling='density'):
     """
     Estimate co-power spectral density using periodogram method.
 
@@ -226,11 +225,6 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         where Pxx has units of V**2/Hz if x is measured in V and computing
         the power spectrum ('spectrum') where Pxx has units of V**2 if x is
         measured in V. Defaults to 'density'.
-    windowing : { 'after_detrend', 'before_detrend' }, optional
-        Either applies the window after detrending the signal as is most
-        commonly done, or applies it beforehand. This will alter the scaling
-        used to be density no matter what argument has been supplied for the
-        scaling.
 
     Returns
     -------
@@ -272,19 +266,11 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     else:
         raise ValueError('Unknown scaling: %r' % scaling)
 
-    if windowing == 'after_detrend':
-        x_dt = sig.detrend(x, type=detrend)
-        y_dt = sig.detrend(y, type=detrend)
-        xft = np.fft.fft(win*x_dt, nfft)
-        yft = np.fft.fft(win*y_dt, nfft)
-    elif windowing == 'before_detrend':
-        x_dt = sig.detrend(win*x, type=detrend)
-        y_dt = sig.detrend(win*y, type=detrend)
-        xft = np.fft.fft(x_dt, nfft)
-        yft = np.fft.fft(y_dt, nfft)
-        scale = 1.0/(fs*len(x))
-    else:
-        raise ValueError('Unknown scaling: %r' % windowing)
+    x_dt = sig.detrend(x, type=detrend)
+    y_dt = sig.detrend(y, type=detrend)
+
+    xft = np.fft.fft(win*x_dt, nfft)
+    yft = np.fft.fft(win*y_dt, nfft)
 
     # Power spectral density in x, y and xy.
     Pxx = (xft*xft.conj()).real
@@ -493,6 +479,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
         # Garrett-Munk shear power spectral density normalised.
         GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
+
         IGMshear = integrated_ps(m, GMshear, params['m_c'], params['m_0'])
 
         EK[i] = IEK
