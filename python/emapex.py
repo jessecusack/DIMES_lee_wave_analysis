@@ -746,6 +746,7 @@ def integrated_dist(Pfl):
 
     import matplotlib.pyplot as plt
 
+    z = Pfl.zef
     U = Pfl.U_abs - Pfl.U
     V = Pfl.V_abs - Pfl.V
     T = Pfl.UTCef*86400
@@ -761,4 +762,8 @@ def integrated_dist(Pfl):
           "GPS: {}\n"
           "VEL: {}".format(D, d))
 
+    plt.figure()
     plt.plot(T, x, T, y)
+
+    plt.figure()
+    plt.plot(T, U, T, V)
