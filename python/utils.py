@@ -22,9 +22,6 @@ def datenum_to_datetime(datenum):
     """
     Convert a MATLAB datenums into python datetimes.
 
-    Generate smooth buoyancy frequency profile by applying the adiabatic
-    levelling method of Bray and Fofonoff (1981).
-
     Parameters
     ----------
     datenum : array_like
