@@ -261,8 +261,6 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         scale = 1.0/(fs*(win*win).sum())
     elif scaling == 'spectrum':
         scale = 1.0/win.sum()**2
-    elif scaling == 'waterman':
-        scale = 1.0/(2.*np.pi*len(x))
     else:
         raise ValueError('Unknown scaling: %r' % scaling)
 
@@ -282,8 +280,10 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     # Chop spectrum in half.
     Pxx, Pyy, Pxy = Pxx[:M], Pyy[:M], Pxy[:M]
 
-    # Make sure the zero frequency is really zero.
-    Pxx[0], Pyy[0], Pxy[0] = 0., 0., 0.
+    # Make sure the zero frequency is really zero and not a very very small
+    # non-zero number because that can mess up log plots.
+    if detrend is not None:
+        Pxx[..., 0], Pyy[..., 0], Pxy[..., 0] = 0., 0., 0.
 
     # Multiply spectrum by 2 except for the Nyquist and constant elements to
     # account for the loss of negative frequencies.
