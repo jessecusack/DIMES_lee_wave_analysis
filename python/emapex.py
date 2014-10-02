@@ -306,6 +306,12 @@ class EMApexFloat(object):
         self.sub_surf_u = self.sub_surf_speed*np.sin(self.profile_bearing)
         self.sub_surf_v = self.sub_surf_speed*np.cos(self.profile_bearing)
 
+        print("Interpolating missing velocity values.")
+        # Fill missing U, V values using linear interpolation otherwise we
+        # run into difficulties using cumtrapz next.
+        self.U = self.__fill_missing(self.U)
+        self.V = self.__fill_missing(self.V)
+
         print("Estimating absolute velocity.")
         # Absolute velocity defined as relative velocity plus mean velocity
         # minus depth integrated relative velocity.
@@ -526,6 +532,32 @@ class EMApexFloat(object):
         xnans = np.isnan(x)
         x[~xnans] = np.interp(xUTC[~xnans], pUTC[~nans], v_flat[~nans])
         return x.reshape(shape, order='F')
+
+    def __fill_missing(self, v):
+        """Fill missing values in 2D arrays using linear interpolation."""
+
+        # Get corresponding time array.
+        t = getattr(self, 'UTC')
+        tef = getattr(self, 'UTCef')
+        if tef.size == v.size:
+            t = tef
+
+        for v_col, t_col in zip(v.T, t.T):
+
+            nnans = ~np.isnan(v_col)
+
+            if np.sum(nnans) == 0:
+                continue
+
+            # Index where padding nans start.
+            pidx = nnans.searchsorted(True, side='right')
+
+            # Replace non-padding nans with linearly interpolated value.
+            nans = np.isnan(v_col[:pidx])
+            v_col[:pidx][nans] = np.interp(t_col[nans], t_col[~nans],
+                                           v_col[~nans])
+
+        return v
 
     def get_profiles(self, hpids, ret_idxs=False):
         """Will return profiles requested. Can also return indices of those
