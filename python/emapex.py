@@ -187,12 +187,15 @@ class EMApexFloat(object):
     contained on a ctd array
 
     """
-    def __init__(self, filepath, floatID):
+    def __init__(self, filepath, floatID, post_process=True, regrid=False):
+
+        print("\nInitialising")
+        print("------------\n")
 
         self.floatID = floatID
         print(
-            "Initialising EM-APEX float: {}\n"
-            "Attmpting to load data...".format(floatID)
+            "EM-APEX float: {}\n"
+            "Loading data...".format(floatID)
         )
 
         # Loaded data is a dictionary.
@@ -227,12 +230,9 @@ class EMApexFloat(object):
 
             print("  Loaded: {}.".format(key))
 
-        print(
-            "All numerical data appears to have been loaded successfully.\n"
-            "Interpolating GPS positions and calculating thermodynamic\n"
-            "variables."
-        )
+        print("All numerical data appears to have been loaded successfully.\n")
 
+        print("Interpolated GPS positions to starts and ends of profiles.")
         # GPS interpolation to the start and end time of each half profile.
         idxs = ~np.isnan(self.lon_gps) & ~np.isnan(self.lat_gps)
         self.lon_start = np.interp(self.UTC_start, self.utc_gps[idxs],
@@ -244,10 +244,32 @@ class EMApexFloat(object):
         self.lat_end = np.interp(self.UTC_end, self.utc_gps[idxs],
                                  self.lat_gps[idxs])
 
+        print("Calculating heights.\n")
+        # Depth.
+        self.z = gsw.z_from_p(self.P, self.lat_start)
+        self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
+        self.zef = gsw.z_from_p(self.Pef, self.lat_start)
+
+        print("Creating array of half profiles.\n")
+
+        self.Profiles = np.array([Profile(self, h) for h in self.hpid])
+
+        if post_process:
+            self.post_process()
+
+        if regrid:
+            self.generate_regular_grids()
+
+    def post_process(self):
+
+        print("\nPost processing")
+        print("---------------\n")
+        print("Calculating distance along trajectory.")
         # Distance along track from first half profile.
         self.__ddist = utils.lldist(self.lon_start, self.lat_start)
         self.dist = np.hstack((0., np.cumsum(self.__ddist)))
 
+        print("Interpolating distance to measurements.")
         # Distances, velocities and speeds of each half profile.
         self.profile_ddist = np.zeros_like(self.lon_start)
         self.profile_dt = np.zeros_like(self.lon_start)
@@ -273,15 +295,18 @@ class EMApexFloat(object):
 
         self.dist_ef = self.__regrid('ctd', 'ef', self.dist_ctd)
 
+        print("Estimating bearings.")
         # Pythagorian approximation (?) of bearing.
         self.profile_bearing = np.arctan2(self.lon_end - self.lon_start,
                                           self.lat_end - self.lat_start)
 
+        print("Calculating sub-surface velocity.")
         # Convert to m s-1 calculate meridional and zonal velocities.
         self.sub_surf_speed = self.profile_ddist*1000./self.profile_dt
         self.sub_surf_u = self.sub_surf_speed*np.sin(self.profile_bearing)
         self.sub_surf_v = self.sub_surf_speed*np.cos(self.profile_bearing)
 
+        print("Estimating absolute velocity.")
         # Absolute velocity defined as relative velocity plus mean velocity
         # minus depth integrated relative velocity.
         self.U_abs = self.U + self.sub_surf_u
@@ -291,12 +316,8 @@ class EMApexFloat(object):
         self.V_abs -= cumtrapz(self.V, self.UTCef*86400.,
                                axis=0, initial=0.)/self.profile_dt
 
+        print("Calculating thermodynamic variables.")
         # Derive some important thermodynamics variables.
-
-        # Depth.
-        self.z = gsw.z_from_p(self.P, self.lat_start)
-        self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
-        self.zef = gsw.z_from_p(self.Pef, self.lat_start)
 
         # Absolute salinity.
         self.SA = gsw.SA_from_SP(self.S, self.P, self.lon_start,
@@ -317,41 +338,47 @@ class EMApexFloat(object):
         N2_ca, __ = gsw.Nsquared(self.SA, self.CT, self.P, self.lat_start)
         self.N2 = self.__regrid('ctd_ca', 'ctd', N2_ca)
 
+        print("Calculating float vertical velocity.")
         # Vertical velocity regridded onto ctd grid.
         dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
         Wz_ca = np.diff(self.z, axis=0)/dt
         self.Wz = self.__regrid('ctd_ca', 'ctd', Wz_ca)
 
+        # Vertical water velocity.
+        self.Wpef = self.Wp.copy()
+        del self.Wp
+
+        print("Calculating shear.")
         # Shear calculations.
         dUdz_ca = np.diff(self.U, axis=0)/np.diff(self.zef, axis=0)
         dVdz_ca = np.diff(self.V, axis=0)/np.diff(self.zef, axis=0)
         self.dUdz = self.__regrid('ef_ca', 'ef', dUdz_ca)
         self.dVdz = self.__regrid('ef_ca', 'ef', dVdz_ca)
 
-        # Vertical water velocity.
-        self.Wpef = self.Wp.copy()
-        del self.Wp
-
         # Regrid piston position.
         self.ppos_ctd = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
 
-        print("Creating array of half profiles.")
+        self.update_profiles()
 
-        self.Profiles = np.array([Profile(self, h) for h in self.hpid])
+    def generate_regular_grids(self, zmin=-1400., dz=5.):
 
-        print("Interpolating some variables onto regular grids.")
+        print("\nGenerating regular grids")
+        print("------------------------\n")
 
-        z_vals = np.arange(-1400., 0., 5.)
+        print("Interpolating from {:1.0f} m to 0 m in {:1.0f} m increments."
+              "".format(zmin, dz))
+
+        z_vals = np.arange(zmin, 0., dz)
         self.__r_z_vals = z_vals
         self_dict = self.__dict__
         for key in self_dict.keys():
 
             d = np.ndim(self_dict[key])
 
-            if d < 2 or d > 2 or '__' in key or '_ca' in key:
+            if d < 2 or d > 2 or '__' in key or '_ca' in key or 'r_' in key:
                 continue
             elif d == 2:
-                name = 'r' + key
+                name = 'r_' + key
                 __, __, var_grid = self.get_interp_grid(self.hpid, z_vals,
                                                         'z', key)
                 setattr(self, name, var_grid)
@@ -359,8 +386,6 @@ class EMApexFloat(object):
             print("  Added: {}.".format(name))
 
         self.update_profiles()
-
-        print("That appears to have worked.\n")
 
     def get_profiles(self, hpids, ret_idxs=False):
         """Will return profiles requested. Can also return indices of those
@@ -384,7 +409,7 @@ class EMApexFloat(object):
             raise RuntimeError('Check arguments.')
 
     def update_profiles(self):
-        print("Updating half profiles.")
+        print("\nUpdating half profiles.\n")
         [profile.update(self) for profile in self.Profiles]
 
     def __regrid(self, grid_from, grid_to, v):
