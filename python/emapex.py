@@ -358,7 +358,7 @@ class EMApexFloat(object):
 
         print("Regridding piston position to ctd.\n")
         # Regrid piston position.
-        self.ppos_ctd = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
+        self.ppos = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
 
         self.update_profiles()
 
@@ -419,21 +419,14 @@ class EMApexFloat(object):
 #            self.r_Ww = self.r_Wz - self.r_Ws
 #            print("  Added: r_Ww.")
 
-            # Hack to get Ww on ctd grid.
-            if ('ppos' in wfi.data_names and 'P' in wfi.data_names
-                and 'rho' in wfi.data_names):
-
-                data = [getattr(self, data_name) for
-                        data_name in ['ppos_ctd', 'P', 'rho']]
+            data = [getattr(self, data_name) for
+                    data_name in wfi.data_names]
 
 
-                self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
-                print("  Added: Ws.")
-                self.Ww = self.Wz - self.Ws
-                print("  Added: Ww.")
-
-            else:
-                raise RuntimeError
+            self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+            print("  Added: Ws.")
+            self.Ww = self.Wz - self.Ws
+            print("  Added: Ww.")
 
 #        elif wfi.profiles == 'updown':
 #
