@@ -389,26 +389,90 @@ class EMApexFloat(object):
 
         self.update_profiles()
 
-    def get_profiles(self, hpids, ret_idxs=False):
-        """Will return profiles requested. Can also return indices of those
-        profiles."""
+    def apply_w_model(self, fit_info):
+        """Give a W_fit_info object or path to pickle of such object."""
 
-        if np.ndim(hpids) == 0:
-            idx = np.unique(self.hpid.searchsorted(hpids))
-            if ret_idxs:
-                return self.Profiles[idx[0]], idx
+        print("\nApplying vertical velocity model")
+        print("--------------------------------\n")
+
+        # Initially assume path to fit.
+        try:
+            with open(fit_info, 'rb') as f:
+                print("Unpickling fit info.")
+                setattr(self, '__wfi', pickle.load(f))
+        except TypeError:
+            print('Copying fit info.')
+            setattr(self, '__wfi', copy.copy(fit_info))
+
+        wfi = getattr(self, '__wfi')
+
+        # Initialise arrays.
+#        self.rWs = np.empty_like(self.rUTC)
+#        self.rWw = np.empty_like(self.rUTC)
+
+        if wfi.profiles == 'all':
+
+#            data = [getattr(self, 'r_' + data_name) for
+#                    data_name in wfi.data_names]
+#            self.r_Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+#            print("  Added: r_Ws.")
+#            self.r_Ww = self.r_Wz - self.r_Ws
+#            print("  Added: r_Ww.")
+
+            # Hack to get Ww on ctd grid.
+            if ('ppos' in wfi.data_names and 'P' in wfi.data_names
+                and 'rho' in wfi.data_names):
+
+                data = [getattr(self, data_name) for
+                        data_name in ['ppos_ctd', 'P', 'rho']]
+
+
+                self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+                print("  Added: Ws.")
+                self.Ww = self.Wz - self.Ws
+                print("  Added: Ww.")
+
             else:
-                return self.Profiles[idx[0]]
-        elif np.ndim(hpids) == 1:
-            hpids = hpids[(np.min(self.hpid) <= hpids) &
-                          (hpids <= np.max(self.hpid))]
-            idxs = np.unique(self.hpid.searchsorted(hpids))
-            if ret_idxs:
-                return self.Profiles[idxs], idxs
-            else:
-                return self.Profiles[idxs]
+                raise RuntimeError
+
+#        elif wfi.profiles == 'updown':
+#
+#            up = up_down_indices(self.hpid, 'up')
+#            data = [getattr(self, 'r_' + data_name)[:, up] for
+#                    data_name in wfi.data_names]
+#            self.r_Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
+#            print("  Added: r_Ws. (ascents)")
+#
+#            down = up_down_indices(self.hpid, 'down')
+#            data = [getattr(self, 'r_' + data_name)[:, down] for
+#                    data_name in wfi.data_names]
+#            self.r_Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
+#            print("  Added: r_Ws. (descents)")
+#
+#            self.r_Ww = self.r_Wz - self.r_Ws
+#            print("  Added: r_Ww.")
+
         else:
-            raise RuntimeError('Check arguments.')
+            raise RuntimeError
+
+        self.update_profiles()
+
+    def apply_strain(self, N2_ref_file):
+        """Input the path to file that contains grid of adiabatically levelled
+        N2."""
+
+        print("\nAdding strain")
+        print("-------------\n")
+
+        with open(N2_ref_file) as f:
+
+            N2_ref = pickle.load(f)
+            setattr(self, 'N2_ref', N2_ref)
+            print("  Added: N2_ref.")
+            setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
+            print("  Added: strain_z.")
+
+        self.update_profiles()
 
     def update_profiles(self):
         print("\nUpdating half profiles.\n")
@@ -469,6 +533,27 @@ class EMApexFloat(object):
         xnans = np.isnan(x)
         x[~xnans] = np.interp(xUTC[~xnans], pUTC[~nans], v_flat[~nans])
         return x.reshape(shape, order='F')
+
+    def get_profiles(self, hpids, ret_idxs=False):
+        """Will return profiles requested. Can also return indices of those
+        profiles."""
+
+        if np.ndim(hpids) == 0:
+            idx = np.unique(self.hpid.searchsorted(hpids))
+            if ret_idxs:
+                return self.Profiles[idx[0]], idx
+            else:
+                return self.Profiles[idx[0]]
+        elif np.ndim(hpids) == 1:
+            hpids = hpids[(np.min(self.hpid) <= hpids) &
+                          (hpids <= np.max(self.hpid))]
+            idxs = np.unique(self.hpid.searchsorted(hpids))
+            if ret_idxs:
+                return self.Profiles[idxs], idxs
+            else:
+                return self.Profiles[idxs]
+        else:
+            raise RuntimeError('Check arguments.')
 
     def get_interp_grid(self, hpids, var_2_vals, var_2_name, var_1_name):
         """Grid data from multiple profiles into a matrix. Linear interpolation
@@ -609,99 +694,6 @@ class EMApexFloat(object):
                                ' array sizes.')
 
         return times, vals
-
-    def apply_w_model(self, fit_info):
-        """Give a W_fit_info object or path to pickle of such object."""
-
-        print("\nApplying vertival velocity model")
-        print("--------------------------------\n")
-
-        # Initially assume path to fit.
-        try:
-            with open(fit_info, 'rb') as f:
-                print("Unpickling fit info.")
-                setattr(self, '__wfi', pickle.load(f))
-        except TypeError:
-            print('Copying fit info.')
-            setattr(self, '__wfi', copy.copy(fit_info))
-
-        wfi = getattr(self, '__wfi')
-
-        # Initialise arrays.
-#        self.rWs = np.empty_like(self.rUTC)
-#        self.rWw = np.empty_like(self.rUTC)
-
-        if wfi.profiles == 'all':
-
-#            data = [getattr(self, 'r_' + data_name) for
-#                    data_name in wfi.data_names]
-#            self.r_Ws = wfi.model_func(wfi.p, data, wfi.fixed)
-#            print("  Added: r_Ws.")
-#            self.r_Ww = self.r_Wz - self.r_Ws
-#            print("  Added: r_Ww.")
-
-            # Hack to get Ww on ctd grid.
-            if ('ppos' in wfi.data_names and 'P' in wfi.data_names
-                and 'rho' in wfi.data_names):
-
-                data = [getattr(self, data_name) for
-                        data_name in ['ppos_ctd', 'P', 'rho']]
-
-
-                self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
-                print("  Added: Ws.")
-                self.Ww = self.Wz - self.Ws
-                print("  Added: Ww.")
-
-            else:
-                raise RuntimeError
-
-#        elif wfi.profiles == 'updown':
-#
-#            up = up_down_indices(self.hpid, 'up')
-#            data = [getattr(self, 'r_' + data_name)[:, up] for
-#                    data_name in wfi.data_names]
-#            self.r_Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
-#            print("  Added: r_Ws. (ascents)")
-#
-#            down = up_down_indices(self.hpid, 'down')
-#            data = [getattr(self, 'r_' + data_name)[:, down] for
-#                    data_name in wfi.data_names]
-#            self.r_Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
-#            print("  Added: r_Ws. (descents)")
-#
-#            self.r_Ww = self.r_Wz - self.r_Ws
-#            print("  Added: r_Ww.")
-
-        else:
-            raise RuntimeError
-
-        self.update_profiles()
-
-    def apply_strain(self, N2_ref_file):
-        """Input the path to file that contains grid of adiabatically levelled
-        N2."""
-
-        with open(N2_ref_file) as f:
-
-            N2_ref = pickle.load(f)
-            setattr(self, 'N2_ref', N2_ref)
-            print("  Added: N2_ref.")
-            setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
-            print("  Added: strain_z.")
-
-        self.update_profiles()
-
-        for key in ['N2_ref', 'strain_z']:
-
-            name = 'r' + key
-            __, __, var_grid = self.get_interp_grid(self.hpid,
-                                                    self.__r_z_vals,
-                                                    'z', key)
-            setattr(self, name, var_grid)
-            print("  Added: {}.".format(name))
-
-        self.update_profiles()
 
 
 def up_down_indices(hpid_array, up_or_down='up'):
