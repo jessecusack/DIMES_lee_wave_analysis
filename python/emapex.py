@@ -244,7 +244,7 @@ class EMApexFloat(object):
         self.lat_end = np.interp(self.UTC_end, self.utc_gps[idxs],
                                  self.lat_gps[idxs])
 
-        print("Calculating heights.\n")
+        print("Calculating heights.")
         # Depth.
         self.z = gsw.z_from_p(self.P, self.lat_start)
         self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
@@ -344,6 +344,7 @@ class EMApexFloat(object):
         Wz_ca = np.diff(self.z, axis=0)/dt
         self.Wz = self.__regrid('ctd_ca', 'ctd', Wz_ca)
 
+        print("Renaming Wp to Wpef.")
         # Vertical water velocity.
         self.Wpef = self.Wp.copy()
         del self.Wp
@@ -355,6 +356,7 @@ class EMApexFloat(object):
         self.dUdz = self.__regrid('ef_ca', 'ef', dUdz_ca)
         self.dVdz = self.__regrid('ef_ca', 'ef', dVdz_ca)
 
+        print("Regridding piston position to ctd.\n")
         # Regrid piston position.
         self.ppos_ctd = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
 
@@ -610,6 +612,10 @@ class EMApexFloat(object):
 
     def apply_w_model(self, fit_info):
         """Give a W_fit_info object or path to pickle of such object."""
+
+        print("\nApplying vertival velocity model")
+        print("--------------------------------\n")
+
         # Initially assume path to fit.
         try:
             with open(fit_info, 'rb') as f:
@@ -622,17 +628,17 @@ class EMApexFloat(object):
         wfi = getattr(self, '__wfi')
 
         # Initialise arrays.
-        self.rWs = np.empty_like(self.rUTC)
-        self.rWw = np.empty_like(self.rUTC)
+#        self.rWs = np.empty_like(self.rUTC)
+#        self.rWw = np.empty_like(self.rUTC)
 
         if wfi.profiles == 'all':
 
-            data = [getattr(self, 'r' + data_name) for
-                    data_name in wfi.data_names]
-            self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
-            print("  Added: rWs.")
-            self.rWw = self.rWz - self.rWs
-            print("  Added: rWw.")
+#            data = [getattr(self, 'r_' + data_name) for
+#                    data_name in wfi.data_names]
+#            self.r_Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+#            print("  Added: r_Ws.")
+#            self.r_Ww = self.r_Wz - self.r_Ws
+#            print("  Added: r_Ww.")
 
             # Hack to get Ww on ctd grid.
             if ('ppos' in wfi.data_names and 'P' in wfi.data_names
@@ -640,25 +646,35 @@ class EMApexFloat(object):
 
                 data = [getattr(self, data_name) for
                         data_name in ['ppos_ctd', 'P', 'rho']]
+
+
                 self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+                print("  Added: Ws.")
                 self.Ww = self.Wz - self.Ws
+                print("  Added: Ww.")
 
-        elif wfi.profiles == 'updown':
+            else:
+                raise RuntimeError
 
-            up = up_down_indices(self.hpid, 'up')
-            data = [getattr(self, 'r' + data_name)[:, up] for
-                    data_name in wfi.data_names]
-            self.rWs[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
-            print("  Added: rWs. (ascents)")
+#        elif wfi.profiles == 'updown':
+#
+#            up = up_down_indices(self.hpid, 'up')
+#            data = [getattr(self, 'r_' + data_name)[:, up] for
+#                    data_name in wfi.data_names]
+#            self.r_Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
+#            print("  Added: r_Ws. (ascents)")
+#
+#            down = up_down_indices(self.hpid, 'down')
+#            data = [getattr(self, 'r_' + data_name)[:, down] for
+#                    data_name in wfi.data_names]
+#            self.r_Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
+#            print("  Added: r_Ws. (descents)")
+#
+#            self.r_Ww = self.r_Wz - self.r_Ws
+#            print("  Added: r_Ww.")
 
-            down = up_down_indices(self.hpid, 'down')
-            data = [getattr(self, 'r' + data_name)[:, down] for
-                    data_name in wfi.data_names]
-            self.rWs[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
-            print("  Added: rWs. (descents)")
-
-            self.rWw = self.rWz - self.rWs
-            print("  Added: rWw.")
+        else:
+            raise RuntimeError
 
         self.update_profiles()
 
