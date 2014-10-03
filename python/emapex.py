@@ -88,7 +88,7 @@ class Profile(object):
         var_2 = getattr(self, var_2_name)
         t = getattr(self, 'UTC')
         tef = getattr(self, 'UTCef')
-        rt = getattr(self, 'rUTC', None)
+        r_t = getattr(self, 'r_UTC', None)
 
         equal_size = False
 
@@ -96,7 +96,7 @@ class Profile(object):
         if var_2.size == var_1.size:
             equal_size = True
         else:
-            for time in [t, tef, rt]:
+            for time in [t, tef, r_t]:
                 if time is None:
                     continue
                 elif time.size == var_1.size:
@@ -109,7 +109,6 @@ class Profile(object):
         nans_var_2 = np.isnan(var_2)
 
         try:
-
             if equal_size:
                 # Both arrays are same length.
                 nans = nans_var_1 | nans_var_2
@@ -134,7 +133,6 @@ class Profile(object):
                                    ' array sizes.')
 
         except ValueError:
-
             var_1_vals = np.NaN*np.zeros_like(var_2_vals)
 
         return var_1_vals
@@ -412,44 +410,33 @@ class EMApexFloat(object):
 
         wfi = getattr(self, '__wfi')
 
-        # Initialise arrays.
-#        self.rWs = np.empty_like(self.rUTC)
-#        self.rWw = np.empty_like(self.rUTC)
-
         if wfi.profiles == 'all':
 
-#            data = [getattr(self, 'r_' + data_name) for
-#                    data_name in wfi.data_names]
-#            self.r_Ws = wfi.model_func(wfi.p, data, wfi.fixed)
-#            print("  Added: r_Ws.")
-#            self.r_Ww = self.r_Wz - self.r_Ws
-#            print("  Added: r_Ww.")
-
-            data = [getattr(self, data_name) for
-                    data_name in wfi.data_names]
-
+            data = [getattr(self, data_name) for data_name in wfi.data_names]
 
             self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
             print("  Added: Ws.")
             self.Ww = self.Wz - self.Ws
             print("  Added: Ww.")
 
-#        elif wfi.profiles == 'updown':
-#
-#            up = up_down_indices(self.hpid, 'up')
-#            data = [getattr(self, 'r_' + data_name)[:, up] for
-#                    data_name in wfi.data_names]
-#            self.r_Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
-#            print("  Added: r_Ws. (ascents)")
-#
-#            down = up_down_indices(self.hpid, 'down')
-#            data = [getattr(self, 'r_' + data_name)[:, down] for
-#                    data_name in wfi.data_names]
-#            self.r_Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
-#            print("  Added: r_Ws. (descents)")
-#
-#            self.r_Ww = self.r_Wz - self.r_Ws
-#            print("  Added: r_Ww.")
+        elif wfi.profiles == 'updown':
+
+            self.Ws = np.nan*np.ones_like(self.Wz)
+
+            up = up_down_indices(self.hpid, 'up')
+            data = [getattr(self, data_name)[:, up] for
+                    data_name in wfi.data_names]
+            self.Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
+            print("  Added: Ws. (ascents)")
+
+            down = up_down_indices(self.hpid, 'down')
+            data = [getattr(self, data_name)[:, down] for
+                    data_name in wfi.data_names]
+            self.Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
+            print("  Added: Ws. (descents)")
+
+            self.Ww = self.Wz - self.Ws
+            print("  Added: Ww.")
 
         else:
             raise RuntimeError
@@ -681,6 +668,8 @@ class EMApexFloat(object):
     def get_timeseries(self, hpids, var_name):
         """TODO: Docstring..."""
 
+        __, idxs = self.get_profiles(hpids, ret_idxs=True)
+
         def make_timeseries(t, v):
             times = t[:, idxs].flatten(order='F')
             nnans = ~np.isnan(times)
@@ -694,26 +683,17 @@ class EMApexFloat(object):
 
         # Shorten some names.
         var = getattr(self, var_name)
+
         t = self.UTC
         tef = self.UTCef
-        rt = self.rUTC
-        __, idxs = self.get_profiles(hpids, ret_idxs=True)
+
         var_1_ef = var.size == tef.size
         var_1_ctd = var.size == t.size
-        var_1_r = var.size == rt.size
 
         if var_1_ef:
-
             times, vals = make_timeseries(tef, var)
-
         elif var_1_ctd:
-
             times, vals = make_timeseries(t, var)
-
-        elif var_1_r:
-
-            times, vals = make_timeseries(rt, var)
-
         else:
             raise RuntimeError('Cannot match time array and/or variable'
                                ' array sizes.')
@@ -778,13 +758,11 @@ def flip_cols(data, cols=None):
     elif d == 2 and cols is not None:
 
         for col_indx, col in zip(cols, data[:, cols].T):
-
             out_data[:, col_indx] = flip(col)
 
     elif d == 2 and cols is None:
 
         for col_indx, col in enumerate(data.T):
-
             out_data[:, col_indx] = flip(col)
 
     else:
