@@ -10,8 +10,6 @@ A place for finescale parameterisation functions.
 import numpy as np
 import gsw
 import scipy.signal as sig
-# import matplotlib
-# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import window as wdw
 import GM79
@@ -178,18 +176,19 @@ def apply_strain(Float, P_bin_width=100.):
 
 def h_gregg(R=3.):
     """Gregg 2003 implimentation."""
-    return 3.*(R + 1)/(2.*R*np.sqrt(2*(R - 1)))
+    return 3.*(R + 1)/(2.*R*np.sqrt(2*np.abs(R - 1)))
 
 
 def h_whalen(R=3.):
     """Whalen 2012 implimentation based on Kunze 2006 implimentation (which
     is based on Gregg yet equations are different)."""
-    return R*(R + 1)/(6.*np.sqrt(2*(R - 1)))
+    return R*(R + 1)/(6.*np.sqrt(2*np.abs(R - 1)))
 
 
 def L(f, N):
     f30 = 7.292115e-5  # rad s-1
     N0 = 5.2e-3  # rad s-1
+    f = np.abs(f)
     return f*np.arccosh(N/f)/(f30*np.arccosh(N0/f30))
 
 
@@ -431,7 +430,7 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     return m, Pshear, Pstrain, PCW, PCCW, PEK
 
 
-def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
+def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
     """"""
 
     X = [U, V, dUdz, dVdz, strain, N2_ref]
@@ -481,23 +480,49 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
         GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
 
         IGMshear = integrated_ps(m, GMshear, params['m_c'], params['m_0'])
+        print("Ishear = {}".format(Ishear))
+        print("IGMshear = {}".format(IGMshear))
 
         EK[i] = IEK
         R_pol[i] = ICCW/ICW
         R_om[i] = Ishear/Istrain
         epsilon[i] = GM79.epsilon_0*N2_mean/GM79.N_0**2*Ishear**2/IGMshear**2
         # Apply correcting factors
-        epsilon[i] *= L(-57.5, N_mean)*h_gregg(R_om[i])
+
+        epsilon[i] *= L(gsw.f(lat), N_mean)*h_gregg(R_om[i])
+        print("lat = {}. f = {}.".format(lat, gsw.f(lat)))
+        print("N_mean = {}".format(N_mean))
+        print("R_om = {}".format(R_om[i]))
+        print("L = {}".format(L(gsw.f(lat), N_mean)))
+        print("h = {}".format(h_gregg(R_om[i])))
+
         kappa[i] = params['mixing_efficiency']*epsilon[i]/N2_mean
 
         # Plotting here generates a crazy number of plots.
         if params['plot_spectra']:
-            X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
-            X = [PEK, Pshear, Pstrain, PCW, PCCW]
-            for x, name in zip(X, X_names):
-                plt.figure()
-                plt.loglog(m, x)
-                plt.title(name)
+
+            GMstrain = GM79.E_str_z(2*np.pi*m, N_mean)
+            GMvel = GM79.E_vel_z(2*np.pi*m, N_mean)
+
+            fig, axs = plt.subplots(3, 1, sharex=True)
+
+            axs[0].loglog(m, PEK, 'r-', label="EK")
+            axs[0].loglog(m, GMvel, 'r--', label="GM EK")
+            axs[0].set_title("height {:1.0f} m".format(z_mean[i]))
+
+            axs[1].loglog(m, Pshear, 'r-', label="shear")
+            axs[1].loglog(m, GMshear, 'r--', label="GM shear")
+            axs[1].loglog(m, Pstrain, 'k', label="strain")
+            axs[1].loglog(m, GMstrain, 'k--', label="GM strain")
+
+            axs[2].loglog(m, PCW, 'r-', label="CW")
+            axs[2].loglog(m, PCCW, 'k-', label="CCW")
+
+            for ax in axs:
+                ax.vlines(params['m_c'], *ax.get_ylim())
+                ax.vlines(params['m_0'], *ax.get_ylim())
+                ax.grid()
+                ax.legend()
 
     return z_mean, EK, R_pol, R_om, epsilon, kappa
 
@@ -513,8 +538,9 @@ def analyse_profile(Pfl, params=default_params):
     dVdz = Pfl.interp(z, 'zef', 'dVdz')
     strain = Pfl.interp(z, 'z', 'strain_z')
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
+    lat = (Pfl.lat_start + Pfl.lat_end)/2.
 
-    results = analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
+    results = analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
 
     if params['plot_profiles']:
         result_names = ['EK', 'R_pol', 'R_om', 'epsilon', 'kappa']
@@ -526,6 +552,7 @@ def analyse_profile(Pfl, params=default_params):
 
         # This is necessary to overcome a bug - may become redundant soon.
         plt.ylim(np.min(z_mean), np.max(z_mean))
+        axs[0].set_ylabel("Height (m)")
 
     return results
 
