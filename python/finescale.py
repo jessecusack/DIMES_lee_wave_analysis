@@ -433,7 +433,7 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
 
 def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
-    """"""
+    """ """
 
     X = [U, V, dUdz, dVdz, strain, N2_ref]
 
@@ -530,7 +530,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
 
 
 def analyse_profile(Pfl, params=default_params):
-    """"""
+    """ """
 
     # First remove NaN values and interpolate variables onto a regular grid.
     z = np.arange(np.nanmin(Pfl.z), 0., params['dz'])
@@ -542,25 +542,31 @@ def analyse_profile(Pfl, params=default_params):
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
     lat = (Pfl.lat_start + Pfl.lat_end)/2.
 
-    results = analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
+    z_mean, EK, R_pol, R_om, epsilon, kappa = analyse(z, U, V, dUdz, dVdz,
+                                                      strain, N2_ref, lat,
+                                                      params)
 
     if params['plot_profiles']:
         result_names = ['EK', 'R_pol', 'R_om', 'epsilon', 'kappa']
-        z_mean = results[0]
+                                                    
         fig, axs = plt.subplots(1, 5, sharey=True)
-        for ax, x, name in zip(axs, results[1:], result_names):
-            ax.plot(x, z_mean)
-            ax.set_title(name)
 
-        # This is necessary to overcome a bug - may become redundant soon.
-        plt.ylim(np.min(z_mean), np.max(z_mean))
-        axs[0].set_ylabel("Height (m)")
+        axs[0].plot(EK, z_mean)
+        axs[0].set_title('EK')
+        axs[1].plot(R_pol, z_mean)
+        axs[1].set_title('R_pol')
+        axs[2].plot(R_om, z_mean)
+        axs[2].set_title('R_om')
+        axs[3].semilogx(epsilon, z_mean)
+        axs[3].set_title('epsilon')
+        axs[4].semilogx(kappa, z_mean)
+        axs[4].set_title('kappa')
 
-    return results
+    return  z_mean, EK, R_pol, R_om, epsilon, kappa
 
 
 def analyse_float(Float, hpids):
-    """"""
+    """ """
     # Nothing special for now. It doesn't even work.
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     return [analyse_profile(Pfl) for Pfl in Float.Profiles[idxs]]
