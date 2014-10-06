@@ -41,6 +41,7 @@ default_params = {
     'bin_width': 300.,
     'bin_overlap': 200.,
     'fine_grid_spectra': False,
+    'print_diagnostics': False,
     'plot_profiles': False,
     'plot_spectra': False,
     'plot_results': False,
@@ -438,17 +439,39 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
     X = [U, V, dUdz, dVdz, strain, N2_ref]
 
     if params['plot_profiles']:
-        X_names = ['U', 'V', 'dUdz', 'dVdz', 'strain', 'N2_ref']
-        fig, axs = plt.subplots(1, 5, sharey=True)
-        for ax, x, name in zip(axs, X, X_names):
-            ax.plot(x, z)
-            ax.set_title(name)
+        fig, axs = plt.subplots(1, 4, sharey=True)
+
+        axs[0].set_ylabel('$z$ (m)')
+
+        axs[0].plot(np.sqrt(N2_ref), z, 'k-', label='$N_{ref}$')
+        axs[0].plot(np.sqrt(strain*N2_ref + N2_ref), z, 'k--', label='$N$')
+        axs[0].set_xlabel('$N$ (rad s$^{-1}$)')
+        axs[0].legend(loc=0)
+        axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=45)
+
+        axs[1].plot(U, z, 'k-', label='$U$')
+        axs[1].plot(V, z, 'r-', label='$V$')
+        axs[1].set_xlabel('$U$, $V$ (m s$^{-1}$)')
+        axs[1].legend(loc=0)
+        axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45)
+
+        axs[2].plot(dUdz, z, 'k-', label=r'$\frac{dU}{dz}$')
+        axs[2].plot(dVdz, z, 'r-', label=r'$\frac{dV}{dz}$')
+        axs[2].set_xlabel(r'$\frac{dU}{dz}$, $\frac{dV}{dz}$ (s$^{-1}$)')
+        axs[2].legend(loc=0)
+        axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45)
+
+        axs[3].plot(strain, z, 'k-')
+        axs[3].set_xlabel(r'$\xi_z$ (-)')
 
     # Split varables into overlapping window segments, bare in mind the last
     # window may not be full.
     width = params['bin_width']
     overlap = params['bin_overlap']
     wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
+
+    step = width - overlap
+    z_bins = np.arange(z[0], z[-1], step)
 
     n = wdws[0].shape[0]
     z_mean = np.empty(n)
@@ -482,8 +505,6 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
 
         IGMshear = integrated_ps(m, GMshear, params['m_c'], params['m_0'])
-        print("Ishear = {}".format(Ishear))
-        print("IGMshear = {}".format(IGMshear))
 
         EK[i] = IEK
         R_pol[i] = ICCW/ICW
@@ -492,13 +513,17 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         # Apply correcting factors
 
         epsilon[i] *= L(gsw.f(lat), N_mean)*h_gregg(R_om[i])
-        print("lat = {}. f = {}.".format(lat, gsw.f(lat)))
-        print("N_mean = {}".format(N_mean))
-        print("R_om = {}".format(R_om[i]))
-        print("L = {}".format(L(gsw.f(lat), N_mean)))
-        print("h = {}".format(h_gregg(R_om[i])))
 
         kappa[i] = params['mixing_efficiency']*epsilon[i]/N2_mean
+
+        if params['print_diagnostics']:
+            print("Ishear = {}".format(Ishear))
+            print("IGMshear = {}".format(IGMshear))
+            print("lat = {}. f = {}.".format(lat, gsw.f(lat)))
+            print("N_mean = {}".format(N_mean))
+            print("R_om = {}".format(R_om[i]))
+            print("L = {}".format(L(gsw.f(lat), N_mean)))
+            print("h = {}".format(h_gregg(R_om[i])))
 
         # Plotting here generates a crazy number of plots.
         if params['plot_spectra']:
@@ -506,19 +531,22 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
             GMstrain = GM79.E_str_z(2*np.pi*m, N_mean)
             GMvel = GM79.E_vel_z(2*np.pi*m, N_mean)
 
-            fig, axs = plt.subplots(3, 1, sharex=True)
+            fig, axs = plt.subplots(4, 1, sharex=True)
 
-            axs[0].loglog(m, PEK, 'r-', label="EK")
-            axs[0].loglog(m, GMvel, 'r--', label="GM EK")
+            axs[0].loglog(m, PEK, 'k-', label="$E_{KE}$")
+            axs[0].loglog(m, GMvel, 'k--', label="GM $E_{KE}$")
             axs[0].set_title("height {:1.0f} m".format(z_mean[i]))
 
-            axs[1].loglog(m, Pshear, 'r-', label="shear")
-            axs[1].loglog(m, GMshear, 'r--', label="GM shear")
-            axs[1].loglog(m, Pstrain, 'k', label="strain")
-            axs[1].loglog(m, GMstrain, 'k--', label="GM strain")
+            axs[1].loglog(m, Pshear, 'k-', label="$V_z$")
+            axs[1].loglog(m, GMshear, 'k--', label="GM $V_z$")
 
-            axs[2].loglog(m, PCW, 'r-', label="CW")
-            axs[2].loglog(m, PCCW, 'k-', label="CCW")
+            axs[2].loglog(m, Pstrain, 'k', label=r"$\xi_z$")
+            axs[2].loglog(m, GMstrain, 'k--', label=r"GM $\xi_z$")
+
+            axs[3].loglog(m, PCW, 'r-', label="CW")
+            axs[3].loglog(m, PCCW, 'k-', label="CCW")
+
+            axs[-1].set_xlabel('$k_z$ (m$^{-1}$)')
 
             for ax in axs:
                 ax.vlines(params['m_c'], *ax.get_ylim())
@@ -526,7 +554,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
                 ax.grid()
                 ax.legend()
 
-    return z_mean, EK, R_pol, R_om, epsilon, kappa
+    return z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa
 
 
 def analyse_profile(Pfl, params=default_params):
@@ -542,31 +570,40 @@ def analyse_profile(Pfl, params=default_params):
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
     lat = (Pfl.lat_start + Pfl.lat_end)/2.
 
-    z_mean, EK, R_pol, R_om, epsilon, kappa = analyse(z, U, V, dUdz, dVdz,
-                                                      strain, N2_ref, lat,
-                                                      params)
+    z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa = \
+        analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
 
     if params['plot_profiles']:
-        result_names = ['EK', 'R_pol', 'R_om', 'epsilon', 'kappa']
-                                                    
+
         fig, axs = plt.subplots(1, 5, sharey=True)
 
-        axs[0].plot(EK, z_mean)
-        axs[0].set_title('EK')
-        axs[1].plot(R_pol, z_mean)
-        axs[1].set_title('R_pol')
-        axs[2].plot(R_om, z_mean)
-        axs[2].set_title('R_om')
-        axs[3].semilogx(epsilon, z_mean)
-        axs[3].set_title('epsilon')
-        axs[4].semilogx(kappa, z_mean)
-        axs[4].set_title('kappa')
+        where = 'pre'
+        axs[0].step(EK, z_bins, 'k-', where=where)
+        axs[0].plot(EK, z_mean, 'ko')
+        axs[0].set_xlabel('$E_{KE}$ (m$^{2}$ s$^{-2}$)')
+        axs[0].set_ylabel('$z$ (m)')
+        axs[1].step(R_pol, z_bins, 'k-', where=where)
+        axs[1].plot(R_pol, z_mean, 'ko')
+        axs[1].set_xlabel('$R_{pol}$ (-)')
+        axs[2].step(R_om, z_bins, 'k-', where=where)
+        axs[2].plot(R_om, z_mean, 'ko')
+        axs[2].set_xlabel('$R_{\omega}$ (-)')
+        axs[3].step(epsilon, z_bins, 'k-', where=where)
+        axs[3].plot(epsilon, z_mean, 'ko')
+        axs[3].set_xlabel('$\epsilon$ (W kg$^{-1}$)')
+        axs[4].step(kappa, z_bins, 'k-', where=where)
+        axs[4].plot(kappa, z_mean, 'ko')
+        axs[4].set_xlabel('$\kappa$ (m$^{2}$ s$^{-1}$)')
 
-    return  z_mean, EK, R_pol, R_om, epsilon, kappa
+        for ax in axs:
+            ax.grid()
+            ax.set_xscale('log')
+
+    return z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa
 
 
-def analyse_float(Float, hpids):
+def analyse_float(Float, hpids, params=default_params):
     """ """
     # Nothing special for now. It doesn't even work.
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-    return [analyse_profile(Pfl) for Pfl in Float.Profiles[idxs]]
+    return [analyse_profile(Pfl, params) for Pfl in Float.Profiles[idxs]]
