@@ -10,10 +10,10 @@ Created on Mon Jul 14 14:42:44 2014
 import numpy as np
 
 
-N_0 = 5.2  # Buoyancy frequency (angular).
+N_0 = 5.2e-3  # Buoyancy frequency [rad s-1].
 b = 1300.  # e-folding scale of N with depth [m].
 E_0 = 6.3e-5  # Internal wave energy parameter.
-f_30 = 7.3e-5  # Coriolis frequency (angular) at 30N.
+f_30 = 7.3e-5  # Coriolis frequency at 30N [rad s-1].
 epsilon_0 = 6.73e-10  # GM energy dissipation rate.
 
 
@@ -101,7 +101,9 @@ def E_she_z(m, N, j_star=3.):
 
 
 def E_disp_z(m, N, j_star=3.):
-    return E_0*b**3*N_0**2/(2*j_star*np.pi*N**2(1 + m/beta_star(N, j_star))**2)
+    num = E_0*b**3*N_0**2
+    den = 2*j_star*np.pi*N**2 * (1 + m/beta_star(N, j_star))**2
+    return num/den
 
 
 def E_str_z(m, N, j_star=3.):

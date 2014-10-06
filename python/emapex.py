@@ -88,7 +88,7 @@ class Profile(object):
         var_2 = getattr(self, var_2_name)
         t = getattr(self, 'UTC')
         tef = getattr(self, 'UTCef')
-        rt = getattr(self, 'rUTC', None)
+        r_t = getattr(self, 'r_UTC', None)
 
         equal_size = False
 
@@ -96,7 +96,7 @@ class Profile(object):
         if var_2.size == var_1.size:
             equal_size = True
         else:
-            for time in [t, tef, rt]:
+            for time in [t, tef, r_t]:
                 if time is None:
                     continue
                 elif time.size == var_1.size:
@@ -109,7 +109,6 @@ class Profile(object):
         nans_var_2 = np.isnan(var_2)
 
         try:
-
             if equal_size:
                 # Both arrays are same length.
                 nans = nans_var_1 | nans_var_2
@@ -134,7 +133,6 @@ class Profile(object):
                                    ' array sizes.')
 
         except ValueError:
-
             var_1_vals = np.NaN*np.zeros_like(var_2_vals)
 
         return var_1_vals
@@ -187,12 +185,15 @@ class EMApexFloat(object):
     contained on a ctd array
 
     """
-    def __init__(self, filepath, floatID):
+    def __init__(self, filepath, floatID, post_process=True, regrid=False):
+
+        print("\nInitialising")
+        print("------------\n")
 
         self.floatID = floatID
         print(
-            "Initialising EM-APEX float: {}\n"
-            "Attmpting to load data...".format(floatID)
+            "EM-APEX float: {}\n"
+            "Loading data...".format(floatID)
         )
 
         # Loaded data is a dictionary.
@@ -227,12 +228,9 @@ class EMApexFloat(object):
 
             print("  Loaded: {}.".format(key))
 
-        print(
-            "All numerical data appears to have been loaded successfully.\n"
-            "Interpolating GPS positions and calculating thermodynamic\n"
-            "variables."
-        )
+        print("All numerical data appears to have been loaded successfully.\n")
 
+        print("Interpolated GPS positions to starts and ends of profiles.")
         # GPS interpolation to the start and end time of each half profile.
         idxs = ~np.isnan(self.lon_gps) & ~np.isnan(self.lat_gps)
         self.lon_start = np.interp(self.UTC_start, self.utc_gps[idxs],
@@ -244,10 +242,32 @@ class EMApexFloat(object):
         self.lat_end = np.interp(self.UTC_end, self.utc_gps[idxs],
                                  self.lat_gps[idxs])
 
+        print("Calculating heights.")
+        # Depth.
+        self.z = gsw.z_from_p(self.P, self.lat_start)
+        self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
+        self.zef = gsw.z_from_p(self.Pef, self.lat_start)
+
+        print("Creating array of half profiles.\n")
+
+        self.Profiles = np.array([Profile(self, h) for h in self.hpid])
+
+        if post_process:
+            self.post_process()
+
+        if regrid:
+            self.generate_regular_grids()
+
+    def post_process(self):
+
+        print("\nPost processing")
+        print("---------------\n")
+        print("Calculating distance along trajectory.")
         # Distance along track from first half profile.
         self.__ddist = utils.lldist(self.lon_start, self.lat_start)
         self.dist = np.hstack((0., np.cumsum(self.__ddist)))
 
+        print("Interpolating distance to measurements.")
         # Distances, velocities and speeds of each half profile.
         self.profile_ddist = np.zeros_like(self.lon_start)
         self.profile_dt = np.zeros_like(self.lon_start)
@@ -273,15 +293,24 @@ class EMApexFloat(object):
 
         self.dist_ef = self.__regrid('ctd', 'ef', self.dist_ctd)
 
+        print("Estimating bearings.")
         # Pythagorian approximation (?) of bearing.
         self.profile_bearing = np.arctan2(self.lon_end - self.lon_start,
                                           self.lat_end - self.lat_start)
 
+        print("Calculating sub-surface velocity.")
         # Convert to m s-1 calculate meridional and zonal velocities.
         self.sub_surf_speed = self.profile_ddist*1000./self.profile_dt
         self.sub_surf_u = self.sub_surf_speed*np.sin(self.profile_bearing)
         self.sub_surf_v = self.sub_surf_speed*np.cos(self.profile_bearing)
 
+        print("Interpolating missing velocity values.")
+        # Fill missing U, V values using linear interpolation otherwise we
+        # run into difficulties using cumtrapz next.
+        self.U = self.__fill_missing(self.U)
+        self.V = self.__fill_missing(self.V)
+
+        print("Estimating absolute velocity.")
         # Absolute velocity defined as relative velocity plus mean velocity
         # minus depth integrated relative velocity.
         self.U_abs = self.U + self.sub_surf_u
@@ -291,12 +320,8 @@ class EMApexFloat(object):
         self.V_abs -= cumtrapz(self.V, self.UTCef*86400.,
                                axis=0, initial=0.)/self.profile_dt
 
+        print("Calculating thermodynamic variables.")
         # Derive some important thermodynamics variables.
-
-        # Depth.
-        self.z = gsw.z_from_p(self.P, self.lat_start)
-        self.z_ca = gsw.z_from_p(self.P_ca, self.lat_start)
-        self.zef = gsw.z_from_p(self.Pef, self.lat_start)
 
         # Absolute salinity.
         self.SA = gsw.SA_from_SP(self.S, self.P, self.lon_start,
@@ -317,41 +342,49 @@ class EMApexFloat(object):
         N2_ca, __ = gsw.Nsquared(self.SA, self.CT, self.P, self.lat_start)
         self.N2 = self.__regrid('ctd_ca', 'ctd', N2_ca)
 
+        print("Calculating float vertical velocity.")
         # Vertical velocity regridded onto ctd grid.
         dt = 86400.*np.diff(self.UTC, axis=0)  # [s]
         Wz_ca = np.diff(self.z, axis=0)/dt
         self.Wz = self.__regrid('ctd_ca', 'ctd', Wz_ca)
 
+        print("Renaming Wp to Wpef.")
+        # Vertical water velocity.
+        self.Wpef = self.Wp.copy()
+        del self.Wp
+
+        print("Calculating shear.")
         # Shear calculations.
         dUdz_ca = np.diff(self.U, axis=0)/np.diff(self.zef, axis=0)
         dVdz_ca = np.diff(self.V, axis=0)/np.diff(self.zef, axis=0)
         self.dUdz = self.__regrid('ef_ca', 'ef', dUdz_ca)
         self.dVdz = self.__regrid('ef_ca', 'ef', dVdz_ca)
 
-        # Vertical water velocity.
-        self.Wpef = self.Wp.copy()
-        del self.Wp
-
+        print("Regridding piston position to ctd.\n")
         # Regrid piston position.
-        self.ppos_ctd = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
+        self.ppos = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
 
-        print("Creating array of half profiles.")
+        self.update_profiles()
 
-        self.Profiles = np.array([Profile(self, h) for h in self.hpid])
+    def generate_regular_grids(self, zmin=-1400., dz=5.):
 
-        print("Interpolating some variables onto regular grids.")
+        print("\nGenerating regular grids")
+        print("------------------------\n")
 
-        z_vals = np.arange(-1400., 0., 5.)
+        print("Interpolating from {:1.0f} m to 0 m in {:1.0f} m increments."
+              "".format(zmin, dz))
+
+        z_vals = np.arange(zmin, 0., dz)
         self.__r_z_vals = z_vals
         self_dict = self.__dict__
         for key in self_dict.keys():
 
             d = np.ndim(self_dict[key])
 
-            if d < 2 or d > 2 or '__' in key or '_ca' in key:
+            if d < 2 or d > 2 or '__' in key or '_ca' in key or 'r_' in key:
                 continue
             elif d == 2:
-                name = 'r' + key
+                name = 'r_' + key
                 __, __, var_grid = self.get_interp_grid(self.hpid, z_vals,
                                                         'z', key)
                 setattr(self, name, var_grid)
@@ -360,31 +393,75 @@ class EMApexFloat(object):
 
         self.update_profiles()
 
-        print("That appears to have worked.\n")
+    def apply_w_model(self, fit_info):
+        """Give a W_fit_info object or path to pickle of such object."""
 
-    def get_profiles(self, hpids, ret_idxs=False):
-        """Will return profiles requested. Can also return indices of those
-        profiles."""
+        print("\nApplying vertical velocity model")
+        print("--------------------------------\n")
 
-        if np.ndim(hpids) == 0:
-            idx = np.unique(self.hpid.searchsorted(hpids))
-            if ret_idxs:
-                return self.Profiles[idx[0]], idx
-            else:
-                return self.Profiles[idx[0]]
-        elif np.ndim(hpids) == 1:
-            hpids = hpids[(np.min(self.hpid) <= hpids) &
-                          (hpids <= np.max(self.hpid))]
-            idxs = np.unique(self.hpid.searchsorted(hpids))
-            if ret_idxs:
-                return self.Profiles[idxs], idxs
-            else:
-                return self.Profiles[idxs]
+        # Initially assume path to fit.
+        try:
+            with open(fit_info, 'rb') as f:
+                print("Unpickling fit info.")
+                setattr(self, '__wfi', pickle.load(f))
+        except TypeError:
+            print('Copying fit info.')
+            setattr(self, '__wfi', copy.copy(fit_info))
+
+        wfi = getattr(self, '__wfi')
+
+        if wfi.profiles == 'all':
+
+            data = [getattr(self, data_name) for data_name in wfi.data_names]
+
+            self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+            print("  Added: Ws.")
+            self.Ww = self.Wz - self.Ws
+            print("  Added: Ww.")
+
+        elif wfi.profiles == 'updown':
+
+            self.Ws = np.nan*np.ones_like(self.Wz)
+
+            up = up_down_indices(self.hpid, 'up')
+            data = [getattr(self, data_name)[:, up] for
+                    data_name in wfi.data_names]
+            self.Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
+            print("  Added: Ws. (ascents)")
+
+            down = up_down_indices(self.hpid, 'down')
+            data = [getattr(self, data_name)[:, down] for
+                    data_name in wfi.data_names]
+            self.Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
+            print("  Added: Ws. (descents)")
+
+            self.Ww = self.Wz - self.Ws
+            print("  Added: Ww.")
+
         else:
-            raise RuntimeError('Check arguments.')
+            raise RuntimeError
+
+        self.update_profiles()
+
+    def apply_strain(self, N2_ref_file):
+        """Input the path to file that contains grid of adiabatically levelled
+        N2."""
+
+        print("\nAdding strain")
+        print("-------------\n")
+
+        with open(N2_ref_file) as f:
+
+            N2_ref = pickle.load(f)
+            setattr(self, 'N2_ref', N2_ref)
+            print("  Added: N2_ref.")
+            setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
+            print("  Added: strain_z.")
+
+        self.update_profiles()
 
     def update_profiles(self):
-        print("Updating half profiles.")
+        print("\nUpdating half profiles.\n")
         [profile.update(self) for profile in self.Profiles]
 
     def __regrid(self, grid_from, grid_to, v):
@@ -442,6 +519,53 @@ class EMApexFloat(object):
         xnans = np.isnan(x)
         x[~xnans] = np.interp(xUTC[~xnans], pUTC[~nans], v_flat[~nans])
         return x.reshape(shape, order='F')
+
+    def __fill_missing(self, v):
+        """Fill missing values in 2D arrays using linear interpolation."""
+
+        # Get corresponding time array.
+        t = getattr(self, 'UTC')
+        tef = getattr(self, 'UTCef')
+        if tef.size == v.size:
+            t = tef
+
+        for v_col, t_col in zip(v.T, t.T):
+
+            nnans = ~np.isnan(v_col)
+
+            if np.sum(nnans) == 0:
+                continue
+
+            # Index where padding nans start.
+            pidx = nnans.searchsorted(True, side='right')
+
+            # Replace non-padding nans with linearly interpolated value.
+            nans = np.isnan(v_col[:pidx])
+            v_col[:pidx][nans] = np.interp(t_col[nans], t_col[~nans],
+                                           v_col[~nans])
+
+        return v
+
+    def get_profiles(self, hpids, ret_idxs=False):
+        """Will return profiles requested. Can also return indices of those
+        profiles."""
+
+        if np.ndim(hpids) == 0:
+            idx = np.unique(self.hpid.searchsorted(hpids))
+            if ret_idxs:
+                return self.Profiles[idx[0]], idx
+            else:
+                return self.Profiles[idx[0]]
+        elif np.ndim(hpids) == 1:
+            hpids = hpids[(np.min(self.hpid) <= hpids) &
+                          (hpids <= np.max(self.hpid))]
+            idxs = np.unique(self.hpid.searchsorted(hpids))
+            if ret_idxs:
+                return self.Profiles[idxs], idxs
+            else:
+                return self.Profiles[idxs]
+        else:
+            raise RuntimeError('Check arguments.')
 
     def get_interp_grid(self, hpids, var_2_vals, var_2_name, var_1_name):
         """Grid data from multiple profiles into a matrix. Linear interpolation
@@ -544,6 +668,8 @@ class EMApexFloat(object):
     def get_timeseries(self, hpids, var_name):
         """TODO: Docstring..."""
 
+        __, idxs = self.get_profiles(hpids, ret_idxs=True)
+
         def make_timeseries(t, v):
             times = t[:, idxs].flatten(order='F')
             nnans = ~np.isnan(times)
@@ -557,110 +683,22 @@ class EMApexFloat(object):
 
         # Shorten some names.
         var = getattr(self, var_name)
+
         t = self.UTC
         tef = self.UTCef
-        rt = self.rUTC
-        __, idxs = self.get_profiles(hpids, ret_idxs=True)
+
         var_1_ef = var.size == tef.size
         var_1_ctd = var.size == t.size
-        var_1_r = var.size == rt.size
 
         if var_1_ef:
-
             times, vals = make_timeseries(tef, var)
-
         elif var_1_ctd:
-
             times, vals = make_timeseries(t, var)
-
-        elif var_1_r:
-
-            times, vals = make_timeseries(rt, var)
-
         else:
             raise RuntimeError('Cannot match time array and/or variable'
                                ' array sizes.')
 
         return times, vals
-
-    def apply_w_model(self, fit_info):
-        """Give a W_fit_info object or path to pickle of such object."""
-        # Initially assume path to fit.
-        try:
-            with open(fit_info, 'rb') as f:
-                print("Unpickling fit info.")
-                setattr(self, '__wfi', pickle.load(f))
-        except TypeError:
-            print('Copying fit info.')
-            setattr(self, '__wfi', copy.copy(fit_info))
-
-        wfi = getattr(self, '__wfi')
-
-        # Initialise arrays.
-        self.rWs = np.empty_like(self.rUTC)
-        self.rWw = np.empty_like(self.rUTC)
-
-        if wfi.profiles == 'all':
-
-            data = [getattr(self, 'r' + data_name) for
-                    data_name in wfi.data_names]
-            self.rWs = wfi.model_func(wfi.p, data, wfi.fixed)
-            print("  Added: rWs.")
-            self.rWw = self.rWz - self.rWs
-            print("  Added: rWw.")
-
-            # Hack to get Ww on ctd grid.
-            if ('ppos' in wfi.data_names and 'P' in wfi.data_names
-                and 'rho' in wfi.data_names):
-
-                data = [getattr(self, data_name) for
-                        data_name in ['ppos_ctd', 'P', 'rho']]
-                self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
-                self.Ww = self.Wz - self.Ws
-
-        elif wfi.profiles == 'updown':
-
-            up = up_down_indices(self.hpid, 'up')
-            data = [getattr(self, 'r' + data_name)[:, up] for
-                    data_name in wfi.data_names]
-            self.rWs[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
-            print("  Added: rWs. (ascents)")
-
-            down = up_down_indices(self.hpid, 'down')
-            data = [getattr(self, 'r' + data_name)[:, down] for
-                    data_name in wfi.data_names]
-            self.rWs[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
-            print("  Added: rWs. (descents)")
-
-            self.rWw = self.rWz - self.rWs
-            print("  Added: rWw.")
-
-        self.update_profiles()
-
-    def apply_strain(self, N2_ref_file):
-        """Input the path to file that contains grid of adiabatically levelled
-        N2."""
-
-        with open(N2_ref_file) as f:
-
-            N2_ref = pickle.load(f)
-            setattr(self, 'N2_ref', N2_ref)
-            print("  Added: N2_ref.")
-            setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
-            print("  Added: strain_z.")
-
-        self.update_profiles()
-
-        for key in ['N2_ref', 'strain_z']:
-
-            name = 'r' + key
-            __, __, var_grid = self.get_interp_grid(self.hpid,
-                                                    self.__r_z_vals,
-                                                    'z', key)
-            setattr(self, name, var_grid)
-            print("  Added: {}.".format(name))
-
-        self.update_profiles()
 
 
 def up_down_indices(hpid_array, up_or_down='up'):
@@ -720,13 +758,11 @@ def flip_cols(data, cols=None):
     elif d == 2 and cols is not None:
 
         for col_indx, col in zip(cols, data[:, cols].T):
-
             out_data[:, col_indx] = flip(col)
 
     elif d == 2 and cols is None:
 
         for col_indx, col in enumerate(data.T):
-
             out_data[:, col_indx] = flip(col)
 
     else:
@@ -746,6 +782,7 @@ def integrated_dist(Pfl):
 
     import matplotlib.pyplot as plt
 
+    z = Pfl.zef
     U = Pfl.U_abs - Pfl.U
     V = Pfl.V_abs - Pfl.V
     T = Pfl.UTCef*86400
@@ -761,4 +798,8 @@ def integrated_dist(Pfl):
           "GPS: {}\n"
           "VEL: {}".format(D, d))
 
+    plt.figure()
     plt.plot(T, x, T, y)
+
+    plt.figure()
+    plt.plot(T, U, T, V)

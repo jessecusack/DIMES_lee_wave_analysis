@@ -10,8 +10,6 @@ A place for finescale parameterisation functions.
 import numpy as np
 import gsw
 import scipy.signal as sig
-# import matplotlib
-# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import window as wdw
 import GM79
@@ -36,7 +34,6 @@ default_periodogram_params = {
     'nfft': 256,
     'detrend': 'linear',
     'scaling': 'density',
-    'windowing': 'after_detrend'
 }
 
 default_params = {
@@ -84,8 +81,8 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
         Latitude [-90...+90]
     p_bin_width : float, optional
         Pressure bin width [dbar]
-    deg : int, option
-        Degree of polynomial fit.
+    deg : int, optional
+        Degree of polynomial fit. (DEGREES HIGHER THAN 1 NOT YET TESTED)
 
     Returns
     -------
@@ -179,23 +176,24 @@ def apply_strain(Float, P_bin_width=100.):
 
 def h_gregg(R=3.):
     """Gregg 2003 implimentation."""
-    return 3.*(R + 1)/(2.*R*np.sqrt(2*(R - 1)))
+    return 3.*(R + 1)/(2.*R*np.sqrt(2*np.abs(R - 1)))
 
 
 def h_whalen(R=3.):
     """Whalen 2012 implimentation based on Kunze 2006 implimentation (which
     is based on Gregg yet equations are different)."""
-    return R*(R + 1)/(6.*np.sqrt(2*(R - 1)))
+    return R*(R + 1)/(6.*np.sqrt(2*np.abs(R - 1)))
 
 
 def L(f, N):
     f30 = 7.292115e-5  # rad s-1
     N0 = 5.2e-3  # rad s-1
+    f = np.abs(f)
     return f*np.arccosh(N/f)/(f30*np.arccosh(N0/f30))
 
 
 def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
-                  scaling='density', windowing='after_detrend'):
+                  scaling='density'):
     """
     Estimate co-power spectral density using periodogram method.
 
@@ -226,11 +224,6 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         where Pxx has units of V**2/Hz if x is measured in V and computing
         the power spectrum ('spectrum') where Pxx has units of V**2 if x is
         measured in V. Defaults to 'density'.
-    windowing : { 'after_detrend', 'before_detrend' }, optional
-        Either applies the window after detrending the signal as is most
-        commonly done, or applies it beforehand. This will alter the scaling
-        used to be density no matter what argument has been supplied for the
-        scaling.
 
     Returns
     -------
@@ -267,24 +260,14 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
         scale = 1.0/(fs*(win*win).sum())
     elif scaling == 'spectrum':
         scale = 1.0/win.sum()**2
-    elif scaling == 'waterman':
-        scale = 1.0/(2.*np.pi*len(x))
     else:
         raise ValueError('Unknown scaling: %r' % scaling)
 
-    if windowing == 'after_detrend':
-        x_dt = sig.detrend(x, type=detrend)
-        y_dt = sig.detrend(y, type=detrend)
-        xft = np.fft.fft(win*x_dt, nfft)
-        yft = np.fft.fft(win*y_dt, nfft)
-    elif windowing == 'before_detrend':
-        x_dt = sig.detrend(win*x, type=detrend)
-        y_dt = sig.detrend(win*y, type=detrend)
-        xft = np.fft.fft(x_dt, nfft)
-        yft = np.fft.fft(y_dt, nfft)
-        scale = 1.0/(fs*len(x))
-    else:
-        raise ValueError('Unknown scaling: %r' % windowing)
+    x_dt = sig.detrend(x, type=detrend)
+    y_dt = sig.detrend(y, type=detrend)
+
+    xft = np.fft.fft(win*x_dt, nfft)
+    yft = np.fft.fft(win*y_dt, nfft)
 
     # Power spectral density in x, y and xy.
     Pxx = (xft*xft.conj()).real
@@ -296,8 +279,10 @@ def coperiodogram(x, y, fs=1.0, window=None, nfft=None, detrend='linear',
     # Chop spectrum in half.
     Pxx, Pyy, Pxy = Pxx[:M], Pyy[:M], Pxy[:M]
 
-    # Make sure the zero frequency is really zero.
-    Pxx[0], Pyy[0], Pxy[0] = 0., 0., 0.
+    # Make sure the zero frequency is really zero and not a very very small
+    # non-zero number because that can mess up log plots.
+    if detrend is not None:
+        Pxx[..., 0], Pyy[..., 0], Pxy[..., 0] = 0., 0., 0.
 
     # Multiply spectrum by 2 except for the Nyquist and constant elements to
     # account for the loss of negative frequencies.
@@ -447,7 +432,7 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     return m, Pshear, Pstrain, PCW, PCCW, PEK
 
 
-def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
+def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
     """"""
 
     X = [U, V, dUdz, dVdz, strain, N2_ref]
@@ -495,24 +480,51 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
 
         # Garrett-Munk shear power spectral density normalised.
         GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
+
         IGMshear = integrated_ps(m, GMshear, params['m_c'], params['m_0'])
+        print("Ishear = {}".format(Ishear))
+        print("IGMshear = {}".format(IGMshear))
 
         EK[i] = IEK
         R_pol[i] = ICCW/ICW
         R_om[i] = Ishear/Istrain
         epsilon[i] = GM79.epsilon_0*N2_mean/GM79.N_0**2*Ishear**2/IGMshear**2
         # Apply correcting factors
-        epsilon[i] *= L(-57.5, N_mean)*h_gregg(R_om[i])
+
+        epsilon[i] *= L(gsw.f(lat), N_mean)*h_gregg(R_om[i])
+        print("lat = {}. f = {}.".format(lat, gsw.f(lat)))
+        print("N_mean = {}".format(N_mean))
+        print("R_om = {}".format(R_om[i]))
+        print("L = {}".format(L(gsw.f(lat), N_mean)))
+        print("h = {}".format(h_gregg(R_om[i])))
+
         kappa[i] = params['mixing_efficiency']*epsilon[i]/N2_mean
 
         # Plotting here generates a crazy number of plots.
         if params['plot_spectra']:
-            X_names = ['PEk', 'shear', 'strain', 'CW', 'CCW']
-            X = [PEK, Pshear, Pstrain, PCW, PCCW]
-            for x, name in zip(X, X_names):
-                plt.figure()
-                plt.loglog(m, x)
-                plt.title(name)
+
+            GMstrain = GM79.E_str_z(2*np.pi*m, N_mean)
+            GMvel = GM79.E_vel_z(2*np.pi*m, N_mean)
+
+            fig, axs = plt.subplots(3, 1, sharex=True)
+
+            axs[0].loglog(m, PEK, 'r-', label="EK")
+            axs[0].loglog(m, GMvel, 'r--', label="GM EK")
+            axs[0].set_title("height {:1.0f} m".format(z_mean[i]))
+
+            axs[1].loglog(m, Pshear, 'r-', label="shear")
+            axs[1].loglog(m, GMshear, 'r--', label="GM shear")
+            axs[1].loglog(m, Pstrain, 'k', label="strain")
+            axs[1].loglog(m, GMstrain, 'k--', label="GM strain")
+
+            axs[2].loglog(m, PCW, 'r-', label="CW")
+            axs[2].loglog(m, PCCW, 'k-', label="CCW")
+
+            for ax in axs:
+                ax.vlines(params['m_c'], *ax.get_ylim())
+                ax.vlines(params['m_0'], *ax.get_ylim())
+                ax.grid()
+                ax.legend()
 
     return z_mean, EK, R_pol, R_om, epsilon, kappa
 
@@ -528,8 +540,9 @@ def analyse_profile(Pfl, params=default_params):
     dVdz = Pfl.interp(z, 'zef', 'dVdz')
     strain = Pfl.interp(z, 'z', 'strain_z')
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
+    lat = (Pfl.lat_start + Pfl.lat_end)/2.
 
-    results = analyse(z, U, V, dUdz, dVdz, strain, N2_ref, params)
+    results = analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
 
     if params['plot_profiles']:
         result_names = ['EK', 'R_pol', 'R_om', 'epsilon', 'kappa']
@@ -541,6 +554,7 @@ def analyse_profile(Pfl, params=default_params):
 
         # This is necessary to overcome a bug - may become redundant soon.
         plt.ylim(np.min(z_mean), np.max(z_mean))
+        axs[0].set_ylabel("Height (m)")
 
     return results
 
