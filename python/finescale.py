@@ -447,19 +447,19 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         axs[0].plot(np.sqrt(strain*N2_ref + N2_ref), z, 'k--', label='$N$')
         axs[0].set_xlabel('$N$ (rad s$^{-1}$)')
         axs[0].legend(loc=0)
-        axs[0].set_xticklabels(axs[0].get_xticklabels(), rotation=45)
+        axs[0].set_xticklabels(axs[0].get_xticks(), rotation=45)
 
         axs[1].plot(U, z, 'k-', label='$U$')
         axs[1].plot(V, z, 'r-', label='$V$')
         axs[1].set_xlabel('$U$, $V$ (m s$^{-1}$)')
         axs[1].legend(loc=0)
-        axs[1].set_xticklabels(axs[1].get_xticklabels(), rotation=45)
+        axs[1].set_xticklabels(axs[1].get_xticks(), rotation=45)
 
         axs[2].plot(dUdz, z, 'k-', label=r'$\frac{dU}{dz}$')
         axs[2].plot(dVdz, z, 'r-', label=r'$\frac{dV}{dz}$')
         axs[2].set_xlabel(r'$\frac{dU}{dz}$, $\frac{dV}{dz}$ (s$^{-1}$)')
         axs[2].legend(loc=0)
-        axs[2].set_xticklabels(axs[2].get_xticklabels(), rotation=45)
+        axs[2].set_xticklabels(axs[2].get_xticks(), rotation=45)
 
         axs[3].plot(strain, z, 'k-')
         axs[3].set_xlabel(r'$\xi_z$ (-)')
@@ -577,22 +577,22 @@ def analyse_profile(Pfl, params=default_params):
 
         fig, axs = plt.subplots(1, 5, sharey=True)
 
-        where = 'pre'
-        axs[0].step(EK, z_bins, 'k-', where=where)
-        axs[0].plot(EK, z_mean, 'ko')
+#        where = 'mid'
+#        axs[0].step(EK, z_mean, 'k-', where=where)
+        axs[0].plot(EK, z_mean, 'k-o')
         axs[0].set_xlabel('$E_{KE}$ (m$^{2}$ s$^{-2}$)')
         axs[0].set_ylabel('$z$ (m)')
-        axs[1].step(R_pol, z_bins, 'k-', where=where)
-        axs[1].plot(R_pol, z_mean, 'ko')
+#        axs[1].step(R_pol, z_mean, 'k-', where=where)
+        axs[1].plot(R_pol, z_mean, 'k-o')
         axs[1].set_xlabel('$R_{pol}$ (-)')
-        axs[2].step(R_om, z_bins, 'k-', where=where)
-        axs[2].plot(R_om, z_mean, 'ko')
+#        axs[2].step(R_om, z_mean, 'k-', where=where)
+        axs[2].plot(R_om, z_mean, 'k-o')
         axs[2].set_xlabel('$R_{\omega}$ (-)')
-        axs[3].step(epsilon, z_bins, 'k-', where=where)
-        axs[3].plot(epsilon, z_mean, 'ko')
+#        axs[3].step(epsilon, z_mean, 'k-', where=where)
+        axs[3].plot(epsilon, z_mean, 'k-o')
         axs[3].set_xlabel('$\epsilon$ (W kg$^{-1}$)')
-        axs[4].step(kappa, z_bins, 'k-', where=where)
-        axs[4].plot(kappa, z_mean, 'ko')
+#        axs[4].step(kappa, z_mean, 'k-', where=where)
+        axs[4].plot(kappa, z_mean, 'k-o')
         axs[4].set_xlabel('$\kappa$ (m$^{2}$ s$^{-1}$)')
 
         for ax in axs:
