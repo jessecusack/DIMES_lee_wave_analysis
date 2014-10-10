@@ -3,15 +3,33 @@
 Created on Fri Jul 25 14:16:02 2014
 
 @author: jc3e13
+
+Functions for chopping up arrays using moving windows and smoothing data.
 """
 
 import numpy as np
+import utils
 
 
 def chunk(x, x_range, y):
-    """x should be monotonically increasing.
-    y should be of the same size as x. (it will still work if this is not the
-    case but beware indexing problems)
+    """Chunk returns slices of arrays x and y given some range of x values.
+
+    Parameters
+    ----------
+    x : array_like
+        Monotonically increasing values.
+    x_range : sequence
+        Should contain (min, max) value at which to slice x and y.
+    y : array_like
+        Arbitrary values.
+
+    Returns
+    -------
+    x_chunk : array_like
+        Values of x that fall in the range x_range.
+    y_chunk : array_like
+        values of y that fall in the range x_range.
+
     """
 
     if len(x_range) != 2:
@@ -22,54 +40,149 @@ def chunk(x, x_range, y):
     return x[s], y[s]
 
 
-def window(x, y, width=25, overlap=None, expansion=0.):
-    """Can't currently deal with expanding windows..."""
+def window(x, y, width, overlap=0., x_0=None, expansion=None):
+    """Break arrays x and y into slices.
+
+    Parameters
+    ----------
+    x : array_like
+        Monotonically increasing numbers. If x is not monotonically increasing
+        then it will be flipped, beware that this may not have the desired
+        effect.
+    y : array_like
+        Arbitrary values, same size as x.
+    width : float
+        Window width in the same units as x.
+    overlap : float
+        Overlap of windows in the same units as x. If negative, the window
+        steps along x values rather than binning.
+    x_0 : float
+        Position in x at which to start windowing. (untested)
+    expansion : polynomial coefficients
+        Describes the rate of change of window size with x. (not implimented)
+        The idea is that width = width_0*np.polyval(expansion, x)
+
+    Returns
+    -------
+    vals : numpy.array
+        Contains all the windowed chunks of x and y.
+
+    """
 
     if x.size != y.size:
         raise ValueError('x and y must be of equal size.')
 
-    x_nans = np.isnan(x)
-    x = x[~x_nans]
-    y = y[~x_nans]
+    if overlap > width:
+        raise ValueError('The overlap cannot be larger than the width.')
 
-    if overlap is None:
-        overlap = 0.
+    # Incredibly bad check for monotonicity.
+    not_monotonic = np.sum(np.diff(x) < 0) > 0.2*len(x)
+    if not_monotonic:
+        x = utils.flip_cols(x)
+        y = utils.flip_cols(y)
 
-    step = width - overlap
+    if x_0 is not None:
+        idxs = ~np.isnan(x) & (x > x_0)
+    else:
+        idxs = ~np.isnan(x)
 
-    left = np.arange(x[0], x[-1], step)
-    right = left + width
+    x = x[idxs]
+    y = y[idxs]
+
+    if overlap < 0.:
+        left = x - width/2.
+        right = left + width
+
+    elif overlap >= 0.:
+        step = width - overlap
+        left = np.arange(x[0], x[-1], step)
+        right = left + width
 
     bins = np.transpose(np.vstack((left, right)))
 
     vals = np.asarray([chunk(x, b, y) for b in bins])
 
+    if not_monotonic:
+        vals = np.flipud(vals)
+
     return vals
 
 
-def window_func(x, y, func, width=25, overlap=None):
+def moving_polynomial_smooth(x, y, width=25., deg=1, expansion=None):
+    """Smooth y using a moving polynomial fit.
 
-    vals = window(x, y, width=width, overlap=overlap)
+    Parameters
+    ----------
+    x : array_like
+        Monotonically increasing numbers. If x is not monotonically increasing
+        then it will be flipped, beware that this may not have the desired
+        effect.
+    y : array_like
+        Arbitrary values, same size as x.
+    width : float
+        Window width in the same units as x.
+    deg : int
+        Degree of the polynomial with which to smooth.
+    expansion : polynomial coefficients
+        Describes the rate of change of window size with x. (not implimented)
+        The idea is that width = width_0*np.polyval(expansion, x)
 
-    X = np.empty_like(vals[:, 0])
-    Y = np.empty_like(vals[:, 0])
+    Returns
+    -------
+    y_out : numpy.array
+        Smoothed y.
 
-    for i, row in enumerate(vals):
-        X[i] = func(row[0])
-        Y[i] = func(row[1])
+    """
 
-    return X, Y
+    vals = window(x, y, width=width, overlap=-1, expansion=expansion)
+
+    idxs = ~np.isnan(x)
+    y_out = np.nan*np.zeros_like(x)
+    xp = x[idxs]
+    yp = y_out[idxs]
+
+    for i, val in enumerate(vals):
+        p = np.polyfit(val[0], val[1], deg)
+        yp[i] = np.polyval(p, xp[i])
+
+    y_out[idxs] = yp
+
+    return y_out
 
 
-def window_func_2(x, y, func, func_args=None, width=25, overlap=None):
+def moving_mean_smooth(x, y, width=25., expansion=None):
+    """Smooth y using a moving mean.
 
-    vals = window(x, y, width=width, overlap=overlap)
+    Parameters
+    ----------
+    x : array_like
+        Monotonically increasing numbers. If x is not monotonically increasing
+        then it will be flipped, beware that this may not have the desired
+        effect.
+    y : array_like
+        Arbitrary values, same size as x.
+    width : float
+        Window width in the same units as x.
+    expansion : polynomial coefficients
+        Describes the rate of change of window size with x. (not implimented)
+        The idea is that width = width_0*np.polyval(expansion, x)
 
-    X = np.empty_like(vals[:, 0])
-    Y = np.empty_like(vals[:, 0])
+    Returns
+    -------
+    y_out : numpy.array
+        Smoothed y.
 
-    for i, row in enumerate(vals):
-        X[i] = np.mean(row[0])
-        Y[i] = func(row[0], row[1], *func_args)
+    """
 
-    return X, Y
+    vals = window(x, y, width=width, overlap=-1, expansion=expansion)
+
+    idxs = ~np.isnan(x)
+    y_out = np.nan*np.zeros_like(x)
+    yp = y_out[idxs]
+
+    for i, val in enumerate(vals):
+        yp[i] = np.mean(val[1])
+
+    y_out[idxs] = yp
+
+    return y_out
