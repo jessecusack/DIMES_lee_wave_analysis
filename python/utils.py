@@ -32,7 +32,6 @@ def datenum_to_datetime(datenum):
     pydt : ndarray
         Python datetime. See datetime module.
 
-
     """
 
     def convert(datenum):
@@ -70,6 +69,7 @@ def lldist(lon, lat):
     -------
     dist : 1-D numpy.ndarray of floats.
         Distance between lon and lat positions. [km]
+
     """
 
     lon = np.asarray(lon)
@@ -141,3 +141,51 @@ def flip_cols(data, cols=None):
         raise RuntimeError('Inputs are probably wrong.')
 
     return out_data
+
+
+def finite_diff(x, y, order=1, acc=1):
+    """Differentiate a curve and then interpolate back onto x positions.
+
+    Parameters
+    ----------
+    x : array_like
+        Numbers.
+    y : array_like
+        Numbers, same size as x.
+    order : int
+        Order of the derivative to calculate e.g. 2 will be the second
+        derivative. finite_diff calls itself recursively.
+    acc : int
+        Accuracy of the finite difference approximation to use. Currently
+        second order with first order interpolation.
+
+    Returns
+    -------
+    dydx : numpy.array
+        Differential of y.
+
+    """
+
+    dydx_out = np.nan*np.zeros_like(x)
+
+    x_nans = np.isnan(x)
+    y_nans = np.isnan(y)
+    nans = x_nans | y_nans
+
+    x_nn = x[~nans]
+    y_nn = y[~nans]
+
+    if acc == 1:
+        dydx = np.diff(y_nn)/np.diff(x_nn)
+        x_mid = (x_nn[1:] + x_nn[:-1])/2.
+        dydx_i = np.interp(x[~x_nans], x_mid, dydx)
+    elif acc > 1:
+        raise ValueError('Accuracies higher than 1 not yet implimented.')
+
+    dydx_out[~x_nans] = dydx_i
+
+    # Differentiate again if order greater than 1.
+    for i in range(order - 1):
+        dydx_out = finite_diff(x, dydx_out, i, acc=acc)
+
+    return dydx_out
