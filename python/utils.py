@@ -11,6 +11,7 @@ all into one miscellaneous 'utilities' module.
 
 import numpy as np
 import datetime as dt
+import pickle
 
 
 class Bunch(object):
@@ -143,7 +144,7 @@ def flip_cols(data, cols=None):
     return out_data
 
 
-def finite_diff(x, y, order=1, acc=1):
+def finite_diff(x, y, ivar=None, order=1, acc=1):
     """Differentiate a curve and then interpolate back onto x positions.
 
     Parameters
@@ -152,6 +153,10 @@ def finite_diff(x, y, order=1, acc=1):
         Numbers.
     y : array_like
         Numbers, same size as x.
+    ivar : array_like
+        Numers, same size as x. Alternative variable to use as the interpolant.
+        This could be useful if x is sometimes not monotonically increasing and
+        another variable (e.g. time) is.
     order : int
         Order of the derivative to calculate e.g. 2 will be the second
         derivative. finite_diff calls itself recursively.
@@ -175,10 +180,19 @@ def finite_diff(x, y, order=1, acc=1):
     x_nn = x[~nans]
     y_nn = y[~nans]
 
+    if ivar is not None:
+        ivar_nn = ivar[~nans]
+
     if acc == 1:
         dydx = np.diff(y_nn)/np.diff(x_nn)
-        x_mid = (x_nn[1:] + x_nn[:-1])/2.
-        dydx_i = np.interp(x[~x_nans], x_mid, dydx)
+
+        # Option to use alternative interpolant (e.g. time).
+        if ivar is not None:
+            mid = (ivar_nn[1:] + ivar_nn[:-1])/2.
+        else:
+            mid = (x_nn[1:] + x_nn[:-1])/2.
+
+        dydx_i = np.interp(x[~x_nans], mid, dydx)
     elif acc > 1:
         raise ValueError('Accuracies higher than 1 not yet implimented.')
 
