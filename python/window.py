@@ -53,19 +53,26 @@ def window(x, y, width, overlap=0., x_0=None, expansion=None):
         Arbitrary values, same size as x.
     width : float
         Window width in the same units as x.
-    overlap : float
+    overlap : float, optional
         Overlap of windows in the same units as x. If negative, the window
         steps along x values rather than binning.
-    x_0 : float
+    x_0 : float, optional
         Position in x at which to start windowing. (untested)
-    expansion : polynomial coefficients
+    expansion : polynomial coefficients, optional
         Describes the rate of change of window size with x. (not implimented)
-        The idea is that width = width_0*np.polyval(expansion, x)
+        The idea is that width = width*np.polyval(expansion, x). Overlap is
+        similarly increased.
 
     Returns
     -------
     vals : numpy.array
         Contains all the windowed chunks of x and y.
+
+    Notes
+    -----
+    The current check on monotonicity is whether more than 20% of points in
+    x are are not monotonic. This is a sort of hack to avoid flipping for the
+    occasional erroneous non-monotonic point.
 
     """
 
