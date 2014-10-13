@@ -421,3 +421,9 @@ def deployments():
 
     save_name = '../figures/deployments.png'
     plt.savefig(save_name, bbox_inches='tight')
+
+
+def plot_everything(Float, save_dir):
+    """Plot profiles of absolutely everything possible."""
+
+    pass
