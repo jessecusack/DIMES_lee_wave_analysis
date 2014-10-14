@@ -460,6 +460,29 @@ class EMApexFloat(object):
 
         self.update_profiles()
 
+    def apply_isopycnal_displacement(self, srho_file):
+        """Input the path to picked array of smoothed potential density."""
+
+        print("\nAdding isopycnal displacements.")
+        print("-------------------------------\n")
+
+        setattr(self, 'mu', np.nan*self.rho_1.copy())
+
+        with open(srho_file) as f:
+
+            srho_1 = pickle.load(f)
+            setattr(self, 'srho_1', srho_1)
+            print("  Added: srho_1.")
+
+        for i in xrange(len(self.hpid)):
+            srho_1dz = utils.finite_diff(self.z[:, i], srho_1[:, i],
+                                         self.UTC[:, i])
+            self.mu[:, i] = (self.rho_1[:, i] - srho_1[:, i])/srho_1dz
+
+        print("  Added: mu.")
+
+        self.update_profiles()
+
     def update_profiles(self):
         print("\nUpdating half profiles.\n")
         [profile.update(self) for profile in self.Profiles]
