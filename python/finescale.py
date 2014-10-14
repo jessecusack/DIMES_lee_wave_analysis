@@ -13,6 +13,8 @@ import scipy.signal as sig
 import matplotlib.pyplot as plt
 import window as wdw
 import GM79
+import pickle
+import os
 
 # Define some standard parameters.
 default_corrections = {
@@ -173,6 +175,22 @@ def apply_strain(Float, P_bin_width=100.):
 
     setattr(Float, 'N2_ref', N2_ref)
     setattr(Float, 'strain_z', strain_z)
+
+
+def smooth_density(Float, z_bin_width=100., save_dir='../../data/EM-APEX'):
+    """Smooth potential density and save to a file."""
+
+    srho_1 = np.nan*Float.rho_1.copy()
+
+    for i in xrange(len(Float.hpid)):
+        print("hpid: {}".format(Float.hpid[i]))
+        srho_1[:, i] = wdw.moving_polynomial_smooth(
+            Float.z[:, i], Float.rho_1[:, i], width=100., deg=1.)
+
+    save_name = "srho_{:g}_{:g}mbin.p".format(Float.floatID, z_bin_width)
+    file_path = os.path.join(save_dir, save_name)
+
+    pickle.dump(srho_1, open(file_path, 'wb'))
 
 
 def h_gregg(R=3.):
