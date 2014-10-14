@@ -151,13 +151,8 @@ def adiabatic_level(P, SA, T, lat, P_bin_width=200., deg=1):
     return N2_ref
 
 
-def apply_strain(Float, P_bin_width=100.):
-    """
-    Takes a float and a pressure bin width then calculates N2_ref for all
-    available profiles and sets N2_ref and strain_z as attributes of the
-    float class.
-
-    """
+def smooth_buoyancy(Float, P_bin_width=100., save_dir='../../data/EM-APEX'):
+    """Smooth buoyancy frequency and save to file."""
 
     Pg = getattr(Float, 'P')
     SAg = getattr(Float, 'SA')
@@ -170,11 +165,10 @@ def apply_strain(Float, P_bin_width=100.):
         print("hpid: {}".format(Float.hpid[i]))
         N2_ref[:, i] = adiabatic_level(P, SA, T, lat, P_bin_width)
 
-    N2 = getattr(Float, 'N2')
-    strain_z = (N2 - N2_ref)/N2_ref
+    save_name = "{:g}_N2_ref_{:g}dbar.p".format(Float.floatID, P_bin_width)
+    file_path = os.path.join(save_dir, save_name)
 
-    setattr(Float, 'N2_ref', N2_ref)
-    setattr(Float, 'strain_z', strain_z)
+    pickle.dump(N2_ref, open(file_path, 'wb'))
 
 
 def smooth_density(Float, z_bin_width=100., save_dir='../../data/EM-APEX'):
