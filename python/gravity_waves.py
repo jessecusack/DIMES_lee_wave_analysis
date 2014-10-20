@@ -86,6 +86,58 @@ def omega(N, k, m, l=None, f=None):
         return np.sqrt((f2*m2 + N2*(k2 + l2))/(k2 + l2 + m2))
 
 
+def phi(x, y, z, t, phi_0, k, l, m, om):
+    """Pressure pertubation."""
+    phase = 1j*(k*x + l*y + m*z - om*t)
+    return np.real(phi_0*np.exp(phase))
+
+
+def b(x, y, z, t, phi_0, k, l, m, om, N):
+    """Buoyancy pertubation."""
+    amplitude = phi_0*1j*m*N**2/(N**2 - om**2)
+    phase = 1j*(k*x + l*y + m*z - om*t)
+    return np.real(amplitude*np.exp(phase))
+
+
+def u(x, y, z, t, phi_0, k, l, m, om, f=None):
+    """Zonal velocity pertubation."""
+    f = 0. if f is None else f
+    amplitude = phi_0*(k*om + 1j*l*f)/(om**2 - f**2)
+    phase = 1j*(k*x + l*y + m*z - om*t)
+    return np.real(amplitude*np.exp(phase))
+
+
+def v(x, y, z, t, phi_0, k, l, m, om, f=None):
+    """Meridional velocity pertubation."""
+    f = 0. if f is None else f
+    amplitude = phi_0*(l*om - 1j*k*f)/(om**2 - f**2)
+    phase = 1j*(k*x + l*y + m*z - om*t)
+    return np.real(amplitude*np.exp(phase))
+
+
+def w(x, y, z, t, phi_0, k, l, m, om, N):
+    """Vertical velocity pertubation."""
+    amplitude = -phi_0*m*om/(N**2 - om**2)
+    phase = 1j*(k*x + l*y + m*z - om*t)
+    return np.real(amplitude*np.exp(phase))
+
+
+def U(x, y, z, t, phi_0, k, m, N, l=None, om=None, f=None):
+    """All components of velocity."""
+    om = omega(N, k, m, l, f) if om is None else om
+
+    if l is None:
+        l = 0.
+        U_x = u(x, y, z, t, phi_0, k, l, m, om, f)
+        U_z = w(x, y, z, t, phi_0, k, l, m, om, N)
+        return U_x, U_z
+    else:
+        U_x = u(x, y, z, t, phi_0, k, l, m, om, f)
+        U_z = w(x, y, z, t, phi_0, k, l, m, om, N)
+        U_y = v(x, y, z, t, phi_0, k, l, m, om, f)
+        return U_x, U_y, U_z
+
+
 def m_topo(k, N, U, f):
     """Relationship between vertical and horizontal wavenumbers for a
     topographically generated internal wave.
