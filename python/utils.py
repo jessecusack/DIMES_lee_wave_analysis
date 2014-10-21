@@ -91,6 +91,21 @@ def lldist(lon, lat):
     return dist
 
 
+def distll(lon_0, lat_0, x, y):
+    """ """
+    pi180 = np.pi/180.
+    earth_radius = 6378.137  # [km]
+
+    r = earth_radius*np.cos(pi180*lat_0)
+    dlons = x/(r*pi180)
+    dlats = y/(earth_radius*pi180)
+
+    lons = lon_0 + dlons
+    lats = lat_0 + dlats
+
+    return lons, lats
+
+
 def flip_cols(data, cols=None):
     """Input an array of data. Receive flipped array. If array is two
     dimensional then a list of columns should be provided else the whole matrix
@@ -154,9 +169,9 @@ def finite_diff(x, y, ivar=None, order=1, acc=1):
     y : array_like
         Numbers, same size as x.
     ivar : array_like
-        Numers, same size as x. Alternative variable to use as the interpolant.
-        This could be useful if x is sometimes not monotonically increasing and
-        another variable (e.g. time) is.
+        Numbers, same size as x. Alternative variable to use as the
+        interpolant. This could be useful if x is sometimes not monotonically
+        increasing and another variable (e.g. time) is.
     order : int
         Order of the derivative to calculate e.g. 2 will be the second
         derivative. finite_diff calls itself recursively.
@@ -203,3 +218,16 @@ def finite_diff(x, y, ivar=None, order=1, acc=1):
         dydx_out = finite_diff(x, dydx_out, i, acc=acc)
 
     return dydx_out
+
+
+def nan_interp(x, xp, fp, left=None, right=None):
+    """ """
+
+    y = np.nan*np.zeros_like(x)
+
+    x_nans = np.isnan(x)
+    xp_nans = np.isnan(xp) | np.isnan(fp)
+
+    y[~x_nans] = np.interp(x[~x_nans], xp[~xp_nans], fp[~xp_nans], left, right)
+
+    return y
