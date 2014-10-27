@@ -460,7 +460,7 @@ class EMApexFloat(object):
 
         self.update_profiles()
 
-    def apply_isopycnal_displacement(self, srho_file):
+    def apply_isopycnal_displacement(self, srho_file, rho_1_0=1031.):
         """Input the path to picked array of smoothed potential density."""
 
         print("\nAdding isopycnal displacements.")
@@ -480,6 +480,10 @@ class EMApexFloat(object):
             self.mu[:, i] = (self.rho_1[:, i] - srho_1[:, i])/srho_1dz
 
         print("  Added: mu.")
+
+        self.b = gsw.grav(self.lat_start, self.P)*(self.rho_1 - srho_1)/rho_1_0
+
+        print("  Added: b.")
 
         self.update_profiles()
 
