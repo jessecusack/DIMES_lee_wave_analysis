@@ -12,6 +12,7 @@ all into one miscellaneous 'utilities' module.
 import numpy as np
 import datetime as dt
 import pickle
+from scipy.signal import detrend
 
 
 class Bunch(object):
@@ -231,3 +232,22 @@ def nan_interp(x, xp, fp, left=None, right=None):
     y[~x_nans] = np.interp(x[~x_nans], xp[~xp_nans], fp[~xp_nans], left, right)
 
     return y
+
+
+def nan_detrend(x, y, deg=1):
+    """ """
+    y_out = np.nan*np.zeros_like(y)
+
+    if np.ndim(x) == 1:
+        nans = np.isnan(x) | np.isnan(y)
+        p = np.polyfit(x[~nans], y[~nans], deg)
+        y_out[~nans] = y - np.polyval(p, x[~nans])
+    elif np.ndim(x) == 2:
+        for i in xrange(x.shape[1]):
+            nans = np.isnan(x[:, i]) | np.isnan(y[:, i])
+            p = np.polyfit(x[~nans, i], y[~nans, i], deg)
+            y_out[~nans, i] = y[~nans, i] - np.polyval(p, x[~nans, i])
+    else:
+        raise RuntimeError('Arguments must be 1 or 2 dimensional arrays.')
+
+    return y_out
