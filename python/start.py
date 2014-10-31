@@ -12,11 +12,6 @@ import matplotlib.pyplot as plt
 import plotting_functions as pf
 import emapex
 import gsw
-import os
-import sandwell
-from scipy.interpolate import griddata
-from scipy.integrate import cumtrapz
-import scipy.signal as sig
 
 reload(emapex)
 
