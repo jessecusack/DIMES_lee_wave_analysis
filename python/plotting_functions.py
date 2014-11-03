@@ -13,6 +13,7 @@ import utils
 import scipy.signal as sig
 from glob import glob
 import scipy.io as io
+import os
 
 
 def dist_section(Float, hpids, var, plot_func=plt.contourf):
@@ -427,3 +428,34 @@ def plot_everything(Float, save_dir):
     """Plot profiles of absolutely everything possible."""
 
     pass
+
+
+def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
+               ftype='png'):
+    """My modified version of savefig."""
+
+    scol = 3.125
+    dcol = 6.5
+
+    if fsize is None:
+        pass
+    elif isinstance(fsize, tuple):
+        fig.set_size_inches(fsize)
+    elif fsize == 'single_col':
+        cfsize = fig.get_size_inches()
+        if lock_aspect:
+            r = scol/cfsize[0]
+            fig.set_size_inches(cfsize*r)
+        else:
+            fig.set_size_inches(scol, cfsize[1])
+    elif fsize == 'double_col':
+        cfsize = fig.get_size_inches()
+        if lock_aspect:
+            r = dcol/cfsize[0]
+            fig.set_size_inches(cfsize*r)
+        else:
+            fig.set_size_inches(dcol, cfsize[1])
+
+    fname = str(fid) + '_' + fname
+    fname = os.path.join(sdir, fname) + '.' + ftype
+    plt.savefig(fname, dpi=300., bbox_inches='tight')
