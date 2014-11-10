@@ -431,7 +431,7 @@ def plot_everything(Float, save_dir):
 
 
 def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
-               ftype='png'):
+               ftype='png', font_size=None):
     """My modified version of savefig."""
 
     scol = 3.125
@@ -455,6 +455,16 @@ def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
             fig.set_size_inches(cfsize*r)
         else:
             fig.set_size_inches(dcol, cfsize[1])
+
+    if font_size is None:
+        pass
+    else:
+        axs = fig.get_axes()
+        for ax in axs:
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
+                         ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(font_size)
+        fig.canvas.draw()
 
     fname = str(fid) + '_' + fname
     fname = os.path.join(sdir, fname) + '.' + ftype
