@@ -50,8 +50,10 @@ except NameError:
 bf = os.path.abspath(glob.glob('../../data/sandwell_bathymetry/topo_*.img')[0])
 # Figure save path.
 sdir = '../figures/sinusoid_fitting_analysis'
+if not os.path.exists(sdir):
+    os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 7})
+matplotlib.rc('font', **{'size': 9})
 
 # %% Spectral analysis
 
@@ -585,9 +587,8 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 # %% Is the wave stationary?
 
 bwr = plt.get_cmap('bwr')
-E76_hpids = np.arange(25, 40) # np.arange(31, 33)
-E77_hpids = np.arange(20, 35) # np.arange(26, 28)
-bathy_file = '../../data/sandwell_bathymetry/topo_17.1.img'
+E76_hpids = np.arange(27, 38) # np.arange(31, 33)
+E77_hpids = np.arange(22, 33) # np.arange(26, 28)
 
 min_depth = -1400
 max_depth = -200
@@ -619,7 +620,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     dctd = d[~nans]
     lonctd = np.interp(tctd, tgps, lon)
     latctd = np.interp(tctd, tgps, lat)
-    bathy = sandwell.interp_track(lonctd, latctd, bathy_file)
+    bathy = sandwell.interp_track(lonctd, latctd, bf)
 
     # Zero the distances at the top of the sea mount.
     d -= dctd[bathy.argmax()]
@@ -628,9 +629,11 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
         in_range = (z > dmin) & (z < dmax)
 
-        C = ax.scatter(d[in_range], utils.datenum_to_datetime(t[in_range]), c=Ww[in_range], s=60, cmap=bwr, vmin=-0.08, vmax=0.08)
-        ax.set_ylim(datetime.datetime(2011, 1, 2), datetime.datetime(2011, 1, 4, 12))
-        ax.set_xlim(-40, 60)
+        C = ax.scatter(d[in_range], utils.datenum_to_datetime(t[in_range]),
+                       c=Ww[in_range], s=30, cmap=bwr, vmin=-0.08, vmax=0.08)
+        ax.set_ylim(datetime.datetime(2011, 1, 2, 12),
+                    datetime.datetime(2011, 1, 4, 6))
+        ax.set_xlim(-20, 40)
         ax.set_xlabel('Distance (km)')
         ax.set_title("{} to {} m".format(dmin, dmax))
 
@@ -641,6 +644,7 @@ cbar = plt.colorbar(C, extend='both')
 cbar.set_label('$W_w$ (m s$^{-1}$)')
 [ax.grid() for ax in axs]
 
+pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
 # %% Modelling float motion
 

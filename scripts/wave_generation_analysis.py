@@ -8,7 +8,7 @@ Created on Fri Oct 31 16:24:05 2014
 # %% Loads and imports.
 
 import numpy as np
-import matplotlib
+#import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits import basemap as bm
 import gsw
@@ -44,14 +44,74 @@ except NameError:
 bf = os.path.abspath(glob.glob('../../data/sandwell_bathymetry/topo_*.img')[0])
 # Figure save path.
 sdir = '../figures/wave_generation_analysis'
+if not os.path.exists(sdir):
+    os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 7})
+matplotlib.rc('font', **{'size': 9})
 
 ################
 # START SCRIPT #
 ################
 
-# %% Float trajectories
+# %% Float trajectories FULL
+# ------------------
+
+lons = np.hstack([Float.lon_start for Float in [E76, E77]])
+lats = np.hstack([Float.lat_start for Float in [E76, E77]])
+
+llcrnrlon = np.floor(np.min(lons)) - 1.
+llcrnrlat = np.floor(np.min(lats)) - 1.
+urcrnrlon = np.ceil(np.max(lons)) + 1.
+urcrnrlat = np.ceil(np.max(lats)) + 1.
+
+lon_lat = np.array([llcrnrlon, urcrnrlon+5, llcrnrlat-5, urcrnrlat])
+
+lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
+bathy_grid[bathy_grid > 0] = 0
+
+m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
+               llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
+               urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
+               lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
+
+fig = plt.figure()
+x, y = m(lon_grid, lat_grid)
+m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
+
+for Float, colour in zip([E76, E77], ['b', 'g']):
+    x, y = m(Float.lon_start, Float.lat_start)
+    m.plot(x, y, colour, linewidth=3, label=Float.floatID)
+
+plt.legend()
+
+m.fillcontinents()
+m.drawcoastlines()
+
+r = np.abs((urcrnrlon-llcrnrlon)/(urcrnrlat-llcrnrlat))
+
+if r > 1.:
+    Nm = 8
+    Np = max(4, np.round(Nm/r))
+    orientation = 'horizontal'
+elif r < 1.:
+    Np = 8
+    Nm = max(4, np.round(Nm/r))
+    orientation = 'vertical'
+else:
+    Np = 4
+    Nm = 4
+    orientation = 'horizontal'
+
+parallels = np.round(np.linspace(llcrnrlat, urcrnrlat, Np), 1)
+m.drawparallels(parallels, labels=[1, 0, 0, 0])
+meridians = np.round(np.linspace(llcrnrlon, urcrnrlon, Nm), 1)
+m.drawmeridians(meridians, labels=[0, 0, 0, 1])
+
+cbar = plt.colorbar(orientation=orientation)
+cbar.set_label('Depth (m)')
+pf.my_savefig(fig, 'both', 'traj', sdir, fsize='double_col')
+
+# %% Float quivers RIDGE ONLY
 # ------------------
 
 # Number of half profiles.
