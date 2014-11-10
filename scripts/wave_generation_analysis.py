@@ -292,7 +292,7 @@ lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
 lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
 bathy_grid[bathy_grid > 0] = 0
 
-plt.figure()
+fig = plt.figure()
 plt.plot(lons, lats, 'o')
 plt.plot(lons, np.polyval(p, lons))
 levels = np.arange(-4000, 0, 500)
@@ -308,7 +308,9 @@ llats = np.polyval(p, llons)
 dist = np.hstack((0, np.cumsum(utils.lldist(llons, llats))))
 topo = sandwell.interp_track(llons, llats, bf)
 
-plt.figure()
+pf.my_savefig(fig, 'both', 'line_over_topo', sdir, fsize='double_col')
+
+fig = plt.figure()
 
 plt.plot(dist, topo, 'r', linewidth=5)
 plt.xlabel('Distance (km)')
@@ -321,6 +323,8 @@ tg = zg - np.max(topo)
 levels = np.arange(-1000, 1, 100)
 CS = plt.contour(xg, zg, tg, colors='k', levels=levels)
 plt.clabel(CS, inline=1, fontsize=8, fmt='%1.f')
+
+pf.my_savefig(fig, 'topo', 'section', sdir, fsize='double_col')
 
 # %% Characteristics of the flow
 # ---------------------------
