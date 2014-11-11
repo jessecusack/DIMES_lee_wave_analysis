@@ -241,7 +241,7 @@ def nan_detrend(x, y, deg=1):
     if np.ndim(x) == 1:
         nans = np.isnan(x) | np.isnan(y)
         p = np.polyfit(x[~nans], y[~nans], deg)
-        y_out[~nans] = y - np.polyval(p, x[~nans])
+        y_out[~nans] = y[~nans] - np.polyval(p, x[~nans])
     elif np.ndim(x) == 2:
         for i in xrange(x.shape[1]):
             nans = np.isnan(x[:, i]) | np.isnan(y[:, i])
