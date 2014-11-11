@@ -12,6 +12,7 @@ import os
 import sys
 import glob
 from scipy.linalg import lstsq
+import gsw
 
 lib_path = os.path.abspath('../python')
 if lib_path not in sys.path:
@@ -20,7 +21,7 @@ if lib_path not in sys.path:
 import utils
 import emapex
 from detect_peaks import detect_peaks
-
+import plotting_functions as pf
 
 try:
     print("Floats {} and {} exist!".format(E76.floatID, E77.floatID))
@@ -40,9 +41,11 @@ except NameError:
 # Bathymetry file path.
 bf = os.path.abspath(glob.glob('../../data/sandwell_bathymetry/topo_*.img')[0])
 # Figure save path.
-sdir = '../figures/sinusoid_fitting_analysis'
+sdir = '../figures/polarisation_relation_analysis'
+if not os.path.exists(sdir):
+    os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 7})
+matplotlib.rc('font', **{'size': 8})
 
 # %%
 
@@ -78,6 +81,52 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     for ax in axs:
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+
+# %% CRAZY MEAN MINUS plot for pfl 32
+
+N = 10
+N0_76 = 15
+N0_77 = 10
+E76_hpids = np.arange(N0_76, N0_76+N)
+E77_hpids = np.arange(N0_77, N0_77+N)
+
+dz = 1.
+z = np.arange(-1500, 0, dz)
+rho = []
+
+pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
+
+for pfl in pfls:
+    rho.append(pfl.interp(z, 'z', 'rho_1'))
+
+rho = np.transpose(np.asarray(rho))
+mrho = np.mean(rho, axis=-1)
+
+axs[0].plot(mrho, z, 'red')
+axs[1].plot(mrho, z, 'red')
+
+pfl = E77.get_profiles(26)
+srhop = utils.nan_interp(pfl.z, z, mrho)
+b = gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+
+fig, axs = plt.subplots(1, 4, sharey=True)
+axs[0].set_ylabel('$z$ (m)')
+#axs[0].plot(pfl.b, pfl.z, 'grey')
+#axs[0].plot(b, pfl.z, 'red')
+axs[0].plot(utils.nan_detrend(pfl.zef, pfl.U_abs), pfl.zef, 'red')
+axs[0].set_xlabel('$U$ (m s$^{-1}$)')
+plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=45)
+axs[1].plot(utils.nan_detrend(pfl.zef, pfl.V_abs), pfl.zef, 'red')
+axs[1].set_xlabel('$V$ (m s$^{-1}$)')
+plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
+axs[2].plot(pfl.Ww, pfl.z, color='red')
+axs[2].set_xlabel('$W$ (m s$^{-1}$)')
+plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=45)
+axs[3].plot(utils.nan_detrend(pfl.z, b), pfl.z, 'red')
+axs[3].set_xlabel('$b$ (m s$^{-2}$)')
+plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=45)
+
+pf.my_savefig(fig, '4977', 'UVWB', sdir, fsize='double_col')
 
 # %%
 

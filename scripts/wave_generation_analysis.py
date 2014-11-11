@@ -379,3 +379,51 @@ print("The height of the obstacle that would have a steepness of 0.4 is "
       "either {:1.0f} m or {:1.0f} m.\n"
       "This depends on a factor of 2 pi and possibly another factor of 2 due "
       "to uncertainty in N.".format(0.4*U/N,2*np.pi*0.4*U/N))
+
+
+# %% Mean rho_1 profile
+
+N = 10
+N0_76 = 15
+N0_77 = 10
+E76_hpids = np.arange(N0_76, N0_76+N)
+E77_hpids = np.arange(N0_77, N0_77+N)
+
+dz = 1.
+z = np.arange(-1500, 0, dz)
+rho = []
+
+pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
+
+fig, axs = plt.subplots(1, 2)
+
+axs[0].set_ylabel('$z$ (m)')
+
+for pfl in pfls:
+    axs[0].plot(pfl.rho_1, pfl.z, color='grey')
+    axs[0].set_xlabel('$\sigma_1$ (kg m$^{-3}$)')
+    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=45)
+
+    axs[1].plot(pfl.srho_1, pfl.z, color='grey')
+    axs[1].set_xlabel('$\sigma_1$ (kg m$^{-3}$)')
+    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
+
+    rho.append(pfl.interp(z, 'z', 'rho_1'))
+
+rho = np.transpose(np.asarray(rho))
+mrho = np.mean(rho, axis=-1)
+
+axs[0].plot(mrho, z, 'red')
+axs[1].plot(mrho, z, 'red')
+
+pfl = E76.get_profiles(32)
+srhop = utils.nan_interp(pfl.z, z, mrho)
+b = gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+
+fig, axs = plt.subplots(1, 2)
+axs[0].plot(pfl.b, pfl.z, 'grey')
+axs[0].plot(b, pfl.z, 'red')
+axs[0].plot(utils.nan_detrend(pfl.z, b), pfl.z, 'red', linestyle='--')
+axs[1].plot(pfl.rho_1, pfl.z, 'grey')
+axs[1].plot(mrho, z, 'red')
+axs[1].plot(pfl.srho_1, pfl.z, 'grey', linestyle='--')

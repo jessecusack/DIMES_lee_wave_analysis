@@ -684,9 +684,22 @@ def wave_vel(r, t, phi_0, k, l, m, om, N, f):
 
     return (np.vstack((u_x, u_y, u_z))).T
 
+
+def buoy(r, t, phi_0, k, l, m, om, N, f):
+    x = r[:, 0]
+    y = r[:, 1]
+    z = r[:, 2]
+
+    om2 = om**2
+    N2 = N**2
+
+    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
+
+    return b
+
 # Model parameters.
-X = 2500.
-Y = 20000.
+X = 5000.
+Y = 15000.
 Z = 6000.
 
 # Mean flow.
@@ -697,10 +710,10 @@ f = gsw.f(-57.5)
 N = 2e-3
 
 # Float change in buoyancy with velocity.
-Wf_pvals = np.polyfit([0., 0.06], [-0.14, -0.16], 1)
+Wf_pvals = np.polyfit([0., 0.06], [0.14, 0.12], 1)
 
 # Wave parameters
-W_0 = 0.20
+W_0 = 0.17
 k = 2*np.pi/X
 l = 2*np.pi/Y
 m = 2*np.pi/Z
@@ -713,40 +726,84 @@ uargs = (phi_0, k, l, m, om, N, f)
 # Integration parameters.
 dt = 10.
 t_0 = 0.
-t_1 = 14000.
+t_1 = 15000.
 t = np.arange(t_0, t_1, dt)
 
 # Initial conditions.
 x_0 = 0.
 y_0 = 0.
-z_0 = 0.
+z_0 = -1500.
 r_0 = np.array([x_0, y_0, z_0])
 
 # This integrator calls FORTRAN odepack to solve the problem.
 r = odeint(drdt, r_0, t, args)
 u = wave_vel(r, t, *uargs)
+b = buoy(r, t, *uargs)
 
-fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14, 6))
+fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 axs[0].set_ylabel('$z$')
-axs[0].plot(u[:, 0], r[:, 2])
-axs[0].set_xlabel('$U$ (wave)')
+axs[0].plot(u[:,0] + np.polyval(U_pvals, r[:, 2]), r[:, 2])
+axs[0].set_xlabel('$U$ (wave + mean) (m s$^{-1}$)')
+plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
 axs[1].plot(u[:, 1], r[:, 2])
-axs[1].set_xlabel('$V$ (wave)')
+axs[1].set_xlabel('$V$ (m s$^{-1}$)')
+plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
 axs[2].plot(u[:, 2], r[:, 2])
-axs[2].set_xlabel('$W$ (wave)')
-axs[3].plot(u[:, 0] + np.polyval(U_pvals, r[:, 2]), r[:, 2])
-axs[3].set_xlabel('$U$ (wave + mean)')
-axs[4].plot(r[:, 0], r[:, 2])
-axs[4].set_xlabel('$x$')
+axs[2].set_xlabel('$W$ (m s$^{-1}$)')
+plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
+axs[3].plot(b, r[:, 2])
+axs[3].set_xlabel('$b$ (m s$^{-2}$)')
+plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
+axs[4].plot(r[:,0], r[:, 2])
+axs[4].set_xlabel('$x$ (m)')
+plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+plt.ylim(-1600, 0)
+
+pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
+
+# %%
+
+N = 10
+N0_76 = 15
+N0_77 = 10
+E76_hpids = np.arange(N0_76, N0_76+N)
+E77_hpids = np.arange(N0_77, N0_77+N)
+
+dz = 1.
+z = np.arange(-1500, 0, dz)
+rho = []
+
+pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
+
+for pfl in pfls:
+    rho.append(pfl.interp(z, 'z', 'rho_1'))
+
+rho = np.transpose(np.asarray(rho))
+mrho = np.mean(rho, axis=-1)
+
+axs[0].plot(mrho, z, 'red')
+axs[1].plot(mrho, z, 'red')
 
 pfl = E77.get_profiles(26)
-fig, axs = plt.subplots(1, 4, sharey=True, figsize=(12, 6))
-axs[0].set_ylabel('$z$')
-axs[0].plot(pfl.U_abs, pfl.zef)
-axs[0].set_xlabel('$U$')
-axs[1].plot(pfl.V_abs, pfl.zef)
-axs[1].set_xlabel('$V$')
-axs[2].plot(pfl.Ww, pfl.z)
-axs[2].set_xlabel('$W$')
-axs[3].plot(pfl.dist_ctd - np.nanmin(pfl.dist_ctd), pfl.z)
-axs[3].set_xlabel('$x$')
+srhop = utils.nan_interp(pfl.z, z, mrho)
+b = gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+
+fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
+axs[0].set_ylabel('$z$ (m)')
+axs[0].plot(pfl.U_abs, pfl.zef, 'red')
+axs[0].set_xlabel('$U$ (m s$^{-1}$)')
+plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
+axs[1].plot(pfl.V_abs, pfl.zef, 'red')
+axs[1].set_xlabel('$V$ (m s$^{-1}$)')
+plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
+axs[2].plot(pfl.Ww, pfl.z, color='red')
+axs[2].set_xlabel('$W$ (m s$^{-1}$)')
+plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
+axs[3].plot(utils.nan_detrend(pfl.z, b), pfl.z, 'red')
+axs[3].set_xlabel('$b$ (m s$^{-2}$)')
+plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
+axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
+axs[4].set_xlabel('$x$ (m)')
+plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+
+pf.my_savefig(fig, '4977', 'pfl26_UVWB', sdir, fsize='double_col')
