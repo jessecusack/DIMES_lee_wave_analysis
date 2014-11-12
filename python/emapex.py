@@ -481,7 +481,9 @@ class EMApexFloat(object):
 
         print("  Added: mu.")
 
-        self.b = gsw.grav(self.lat_start, self.P)*(self.rho_1 - srho_1)/rho_1_0
+        # I added a minus because I *think* gravity should be negative.
+        self.b = -gsw.grav(self.lat_start, self.P) \
+             * (self.rho_1 - srho_1)/rho_1_0
 
         print("  Added: b.")
 
