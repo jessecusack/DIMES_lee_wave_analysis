@@ -677,8 +677,8 @@ def wave_vel(r, t, phi_0, k, l, m, om, N, f):
     return (np.vstack((u_x, u_y, u_z))).T
 
 # Model parameters.
-X = 2500.
-Y = 20000.
+X = 6000.
+Y = 15000.
 Z = 6000.
 
 # Mean flow.
@@ -714,6 +714,20 @@ y_0 = 0.
 z_0 = 0.
 r_0 = np.array([x_0, y_0, z_0])
 
+# Group velocity.
+#om0 = om - U_depth*k
+om0 = om
+cg = np.array([k*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
+               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
+               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
+cgz = -N**2*(k**2+l**2)/(m**2*(f**2*m**2+N**2*(k**2+l**2))**0.5)
+sin2phi = m**2/(k**2+l**2+m**2)
+phi = np.arcsin(np.sqrt(sin2phi))
+rho0 = 1025.
+h0 = 750.
+E = 0.5*rho0*(W_0/np.cos(phi))**2
+F = cg*E
+Fv = 0.5*rho0*U_depth*m/k*h0**2*(U_depth**2*k**2 - f**2)
 # This integrator calls FORTRAN odepack to solve the problem.
 r = odeint(drdt, r_0, t, args)
 u = wave_vel(r, t, *uargs)
