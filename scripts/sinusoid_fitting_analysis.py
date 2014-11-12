@@ -759,7 +759,17 @@ axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 plt.ylim(-1600, 0)
 
-pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
+#pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
+
+sintheta2 = m**2/(m**2 + k**2 + l**2)
+theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
+
+rho_0 = 1025.
+h0 = 750.
+Eflux = m*U_depth*W_0**2/(2*k)
+Eflux2 = 0.5*rho_0* U_depth*m*h0**2*(U_depth**2*k**2 - f**2)/k
+
+#wphi = phi_0**2 *
 
 # %%
 
@@ -786,7 +796,7 @@ axs[1].plot(mrho, z, 'red')
 
 pfl = E77.get_profiles(26)
 srhop = utils.nan_interp(pfl.z, z, mrho)
-b = gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 axs[0].set_ylabel('$z$ (m)')

@@ -45,7 +45,7 @@ sdir = '../figures/polarisation_relation_analysis'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 8})
+matplotlib.rc('font', **{'size': 9})
 
 # %%
 
@@ -82,7 +82,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     for ax in axs:
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-# %% CRAZY MEAN MINUS plot for pfl 32
+# %% CRAZY MEAN MINUS plot for pfl 26
 
 N = 10
 N0_76 = 15
@@ -107,22 +107,26 @@ axs[1].plot(mrho, z, 'red')
 
 pfl = E77.get_profiles(26)
 srhop = utils.nan_interp(pfl.z, z, mrho)
-b = gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+
+zmax = -650
+use = pfl.z < zmax
+useef = pfl.zef < zmax
 
 fig, axs = plt.subplots(1, 4, sharey=True)
 axs[0].set_ylabel('$z$ (m)')
 #axs[0].plot(pfl.b, pfl.z, 'grey')
 #axs[0].plot(b, pfl.z, 'red')
-axs[0].plot(utils.nan_detrend(pfl.zef, pfl.U_abs), pfl.zef, 'red')
+axs[0].plot(utils.nan_detrend(pfl.zef[useef], pfl.U_abs[useef]), pfl.zef[useef], 'red')
 axs[0].set_xlabel('$U$ (m s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=45)
-axs[1].plot(utils.nan_detrend(pfl.zef, pfl.V_abs), pfl.zef, 'red')
+axs[1].plot(utils.nan_detrend(pfl.zef[useef], pfl.V_abs[useef]), pfl.zef[useef], 'red')
 axs[1].set_xlabel('$V$ (m s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
-axs[2].plot(pfl.Ww, pfl.z, color='red')
+axs[2].plot(pfl.Ww[use], pfl.z[use], color='red')
 axs[2].set_xlabel('$W$ (m s$^{-1}$)')
 plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=45)
-axs[3].plot(utils.nan_detrend(pfl.z, b), pfl.z, 'red')
+axs[3].plot(utils.nan_detrend(pfl.z[use], b[use]), pfl.z[use], 'red')
 axs[3].set_xlabel('$b$ (m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=45)
 
@@ -209,12 +213,20 @@ w_amp = np.array([-0.2, 0.2, 0.2, -0.23, -0.15, 0.15])
 b_amp = np.array([4e-4, 3e-4, 3e-4, 4e-4, 3.5e-4, 2e-4])
 u_amp = np.array([0.2, 0.2, 0.2, 0.15, 0.15, 0.1])
 v_amp = np.array([0.2, 0.1, 0.1, 0.25, 0.2, 0.15])
-N = 0.002
+N = 0.0017
 f = 1.2e-4
 
 om = np.abs(w_amp*N**2/b_amp)
 
 r = np.abs((1j*u_amp/v_amp*f + om)/(u_amp/v_amp*om - 1j*f))
 
-print(om)
+print(np.mean(om))
 print(r)
+
+w0 = 0.2
+U0 = 0.2
+U1 = 0.4
+h0 = 500
+h1 = 1000
+
+print(2*np.pi/(w0/(U0*h0)), 2*np.pi/(w0/(U1*h1)))

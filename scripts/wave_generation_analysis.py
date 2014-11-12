@@ -348,37 +348,43 @@ print("Mean inertial frequency at {:1.1f} degrees is {:.2E} rad s-1. "
 # - Buoyancy period, $T_N \approx 50$ mins.
 # - Inertial period, $T_f \approx 14$ hours.
 
-N = 1.0e-3
-U = 0.3
+N0 = 0.8e-3
+N1 = 1.0e-3
+U0 = 0.2
+U1 = 0.4
 f = 1.2e-4
-h0 = 1.5e3
-L0 = 1e4
-h1 = 300.
-L1 = 2e3
+h0 = 300.
+h1 = 1.5e3
+L0 = 2e3
+L1 = 1e4
 
 # Assuming waves generated have a frequency near N, the horizontal scale is...
-L_N = 2*np.pi*U/N
+L_N0 = 2*np.pi*U0/N1
+L_N1 = 2*np.pi*U1/N0
 print("Assuming that generated waves have a frequency near N then their "
-      "horizontal wavelength should be of order {:1.0f} m.".format(L_N))
+      "horizontal wavelength should be of order {:1.0f} -- {:1.0f} m.".format(L_N0, L_N1))
 # Not assuming this the appropriate frequency is...
-om_L0 = 2*np.pi*U/L0
-om_L1 = 2*np.pi*U/L1
+om_L0 = 2*np.pi*U0/L1
+om_L1 = 2*np.pi*U1/L0
 print("Topographic and velocity scales suggest that their frequency is in the "
       "range {:.2E} -- {:.2E} rad s-1.".format(om_L0, om_L1))
-Ro0 = U/(f*L0)
-Ro1 = U/(f*L1)
+Ro0 = U1/(f*L1)
+Ro1 = U1/(f*L0)
 print("The Rossby number for the flow given a range of length scales is "
       "between {} -- {}.".format(Ro0, Ro1))
-Fr0 = U/(N*h0)
-Fr1 = U/(N*h1)
+Fr0 = U0/(N1*h1)
+Fr1 = U1/(N0*h0)
 print("The Froude number given a range of height scales is  between {:1.2f} "
       "-- {:1.2f}.".format(Fr0, Fr1))
 print("Consequenctly the steepness parameter (1/Fr) is in the range {:1.1f} "
       "-- {:1.1f}.".format(1./Fr1, 1./Fr0))
+
+hc0 = 2*np.pi*0.4*U0/N1
+hc1 = 2*np.pi*0.4*U1/N0
 print("The height of the obstacle that would have a steepness of 0.4 is "
       "either {:1.0f} m or {:1.0f} m.\n"
       "This depends on a factor of 2 pi and possibly another factor of 2 due "
-      "to uncertainty in N.".format(0.4*U/N,2*np.pi*0.4*U/N))
+      "to uncertainty in N.".format(hc0, hc1))
 
 
 # %% Mean rho_1 profile
