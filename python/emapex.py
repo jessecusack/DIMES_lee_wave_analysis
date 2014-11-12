@@ -11,7 +11,7 @@ data.
 import numpy as np
 import scipy.io as io
 from scipy.interpolate import griddata
-from scipy.integrate import cumtrapz
+from scipy.integrate import trapz
 import gsw
 import utils
 import pickle
@@ -319,6 +319,15 @@ class EMApexFloat(object):
         self.V_abs = self.V + self.sub_surf_v
         self.V_abs -= cumtrapz(self.V, self.UTCef*86400.,
                                axis=0, initial=0.)/self.profile_dt
+#        for i in xrange(len(self.hpid)):
+#            unans = np.isnan(self.U[:, i]) | np.isnan(self.UTCef[:, i])
+#            vnans = np.isnan(self.V[:, i]) | np.isnan(self.UTCef[:, i])
+#            self.U_abs[~unans, i] -= \
+#                trapz(self.U[~unans, i], self.UTCef[~unans, i]*86400.) \
+#                / self.profile_dt[i]
+#            self.V_abs[~vnans, i] -= \
+#                trapz(self.U[~vnans, i], self.UTCef[~vnans, i]*86400.) \
+#                / self.profile_dt[i]
 
         print("Calculating thermodynamic variables.")
         # Derive some important thermodynamics variables.
