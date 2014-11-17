@@ -11,7 +11,7 @@ data.
 import numpy as np
 import scipy.io as io
 from scipy.interpolate import griddata
-from scipy.integrate import trapz
+from scipy.integrate import cumtrapz, trapz
 import gsw
 import utils
 import pickle
