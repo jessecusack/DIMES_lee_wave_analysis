@@ -768,7 +768,7 @@ rho0 = 1025.
 h0 = 750.
 E = 0.5*rho0*(W_0/np.cos(phi))**2
 F = cg*E
-Fv = 0.5*rho0*U_depth*m/k*h0**2*(U_depth**2*k**2 - f**2)
+Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
 # This integrator calls FORTRAN odepack to solve the problem.
 r = odeint(drdt, r_0, t, args)
 u = wave_vel(r, t, *uargs)
@@ -974,10 +974,10 @@ def buoy(r, t, phi_0, k, l, m, om, N, f):
 pfl26 = E77.get_profiles(26)
 zmax = -650.
 use = ~np.isnan(pfl26.z) & (pfl26.z < zmax)
-zf = pfl.z[use]
-wf = pfl.Ww[use]
-uf = pfl.U_abs[use]
-vf = pfl.V_abs[use]
+zf = pfl26.z[use]
+wf = pfl26.Ww[use]
+uf = pfl26.U_abs[use]
+vf = pfl26.V_abs[use]
 bf = utils.nan_detrend(zf, (gsw.grav(pfl26.lat_start, pfl26.P)*(pfl26.rho_1 - srhop)/1031.)[use])
 zmin = np.min(zf)
 
@@ -1031,7 +1031,7 @@ def model(params, z, sub, var_name):
 
 popt1, __ = op.leastsq(model, x0=[5000., 15000., 8000.], args=(zf, wf, 'w'))
 plt.figure()
-plt.plot(wf, zf, model(popt, z=zf, sub=wf, var_name='w') + wf, zf)
+plt.plot(wf, zf, model(popt1, z=zf, sub=wf, var_name='w') + wf, zf)
 
 popt2, __ = op.leastsq(model, x0=popt1, args=(zf, uf, 'u'))
 plt.figure()
