@@ -314,20 +314,17 @@ class EMApexFloat(object):
         # Absolute velocity defined as relative velocity plus mean velocity
         # minus depth integrated relative velocity.
         self.U_abs = self.U + self.sub_surf_u
-        self.U_abs -= cumtrapz(self.U, self.UTCef*86400.,
-                               axis=0, initial=0.)/self.profile_dt
         self.V_abs = self.V + self.sub_surf_v
-        self.V_abs -= cumtrapz(self.V, self.UTCef*86400.,
-                               axis=0, initial=0.)/self.profile_dt
-#        for i in xrange(len(self.hpid)):
-#            unans = np.isnan(self.U[:, i]) | np.isnan(self.UTCef[:, i])
-#            vnans = np.isnan(self.V[:, i]) | np.isnan(self.UTCef[:, i])
-#            self.U_abs[~unans, i] -= \
-#                trapz(self.U[~unans, i], self.UTCef[~unans, i]*86400.) \
-#                / self.profile_dt[i]
-#            self.V_abs[~vnans, i] -= \
-#                trapz(self.U[~vnans, i], self.UTCef[~vnans, i]*86400.) \
-#                / self.profile_dt[i]
+
+        for i in xrange(len(self.hpid)):
+            unans = np.isnan(self.U[:, i]) | np.isnan(self.UTCef[:, i])
+            vnans = np.isnan(self.V[:, i]) | np.isnan(self.UTCef[:, i])
+            self.U_abs[~unans, i] -= \
+                trapz(self.U[~unans, i], self.UTCef[~unans, i]*86400.) \
+                / self.profile_dt[i]
+            self.V_abs[~vnans, i] -= \
+                trapz(self.V[~vnans, i], self.UTCef[~vnans, i]*86400.) \
+                / self.profile_dt[i]
 
         print("Calculating thermodynamic variables.")
         # Derive some important thermodynamics variables.

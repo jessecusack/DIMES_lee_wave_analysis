@@ -192,9 +192,9 @@ for i, (lon, lat, U, V, W) in enumerate(zip(lons.T, lats.T, Us.T, Vs.T, Ws.T)):
     m.plot(x, y, marker[i], color='y', label=label[i])
     Q = m.quiver(x, y, U, V, W, scale=6, cmap=plt.get_cmap('jet'))
     plt.clim(0, 0.3)
-    for _x, _y, hpid in zip(x, y, hpids[:, i]):
-        plt.annotate("{:1.0f}".format(hpid), xy=(_x, _y),
-                     xytext=(1.03*_x, 1.03*_y), color=color[i])
+#    for _x, _y, hpid in zip(x, y, hpids[:, i]):
+#        plt.annotate("{:1.0f}".format(hpid), xy=(_x, _y),
+#                     xytext=(1.03*_x, 1.03*_y), color=color[i])
 
 plt.legend()
 qk = plt.quiverkey(Q, 0.5, 0.92, 0.5, r'0.5 m s$^{-1}$', labelpos='N')
@@ -220,26 +220,26 @@ fig.set_size_inches(16, 5)
 axs[0].set_ylabel('$z$ (m)')
 
 for pfl in pfls:
-    axs[0].plot(np.sqrt(pfl.N2_ref), pfl.z, color='grey')
-    axs[0].set_xlabel('$N$ (rad s$^{-1}$)')
-    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=45)
+    axs[0].plot(np.sqrt(pfl.N2_ref)*1000., pfl.z, color='grey')
+    axs[0].set_xlabel('$N$ (10$^{-3}$ rad s$^{-1}$)')
+    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation='vertical')
 
     axs[1].plot(pfl.rho_1, pfl.z, color='grey')
     axs[1].set_xlabel('$\sigma_1$ (kg m$^{-3}$)')
     axs[1].ticklabel_format(useOffset=1000.)
-    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
+    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation='vertical')
 
     axs[2].plot(pfl.U_abs, pfl.zef, color='grey')
     axs[2].set_xlabel('$U$ (m s$^{-1}$)')
-    plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=45)
+    plt.setp(axs[2].xaxis.get_majorticklabels(), rotation='vertical')
 
     axs[3].plot(pfl.V_abs, pfl.zef, color='grey')
     axs[3].set_xlabel('$V$ (m s$^{-1}$)')
-    plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=45)
+    plt.setp(axs[3].xaxis.get_majorticklabels(), rotation='vertical')
 
     axs[4].plot(pfl.Ww, pfl.z, color='grey')
     axs[4].set_xlabel('$W$ (m s$^{-1}$)')
-    plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=45)
+    plt.setp(axs[4].xaxis.get_majorticklabels(), rotation='vertical')
 
 # TODO: Plot mean profiles too!
 
@@ -424,7 +424,7 @@ axs[1].plot(mrho, z, 'red')
 
 pfl = E76.get_profiles(32)
 srhop = utils.nan_interp(pfl.z, z, mrho)
-b = gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
 
 fig, axs = plt.subplots(1, 2)
 axs[0].plot(pfl.b, pfl.z, 'grey')
