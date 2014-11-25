@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import gsw
 from scipy.integrate import odeint
+import matplotlib.pyplot as plt
 
 lib_path = '/noc/users/jc3e13/emapex/python'
 pymc3_path = '/noc/users/jc3e13/envs/my_root/lib/python2.7/site-packages/pymc-3.0-py2.7.egg'
@@ -86,6 +87,59 @@ def buoy(r, t, phi_0, k, l, m, om, N, f):
 
     return b
 
+
+def wave_profile(zf, X, Y, Z):
+    U = 0.5
+    V = -0.0
+    f = gsw.f(-57.5)
+    N = 1.8e-3
+
+    # Float change in buoyancy with velocity.
+    Wf_pvals = np.polyfit([0., 0.06], [0.14, 0.12], 1)
+
+    # Wave parameters
+    W_0 = 0.17
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+
+    om = gw.omega(N, k, m, l, f) + k*U + l*V
+    phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
+    uargs = (phi_0, k, l, m, om, N, f)
+
+    # Integration parameters.
+    dt = 20.
+    t_0 = 0.
+    t_1 = 13000.
+    t = np.arange(t_0, t_1, dt)
+
+    # Initial conditions.
+    x_0 = 0.
+    y_0 = 0.
+    z_0 = zmin
+    r_0 = np.array([x_0, y_0, z_0])
+
+    # This integrator calls FORTRAN odepack to solve the problem.
+    r = odeint(drdt, r_0, t, args)
+    u = wave_vel(r, t, *uargs)
+    u[:, 0] += U
+    u[:, 1] += V
+    b = buoy(r, t, *uargs)
+
+    um = np.interp(zf, r[:, 2], u[:, 0])
+    vm = np.interp(zf, r[:, 2], u[:, 1])
+    wm = np.interp(zf, r[:, 2], u[:, 2])
+    bm = 250.*np.interp(zf, r[:, 2], b)
+
+#    # Variable to return.
+#    var_dict = {'w': u[:, 2], 'u': u[:, 0], 'v': u[:, 1], 'b': b}
+#    var = var_dict['w']
+#    ivar = np.interp(zf, r[:, 2], var)
+
+    return np.hstack((um, vm, wm, bm))
+
 N = 10
 N0_76 = 15
 N0_77 = 10
@@ -116,65 +170,35 @@ vf = pfl26.V_abs[use]
 bf = utils.nan_detrend(zf, (gsw.grav(pfl26.lat_start, pfl26.P)*(pfl26.rho_1 - srhop)/1031.)[use])
 zmin = np.min(zf)
 
+data_stack = np.hstack((uf, vf, wf, 250*bf))
+
 
 def model():
 
     # Priors.
-    sig = pymc.Uniform('sig', 0.0, 100.0, value=1.)
+    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
     X = pymc.Uniform('X', -2e4, 2e4, value=5e3)
     Y = pymc.Uniform('Y', -1e5, 1e5, value=1e4)
     Z = pymc.Uniform('Z', -2e4, 2e4, value=6e3)
 
     @pymc.deterministic()
-    def wave_profile(zf=zf, X=X, Y=Y, Z=Z):
-        U = 0.5
-        V = -0.0
-        f = gsw.f(-57.5)
-        N = 1.8e-3
-
-        # Float change in buoyancy with velocity.
-        Wf_pvals = np.polyfit([0., 0.06], [0.14, 0.12], 1)
-
-        # Wave parameters
-        W_0 = 0.17
-        k = 2*np.pi/X
-        l = 2*np.pi/Y
-        m = 2*np.pi/Z
-
-        om = gw.omega(N, k, m, l, f) + k*U + l*V
-        phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
-
-        args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
-        uargs = (phi_0, k, l, m, om, N, f)
-
-        # Integration parameters.
-        dt = 20.
-        t_0 = 0.
-        t_1 = 13000.
-        t = np.arange(t_0, t_1, dt)
-
-        # Initial conditions.
-        x_0 = 0.
-        y_0 = 0.
-        z_0 = zmin
-        r_0 = np.array([x_0, y_0, z_0])
-
-        # This integrator calls FORTRAN odepack to solve the problem.
-        r = odeint(drdt, r_0, t, args)
-        u = wave_vel(r, t, *uargs)
-        u[:, 0] += U
-        u[:, 1] += V
-        b = buoy(r, t, *uargs)
-
-        # Variable to return.
-        var_dict = {'w': u[:, 2], 'u': u[:, 0], 'v': u[:, 1], 'b': b}
-        var = var_dict['w']
-        ivar = np.interp(zf, r[:, 2], var)
-
-        return ivar
+    def wave_model(zf=zf, X=X, Y=Y, Z=Z):
+        return wave_profile(zf, X, Y, Z)
 
     # Likelihood
-    y = pymc.Normal('y', mu=wave_profile, tau=1./sig**2, value=wf, observed=True)
+    y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack, observed=True)
 
     return locals()
 
+M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
+samples = 500000
+burn = 200000
+thin = 10
+M.sample(samples, burn, thin)
+pymc.Matplot.plot(M, common_scale=False)
+
+plt.figure()
+plt.plot(data_stack)
+plt.plot(wave_profile(zf, np.median(M.trace('X')[:]), np.median(M.trace('Y')[:]),
+                      np.median(M.trace('Z')[:])))
+plt.savefig('output.png')
