@@ -134,8 +134,8 @@ pf.my_savefig(fig, '4977', 'UVWB', sdir, fsize='double_col')
 
 # %%
 
-E76_hpids = np.array([31, 32])
-E77_hpids = np.array([26, 27])
+E76_hpids = np.array([31])
+E77_hpids = np.array([26])
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
@@ -150,7 +150,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     posidxs = detect_peaks(w, mph=0.08, mpd=100.)
     negidxs = detect_peaks(w, mph=0.08, mpd=100., valley=True)
     pidxs = np.hstack((negidxs, posidxs))
-    TF = np.hstack((np.zeros_like(posidxs), np.ones_like(negidxs)))
+    TF = np.arange(len(pidxs))
     tpeaks = t[pidxs]
     pidxsef = np.searchsorted(tef, tpeaks)
 
