@@ -698,15 +698,15 @@ def buoy(r, t, phi_0, k, l, m, om, N, f):
     return b
 
 # Model parameters.
-X = 2000.
-Y = 10000.
-Z = 2500.
+X = -2300.
+Y = 30000.
+Z = -785.
 
 # Mean flow.
 #U_surf = 0.0
 #U_depth = 0.0
 #U_pvals = np.polyfit([0., -1500.], [U_surf, U_depth], 1)
-U = 0.3
+U = 0.5
 f = gsw.f(-57.5)
 N = 1.8e-3
 
