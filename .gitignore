@@ -12,6 +12,11 @@
 ###########
 figures/*
 
+# Dumps #
+#########
+scripts/*.txt
+scripts/*.png
+
 # Autosaves #
 #############
 *~ 
