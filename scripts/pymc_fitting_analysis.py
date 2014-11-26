@@ -38,7 +38,7 @@ except NameError:
     E77.apply_isopycnal_displacement('/noc/users/jc3e13/data/EM-APEX/srho_4977_100mbin.p')
 
 
-def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f):
+def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f, phase):
     x = r[0]
     y = r[1]
     z = r[2]
@@ -52,14 +52,14 @@ def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f):
     f2 = f**2
     K2 = k**2 + l**2 + m**2
 
-    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t))))/(1 - Wf_g)
+    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase)))
+    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase)))
+    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase))))/(1 - Wf_g)
 
     return np.array([dxdt, dydt, dzdt])
 
 
-def wave_vel(r, t, phi_0, k, l, m, om, N, f):
+def wave_vel(r, t, phi_0, k, l, m, om, N, f, phase):
     x = r[..., 0]
     y = r[..., 1]
     z = r[..., 2]
@@ -68,14 +68,14 @@ def wave_vel(r, t, phi_0, k, l, m, om, N, f):
     f2 = f**2
     K2 = k**2 + l**2 + m**2
 
-    u_x = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    u_y = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    u_z = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
+    u_x = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase)))
+    u_y = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase)))
+    u_z = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase)))
 
     return (np.vstack((u_x, u_y, u_z))).T
 
 
-def buoy(r, t, phi_0, k, l, m, om, N, f):
+def buoy(r, t, phi_0, k, l, m, om, N, f, phase):
     x = r[:, 0]
     y = r[:, 1]
     z = r[:, 2]
@@ -83,12 +83,12 @@ def buoy(r, t, phi_0, k, l, m, om, N, f):
     om2 = om**2
     N2 = N**2
 
-    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
+    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t + phase)))
 
     return b
 
 
-def wave_profile(zf, X, Y, Z):
+def wave_profile(zf, X, Y, Z, phase):
     U = 0.5
     V = -0.0
     f = gsw.f(-57.5)
@@ -106,8 +106,8 @@ def wave_profile(zf, X, Y, Z):
     om = gw.omega(N, k, m, l, f) + k*U + l*V
     phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
-    args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
-    uargs = (phi_0, k, l, m, om, N, f)
+    args = (phi_0, U, Wf_pvals, k, l, m, om, N, f, phase)
+    uargs = (phi_0, k, l, m, om, N, f, phase)
 
     # Integration parameters.
     dt = 20.
@@ -167,7 +167,7 @@ zf = pfl26.z[use]
 wf = pfl26.Ww[use]
 uf = pfl26.U_abs[use]
 vf = pfl26.V_abs[use]
-bf = utils.nan_detrend(zf, (gsw.grav(pfl26.lat_start, pfl26.P)*(pfl26.rho_1 - srhop)/1031.)[use])
+bf = utils.nan_detrend(zf, (-gsw.grav(pfl26.lat_start, pfl26.P)*(pfl26.rho_1 - srhop)/1031.)[use])
 zmin = np.min(zf)
 
 data_stack = np.hstack((uf, vf, wf, 250*bf))
@@ -180,10 +180,11 @@ def model():
     X = pymc.Uniform('X', -2e4, 2e4, value=5e3)
     Y = pymc.Uniform('Y', -1e5, 1e5, value=1e4)
     Z = pymc.Uniform('Z', -2e4, 2e4, value=6e3)
+    phase = pymc.Uniform('phase', 0., 2.*np.pi, value=0.)
 
     @pymc.deterministic()
-    def wave_model(zf=zf, X=X, Y=Y, Z=Z):
-        return wave_profile(zf, X, Y, Z)
+    def wave_model(zf=zf, X=X, Y=Y, Z=Z, phase=phase):
+        return wave_profile(zf, X, Y, Z, phase)
 
     # Likelihood
     y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack, observed=True)
@@ -191,8 +192,8 @@ def model():
     return locals()
 
 M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
-samples = 500000
-burn = 200000
+samples = 50000
+burn = 20000
 thin = 10
 M.sample(samples, burn, thin)
 pymc.Matplot.plot(M, common_scale=False)
@@ -200,5 +201,9 @@ pymc.Matplot.plot(M, common_scale=False)
 plt.figure()
 plt.plot(data_stack)
 plt.plot(wave_profile(zf, np.median(M.trace('X')[:]), np.median(M.trace('Y')[:]),
-                      np.median(M.trace('Z')[:])))
+                      np.median(M.trace('Z')[:]), np.median(M.trace('phase')[:])))
 plt.savefig('output.png')
+
+plt.figure()
+plt.plot(data_stack)
+plt.plot(wave_profile(zf, 5000., 15000, 8000, 0.))
