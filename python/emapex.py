@@ -312,11 +312,53 @@ class EMApexFloat(object):
 
         print("Estimating absolute velocity.")
         # Absolute velocity defined as relative velocity plus mean velocity
-        # minus depth integrated relative velocity.
+        # minus depth integrated relative velocity. It attempts to use the
+        # profile pair integral of velocity, but if it can't then it will use
+        # the single profile approximation.
         self.U_abs = self.U + self.sub_surf_u
         self.V_abs = self.V + self.sub_surf_v
 
-        for i in xrange(len(self.hpid)):
+        didxs = up_down_indices(self.hpid, 'down')
+        successful_pairs = []
+        nan_pairs = []
+
+        for idx in didxs:
+            # Check that a down up profile pair exists, if not, then skip.
+            if (self.hpid[idx] + 1) != self.hpid[idx+1]:
+                print('  No pair, continue.')
+                continue
+
+            hpids = self.hpid[[idx, idx+1]]
+            t, U = self.get_timeseries(hpids, 'U')
+            __, V = self.get_timeseries(hpids, 'V')
+
+            unans = np.isnan(U) | np.isnan(t)
+            vnans = np.isnan(V) | np.isnan(t)
+
+            # If all values are NaN then skip.
+            if (np.sum(unans) == unans.size) | (np.sum(vnans) == vnans.size):
+                print('  All NaN, continue.')
+                nan_pairs.append(idx)
+                nan_pairs.append(idx+1)
+                continue
+
+            dt = np.nanmax(t) - np.nanmin(t)
+
+            self.U_abs[:, [idx, idx+1]] -= trapz(U[~unans], t[~unans])/dt
+            self.V_abs[:, [idx, idx+1]] -= trapz(U[~unans], t[~unans])/dt
+
+            successful_pairs.append(idx)
+            successful_pairs.append(idx+1)
+            print("  hpid pair {}, {}.".format(self.hpid[idx],
+                  self.hpid[idx+1]))
+
+        failed_idxs = list(set(np.arange(len(self.hpid))) -
+                           set(successful_pairs) -
+                           set(nan_pairs))
+        print("Pair integration failed for the following hpids:\n"
+              "{}".format(self.hpid[failed_idxs]))
+
+        for i in failed_idxs:
             unans = np.isnan(self.U[:, i]) | np.isnan(self.UTCef[:, i])
             vnans = np.isnan(self.V[:, i]) | np.isnan(self.UTCef[:, i])
             self.U_abs[~unans, i] -= \
