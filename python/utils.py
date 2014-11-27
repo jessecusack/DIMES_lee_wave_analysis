@@ -234,18 +234,25 @@ def nan_interp(x, xp, fp, left=None, right=None):
     return y
 
 
+def nan_polyfit(x, y, deg, rcond=None, full=False, w=None, cov=False):
+    """ """
+
+    nans = np.isnan(x) | np.isnan(y)
+    return np.polyfit(x[~nans], y[~nans], deg, rcond, full, w, cov)
+
+
 def nan_detrend(x, y, deg=1):
     """ """
     y_out = np.nan*np.zeros_like(y)
 
     if np.ndim(x) == 1:
         nans = np.isnan(x) | np.isnan(y)
-        p = np.polyfit(x[~nans], y[~nans], deg)
+        p = nan_polyfit(x, y, deg)
         y_out[~nans] = y[~nans] - np.polyval(p, x[~nans])
     elif np.ndim(x) == 2:
         for i in xrange(x.shape[1]):
             nans = np.isnan(x[:, i]) | np.isnan(y[:, i])
-            p = np.polyfit(x[~nans, i], y[~nans, i], deg)
+            p = nan_polyfit(x[:, i], y[:, i], deg)
             y_out[~nans, i] = y[~nans, i] - np.polyval(p, x[~nans, i])
     else:
         raise RuntimeError('Arguments must be 1 or 2 dimensional arrays.')
