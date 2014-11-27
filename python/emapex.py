@@ -11,7 +11,7 @@ data.
 import numpy as np
 import scipy.io as io
 from scipy.interpolate import griddata
-from scipy.integrate import cumtrapz, trapz
+from scipy.integrate import trapz
 import gsw
 import utils
 import pickle
@@ -643,6 +643,31 @@ class EMApexFloat(object):
                 return self.Profiles[idxs]
         else:
             raise RuntimeError('Check arguments.')
+
+    def get_mean_profile(self, hpids, var_name, z_return=None, z_interp=None):
+        """Calculates an average profile of some variable from a given list of
+        profiles by first interpolating on to equal depth grid and then
+        averaging. Interpolation is then performed back on to a given depth
+        grid."""
+
+        dz = 1.
+        if z_interp is None:
+            z_interp = np.arange(-1500, 0, dz)
+
+        if z_return is None:
+            z_return = z_interp
+
+        var = []
+
+        pfls = self.get_profiles(hpids)
+
+        for pfl in pfls:
+            var.append(pfl.interp(z_interp, 'z', var_name))
+
+        var_mean = np.mean(np.transpose(np.asarray(var)), axis=-1)
+        var_return = utils.nan_interp(z_return, z_interp, var_mean)
+
+        return var_return
 
     def get_interp_grid(self, hpids, var_2_vals, var_2_name, var_1_name):
         """Grid data from multiple profiles into a matrix. Linear interpolation
