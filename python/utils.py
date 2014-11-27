@@ -241,6 +241,16 @@ def nan_polyfit(x, y, deg, rcond=None, full=False, w=None, cov=False):
     return np.polyfit(x[~nans], y[~nans], deg, rcond, full, w, cov)
 
 
+def nan_polyvalfit(x, y, deg):
+    """ """
+
+    p = nan_polyfit(x, y, deg)
+    nans = np.isnan(x) | np.isnan(y)
+    y_out = np.nan*np.zeros_like(y)
+    y_out[~nans] = np.polyval(p, x[~nans])
+    return y_out
+
+
 def nan_detrend(x, y, deg=1):
     """ """
     y_out = np.nan*np.zeros_like(y)
