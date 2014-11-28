@@ -628,21 +628,24 @@ class EMApexFloat(object):
         profiles."""
 
         if np.ndim(hpids) == 0:
-            idx = np.unique(self.hpid.searchsorted(hpids))
-            if ret_idxs:
-                return self.Profiles[idx[0]], idx
+            arg = np.argwhere(self.hpid == hpids)
+
+            if arg.size == 0:
+                idx = []
             else:
-                return self.Profiles[idx[0]]
+                idx = int(arg)
+
         elif np.ndim(hpids) == 1:
-            hpids = hpids[(np.min(self.hpid) <= hpids) &
-                          (hpids <= np.max(self.hpid))]
-            idxs = np.unique(self.hpid.searchsorted(hpids))
-            if ret_idxs:
-                return self.Profiles[idxs], idxs
-            else:
-                return self.Profiles[idxs]
+            idx = [i for i in xrange(len(self.hpid)) if self.hpid[i] in hpids]
+            idx = np.array(idx)
+
         else:
-            raise RuntimeError('Check arguments.')
+            raise ValueError('Dimensionality of hpids is wrong.')
+
+        if ret_idxs:
+            return self.Profiles[idx], idx
+        else:
+            return self.Profiles[idx]
 
     def get_mean_profile(self, hpids, var_name, z_return=None, z_interp=None):
         """Calculates an average profile of some variable from a given list of
