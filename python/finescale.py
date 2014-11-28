@@ -18,25 +18,29 @@ import os
 
 # Define some standard parameters.
 default_corrections = {
-    'use_range': True,
-    'use_diff': True,
+    'use_range': False,
+    'use_diff': False,
     'use_interp': True,
-    'use_tilt': True,
-    'use_bin': True,
+    'use_tilt': False,
+    'use_bin': False,
+    'use_volt': True,
     'dzt': 8.,
     'dzr': 8.,
     'dzfd': 8.,
     'dzg': 8.,
     'ddash': 5.4,
-    'dzs': 8.
+    'dzs': 8.,
+    'vfi': 50.,
+    'mfr': 0.12
     }
+
 
 default_periodogram_params = {
     'window': 'sin2taper',
     'nfft': 256,
     'detrend': 'linear',
     'scaling': 'density',
-}
+    }
 
 default_params = {
     'dz': 4.,
@@ -50,8 +54,8 @@ default_params = {
     'plot_dir': '../figures/finescale',
     'm_0': 1./150.,
     'm_c': 1./15.,
-    'correct_ladcp': False,
-    'ladcp_corrections': default_corrections,
+    'apply_corrections': False,
+    'corrections': default_corrections,
     'periodogram_params': default_periodogram_params,
     'mixing_efficiency': 0.2
     }
@@ -336,9 +340,40 @@ def integrated_ps(m, P, m_c, m_0):
 
 
 def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
-                        use_tilt=True, use_bin=True, dzt=8., dzr=8.,
-                        dzfd=8., dzg=8., ddash=5.4, dzs=8.):
-    """Spectral corrections for LADCP data - see Polzin et. al. 2002.
+                        use_tilt=True, use_bin=True, use_volt=True, dzt=8.,
+                        dzr=8., dzfd=8., dzg=8., ddash=5.4, dzs=8., vfi=50.,
+                        mfr=0.12):
+    """
+    Calculates the appropriate transfer function to scale power spectra.
+
+    Parameters
+    ----------
+    m : ndarray
+        Vertical wavenumber. [rad s-1]
+    use_range : boolean, optional
+    use_diff : boolean, optional
+    use_interp : boolean, optional
+    use_tilt : boolean, optional
+    use_bin : boolean, optional
+    use_volt : boolean, optional
+    dzt : float, optional
+    dzr : float, optional
+    dzfd : float, optional
+    dzg : float, optional
+    ddash : float, optional
+    dzs : float, optional
+    vfi : float, optional
+    mfr : float, optional
+
+    Returns
+    -------
+    T : ndarray
+        Transfer function, which is the product of all of the individual
+        transfer functions for each separate spectral correction.
+
+
+
+    Spectral corrections for LADCP data - see Polzin et. al. 2002.
 
     m is vertical wavenumber. Needs factor of 2 pi.
 
@@ -374,37 +409,47 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
 
     """
 
+    pi2 = np.pi*2
+
     # Range averaging.
     if use_range:
-        C_range = np.sinc(m*dzt/(2.*np.pi))**2 * np.sinc(m*dzr/(2.*np.pi))**2
+        T_range = np.sinc(m*dzt/pi2)**2 * np.sinc(m*dzr/pi2)**2
     else:
-        C_range = 1.
+        T_range = 1.
 
     # First differencing.
     if use_diff:
-        C_diff = np.sinc(m*dzfd/(2.*np.pi))**2
+        T_diff = np.sinc(m*dzfd/pi2)**2
     else:
-        C_diff = 1.
+        T_diff = 1.
 
     # Interpolation.
     if use_interp:
-        C_interp = np.sinc(m*dzr/(2.*np.pi))**4 * np.sinc(m*dzg/(2.*np.pi))**2
+        T_interp = np.sinc(m*dzr/pi2)**4 * np.sinc(m*dzg/pi2)**2
     else:
-        C_interp = 1.
+        T_interp = 1.
 
     # Tilting.
     if use_tilt:
-        C_tilt = np.sinc(m*ddash/(2.*np.pi))**2
+        T_tilt = np.sinc(m*ddash/pi2)**2
     else:
-        C_tilt = 1.
+        T_tilt = 1.
 
     # Binning
     if use_bin:
-        C_bin = np.sinc(m*dzg/(2.*np.pi))**2 * np.sinc(m*dzs/(2.*np.pi))**2
+        T_bin = np.sinc(m*dzg/pi2)**2 * np.sinc(m*dzs/pi2)**2
     else:
-        C_bin = 1.
+        T_bin = 1.
 
-    return C_range*C_diff*C_interp*C_tilt*C_bin
+    # Voltmeter
+    if use_volt:
+        T_volt = 1./np.sinc(m*vfi*mfr/pi2)
+    else:
+        T_volt = 1.
+
+    T = T_range*T_diff*T_interp*T_tilt*T_bin*T_volt
+
+    return T
 
 
 def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
@@ -430,8 +475,8 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     # Shear spectra.
     Pshear = PdU + PdV
 
-    if params['correct_ladcp']:
-        C = spectral_correction(m, **params['ladcp_corrections'])
+    if params['apply_corrections']:
+        C = spectral_correction(m, **params['corrections'])
         PCW /= C
         PCCW /= C
         Pshear /= C
