@@ -11,8 +11,6 @@ all into one miscellaneous 'utilities' module.
 
 import numpy as np
 import datetime as dt
-import pickle
-from scipy.signal import detrend
 
 
 class Bunch(object):
