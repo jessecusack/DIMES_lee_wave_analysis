@@ -515,19 +515,19 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         axs[0].plot(np.sqrt(strain*N2_ref + N2_ref), z, 'k--', label='$N$')
         axs[0].set_xlabel('$N$ (rad s$^{-1}$)')
         axs[0].legend(loc=0)
-        axs[0].set_xticklabels(axs[0].get_xticks(), rotation=45)
+        axs[0].set_xticklabels(axs[0].get_xticks(), rotation='vertical')
 
         axs[1].plot(U, z, 'k-', label='$U$')
         axs[1].plot(V, z, 'r-', label='$V$')
         axs[1].set_xlabel('$U$, $V$ (m s$^{-1}$)')
         axs[1].legend(loc=0)
-        axs[1].set_xticklabels(axs[1].get_xticks(), rotation=45)
+        axs[1].set_xticklabels(axs[1].get_xticks(), rotation='vertical')
 
         axs[2].plot(dUdz, z, 'k-', label=r'$\frac{dU}{dz}$')
         axs[2].plot(dVdz, z, 'r-', label=r'$\frac{dV}{dz}$')
         axs[2].set_xlabel(r'$\frac{dU}{dz}$, $\frac{dV}{dz}$ (s$^{-1}$)')
         axs[2].legend(loc=0)
-        axs[2].set_xticklabels(axs[2].get_xticks(), rotation=45)
+        axs[2].set_xticklabels(axs[2].get_xticks(), rotation='vertical')
 
         axs[3].plot(strain, z, 'k-')
         axs[3].set_xlabel(r'$\xi_z$ (-)')
@@ -537,9 +537,6 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
     width = params['bin_width']
     overlap = params['bin_overlap']
     wdws = [wdw.window(z, x, width=width, overlap=overlap) for x in X]
-
-    step = width - overlap
-    z_bins = np.arange(z[0], z[-1], step)
 
     n = wdws[0].shape[0]
     z_mean = np.empty(n)
@@ -622,7 +619,7 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
                 ax.grid()
                 ax.legend()
 
-    return z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa
+    return z_mean, EK, R_pol, R_om, epsilon, kappa
 
 
 def analyse_profile(Pfl, params=default_params):
@@ -642,7 +639,7 @@ def analyse_profile(Pfl, params=default_params):
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
     lat = (Pfl.lat_start + Pfl.lat_end)/2.
 
-    z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa = \
+    z_mean, EK, R_pol, R_om, epsilon, kappa = \
         analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
 
     if params['plot_results']:
@@ -651,27 +648,30 @@ def analyse_profile(Pfl, params=default_params):
 
 #        where = 'mid'
 #        axs[0].step(EK, z_mean, 'k-', where=where)
-        axs[0].plot(EK, z_mean, 'k-o')
-        axs[0].set_xlabel('$E_{KE}$ (m$^{2}$ s$^{-2}$)')
+        axs[0].plot(np.log10(EK), z_mean, 'k-o')
+        axs[0].set_xlabel('$\log_{10}E_{KE}$ (m$^{2}$ s$^{-2}$)')
         axs[0].set_ylabel('$z$ (m)')
 #        axs[1].step(R_pol, z_mean, 'k-', where=where)
-        axs[1].plot(R_pol, z_mean, 'k-o')
-        axs[1].set_xlabel('$R_{pol}$ (-)')
+        axs[1].plot(np.log10(R_pol), z_mean, 'k-o')
+        axs[1].set_xlabel('$\log_{10}R_{pol}$ (-)')
+        axs[1].set_xlim(-1, 1)
 #        axs[2].step(R_om, z_mean, 'k-', where=where)
-        axs[2].plot(R_om, z_mean, 'k-o')
-        axs[2].set_xlabel('$R_{\omega}$ (-)')
+        axs[2].plot(np.log10(R_om), z_mean, 'k-o')
+        axs[2].set_xlabel('$\log_{10}R_{\omega}$ (-)')
+        axs[2].set_xlim(-1, 1)
 #        axs[3].step(epsilon, z_mean, 'k-', where=where)
-        axs[3].plot(epsilon, z_mean, 'k-o')
-        axs[3].set_xlabel('$\epsilon$ (W kg$^{-1}$)')
+        axs[3].plot(np.log10(epsilon), z_mean, 'k-o')
+        axs[3].set_xlabel('$\log_{10}\epsilon$ (W kg$^{-1}$)')
 #        axs[4].step(kappa, z_mean, 'k-', where=where)
-        axs[4].plot(kappa, z_mean, 'k-o')
-        axs[4].set_xlabel('$\kappa$ (m$^{2}$ s$^{-1}$)')
+        axs[4].plot(np.log10(kappa), z_mean, 'k-o')
+        axs[4].set_xlabel('$\log_{10}\kappa$ (m$^{2}$ s$^{-1}$)')
 
         for ax in axs:
             ax.grid()
-            ax.set_xscale('log')
+#            ax.set_xscale('log')
+            ax.set_xticklabels(ax.get_xticks(), rotation='vertical')
 
-    return z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa
+    return z_mean, EK, R_pol, R_om, epsilon, kappa
 
 
 def analyse_float(Float, hpids, params=default_params):
