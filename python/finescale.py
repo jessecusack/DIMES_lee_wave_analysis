@@ -630,7 +630,7 @@ def analyse_profile(Pfl, params=default_params):
     z_bins, z_mean, EK, R_pol, R_om, epsilon, kappa = \
         analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
 
-    if params['plot_profiles']:
+    if params['plot_results']:
 
         fig, axs = plt.subplots(1, 5, sharey=True)
 
