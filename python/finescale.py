@@ -44,6 +44,8 @@ default_periodogram_params = {
 
 default_params = {
     'dz': 4.,
+    'zmin': None,
+    'zmax': -300.,
     'bin_width': 300.,
     'bin_overlap': 200.,
     'fine_grid_spectra': False,
@@ -476,13 +478,16 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
     Pshear = PdU + PdV
 
     if params['apply_corrections']:
-        C = spectral_correction(m, **params['corrections'])
-        PCW /= C
-        PCCW /= C
-        Pshear /= C
+        T = spectral_correction(m, **params['corrections'])
+        PCW /= T
+        PCCW /= T
+        Pshear /= T
         # TODO: Note sure if velocity spectra also need correcting...
-        PU /= C
-        PV /= C
+        PU /= T
+        PV /= T
+
+        if params['print_diagnostics']:
+            print("T = {}".format(T))
 
     # Kinetic energy spectra.
     PEK = (PU + PV)/2.
@@ -617,8 +622,12 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
 def analyse_profile(Pfl, params=default_params):
     """ """
 
+    if params['zmin'] is None:
+        params['zmin'] = np.nanmin(Pfl.z)
+
     # First remove NaN values and interpolate variables onto a regular grid.
-    z = np.arange(np.nanmin(Pfl.z), 0., params['dz'])
+    dz = params['dz']
+    z = np.arange(params['zmin'], params['zmax']+dz, dz)
     U = Pfl.interp(z, 'zef', 'U_abs')
     V = Pfl.interp(z, 'zef', 'V_abs')
     dUdz = Pfl.interp(z, 'zef', 'dUdz')
