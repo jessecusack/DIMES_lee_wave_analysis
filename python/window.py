@@ -40,7 +40,8 @@ def chunk(x, x_range, y):
     return x[s], y[s]
 
 
-def window(x, y, width, overlap=0., x_0=None, expansion=None):
+def window(x, y, width, overlap=0., x_0=None, expansion=None, cap_left=True,
+           cap_right=True):
     """Break arrays x and y into slices.
 
     Parameters
@@ -62,6 +63,12 @@ def window(x, y, width, overlap=0., x_0=None, expansion=None):
         Describes the rate of change of window size with x. (not implimented)
         The idea is that width = width*np.polyval(expansion, x). Overlap is
         similarly increased.
+    cap_left : boolean, optional
+        Stop window exceeding left most (minimum) value of x. Only applies when
+        overlap is positive.
+    cap_right : boolean, optional
+        Stop window exceeding right most (maximum) value of x. Only applies
+        when overlap is positive.
 
     Returns
     -------
@@ -102,7 +109,20 @@ def window(x, y, width, overlap=0., x_0=None, expansion=None):
 
     elif overlap >= 0.:
         step = width - overlap
-        left = np.arange(x[0], x[-1], step)
+
+        if cap_left:
+            xmin = x[0]
+        else:
+            xmin = x[0] - width
+
+        if cap_right:
+            # Take away slightly less than the full width to allow for the last
+            # bin to complete the full range.
+            xmax = x[-1] - 0.99*width
+        else:
+            xmax = x[-1]
+
+        left = np.arange(xmin, xmax, step)
         right = left + width
 
     bins = np.transpose(np.vstack((left, right)))
