@@ -352,20 +352,35 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
     ----------
     m : ndarray
         Vertical wavenumber. [rad s-1]
-    use_range : boolean, optional
-    use_diff : boolean, optional
-    use_interp : boolean, optional
-    use_tilt : boolean, optional
-    use_bin : boolean, optional
-    use_volt : boolean, optional
-    dzt : float, optional
-    dzr : float, optional
-    dzfd : float, optional
-    dzg : float, optional
-    ddash : float, optional
-    dzs : float, optional
-    vfi : float, optional
-    mfr : float, optional
+    use_range : boolean, optional (LADCP)
+        Switch for range correction.
+    use_diff : boolean, optional (LADCP)
+        Switch for differencing correction.
+    use_interp : boolean, optional (LADCP/EM-APEX)
+        Switch for interpolation correction.
+    use_tilt : boolean, optional (LADCP)
+        Switch for tilt correction.
+    use_bin : boolean, optional (LADCP)
+        Switch for binning correction.
+    use_volt : boolean, optional (EM-APEX)
+        Switch for voltmeter noise correction.
+    dzt : float, optional (LADCP)
+        Transmitted sound pulse length projected on the vertical. [m]
+    dzr : float, optional (LADCP/EM-APEX)
+        Receiver processing bin length. [m]
+    dzfd : float, optional (LADCP)
+        First-differencing interval. [m]
+    dzg : float, optional (LADCP/EM-APEX)
+        Interval of depth grid onto which single-ping piecewise-linear
+        continuous profiles of vertical shear are binned. [m]
+    ddash : float, optional (LADCP)
+        ?
+    dzs : float, optional (LADCP)
+        Superensemble pre-averaging interval, usually chosen to be dzg. [m]
+    vfi : float, optional (EM-APEX)
+        ? [s-1]
+    mfr : float, optional (EM-APEX)
+        ? [m s-1]
 
     Returns
     -------
@@ -374,40 +389,32 @@ def spectral_correction(m, use_range=True, use_diff=True, use_interp=True,
         transfer functions for each separate spectral correction.
 
 
-
+    Notes
+    -----
     Spectral corrections for LADCP data - see Polzin et. al. 2002.
 
-    m is vertical wavenumber. Needs factor of 2 pi.
-
-    See Sheen/Shuckburgh MATLAB code for comments.
-
-    There is a sixth possible correction which isn't used.
-
-    dzt: transmitted sound pulse length projected on the vertical
-    dzr: receiver processing bin length
-    dzfd: first-differencing interval (=dzr)
-    dzg: interval of depth grid onto which single-ping piecewise-linear
-        continuous profiles of vertical shear are binned
-    dzs: superensemble pre-averaging interval, usually chosen to be dzg
+    There is another possible correction which isn't used.
 
     Notes from MATLAB code
     ----------------------
 
-    A quadratic fit to the range-maxima (rmax) ? d? pairs given by Polzin et
-    al. (2002) yields ddash = -1.2+0.0857r_{max} - 0.000136r_{max}^2 ,
-    (5) max max
-    which has an intercept near rmax = 14 m. It should be noted that
+    A quadratic fit to the range maxima (r_max) pairs given by Polzin et al.
+    (2002) yields.
+
+    ddash = -1.2+0.0857r_max - 0.000136r_max^2 ,
+
+    which has an intercept near r_max = 14 m. It should be noted that
     expressions (4) and (5) are semi-empirical and apply strictly only to the
-    data set of Polzin et al. (2002). Estimating rmax ? 255 m as the range at
+    data set of Polzin et al. (2002). Estimating r_max ? 255 m as the range at
     which 80% of all ensembles have valid velocities yields d? ? 11.8 m in case
-    of this data set (i.e as in Thurherr 2011 NOT DIMES - nede to updaye!!).
+    of this data set (i.e as in Thurherr 2011 NOT DIMES - need to update!!).
     ddash is determined empirically by Polzin et al. (2002) and is dependent
     on range and the following assumptions:
-       + small tilts (~ 3 deg)
-       + instrument tilt and orientation are constant over measurement period
-       + instrument tilt and orientation are independent
-       + tilt attenuation is limited by bin-mapping capabilities of
-       RDI (1996) processing
+        Small tilts (~ 3 deg).
+        Instrument tilt and orientation are constant over measurement period.
+        Instrument tilt and orientation are independent.
+        Tilt attenuation is limited by bin-mapping capabilities of RDI (1996)
+        processing.
 
     """
 
@@ -482,7 +489,6 @@ def window_ps(dz, U, V, dUdz, dVdz, strain, N2_ref, params=default_params):
         PCW /= T
         PCCW /= T
         Pshear /= T
-        # TODO: Note sure if velocity spectra also need correcting...
         PU /= T
         PV /= T
 
