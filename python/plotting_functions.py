@@ -469,3 +469,19 @@ def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
     fname = str(fid) + '_' + fname
     fname = os.path.join(sdir, fname) + '.' + ftype
     plt.savefig(fname, dpi=300., bbox_inches='tight')
+
+
+def step(x, y, **kwargs):
+    """Because I think that the matplotlib step function is crappy at ends. """
+    dx = np.diff(x)
+    dxl = np.hstack((dx[-1, ...], dx))/2.
+    dxr = np.hstack((dx, dx[0, ...]))/2.
+    shape = np.array(x.shape)
+    shape[0] *= 2
+    xp = np.empty(shape)
+    yp = np.empty(shape)
+    xp[::2, ...] = x - dxl
+    xp[1::2, ...] = x + dxr
+    yp[::2, ...] = y
+    yp[1::2, ...] = y
+    return plt.plot(xp, yp, **kwargs)
