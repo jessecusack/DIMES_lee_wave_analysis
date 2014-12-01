@@ -510,25 +510,21 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         fig, axs = plt.subplots(1, 4, sharey=True)
 
         axs[0].set_ylabel('$z$ (m)')
-
         axs[0].plot(np.sqrt(N2_ref), z, 'k-', label='$N_{ref}$')
         axs[0].plot(np.sqrt(strain*N2_ref + N2_ref), z, 'k--', label='$N$')
         axs[0].set_xlabel('$N$ (rad s$^{-1}$)')
         axs[0].legend(loc=0)
         axs[0].set_xticklabels(axs[0].get_xticks(), rotation='vertical')
-
         axs[1].plot(U, z, 'k-', label='$U$')
         axs[1].plot(V, z, 'r-', label='$V$')
         axs[1].set_xlabel('$U$, $V$ (m s$^{-1}$)')
         axs[1].legend(loc=0)
         axs[1].set_xticklabels(axs[1].get_xticks(), rotation='vertical')
-
         axs[2].plot(dUdz, z, 'k-', label=r'$\frac{dU}{dz}$')
         axs[2].plot(dVdz, z, 'r-', label=r'$\frac{dV}{dz}$')
         axs[2].set_xlabel(r'$\frac{dU}{dz}$, $\frac{dV}{dz}$ (s$^{-1}$)')
         axs[2].legend(loc=0)
         axs[2].set_xticklabels(axs[2].get_xticks(), rotation='vertical')
-
         axs[3].plot(strain, z, 'k-')
         axs[3].set_xlabel(r'$\xi_z$ (-)')
 
@@ -601,13 +597,10 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
             axs[0].loglog(m, PEK, 'k-', label="$E_{KE}$")
             axs[0].loglog(m, GMvel, 'k--', label="GM $E_{KE}$")
             axs[0].set_title("height {:1.0f} m".format(z_mean[i]))
-
             axs[1].loglog(m, Pshear, 'k-', label="$V_z$")
             axs[1].loglog(m, GMshear, 'k--', label="GM $V_z$")
-
             axs[2].loglog(m, Pstrain, 'k', label=r"$\xi_z$")
             axs[2].loglog(m, GMstrain, 'k--', label=r"GM $\xi_z$")
-
             axs[3].loglog(m, PCW, 'r-', label="CW")
             axs[3].loglog(m, PCCW, 'k-', label="CCW")
 
@@ -618,6 +611,28 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
                 ax.vlines(params['m_0'], *ax.get_ylim())
                 ax.grid()
                 ax.legend()
+
+    if params['plot_results']:
+
+        fig, axs = plt.subplots(1, 5, sharey=True)
+
+        axs[0].plot(np.log10(EK), z_mean, 'k-o')
+        axs[0].set_xlabel('$\log_{10}E_{KE}$ (m$^{2}$ s$^{-2}$)')
+        axs[0].set_ylabel('$z$ (m)')
+        axs[1].plot(np.log10(R_pol), z_mean, 'k-o')
+        axs[1].set_xlabel('$\log_{10}R_{pol}$ (-)')
+        axs[1].set_xlim(-1, 1)
+        axs[2].plot(np.log10(R_om), z_mean, 'k-o')
+        axs[2].set_xlabel('$\log_{10}R_{\omega}$ (-)')
+        axs[2].set_xlim(-1, 1)
+        axs[3].plot(np.log10(epsilon), z_mean, 'k-o')
+        axs[3].set_xlabel('$\log_{10}\epsilon$ (W kg$^{-1}$)')
+        axs[4].plot(np.log10(kappa), z_mean, 'k-o')
+        axs[4].set_xlabel('$\log_{10}\kappa$ (m$^{2}$ s$^{-1}$)')
+
+        for ax in axs:
+            ax.grid()
+            ax.set_xticklabels(ax.get_xticks(), rotation='vertical')
 
     return z_mean, EK, R_pol, R_om, epsilon, kappa
 
@@ -639,39 +654,7 @@ def analyse_profile(Pfl, params=default_params):
     N2_ref = Pfl.interp(z, 'z', 'N2_ref')
     lat = (Pfl.lat_start + Pfl.lat_end)/2.
 
-    z_mean, EK, R_pol, R_om, epsilon, kappa = \
-        analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
-
-    if params['plot_results']:
-
-        fig, axs = plt.subplots(1, 5, sharey=True)
-
-#        where = 'mid'
-#        axs[0].step(EK, z_mean, 'k-', where=where)
-        axs[0].plot(np.log10(EK), z_mean, 'k-o')
-        axs[0].set_xlabel('$\log_{10}E_{KE}$ (m$^{2}$ s$^{-2}$)')
-        axs[0].set_ylabel('$z$ (m)')
-#        axs[1].step(R_pol, z_mean, 'k-', where=where)
-        axs[1].plot(np.log10(R_pol), z_mean, 'k-o')
-        axs[1].set_xlabel('$\log_{10}R_{pol}$ (-)')
-        axs[1].set_xlim(-1, 1)
-#        axs[2].step(R_om, z_mean, 'k-', where=where)
-        axs[2].plot(np.log10(R_om), z_mean, 'k-o')
-        axs[2].set_xlabel('$\log_{10}R_{\omega}$ (-)')
-        axs[2].set_xlim(-1, 1)
-#        axs[3].step(epsilon, z_mean, 'k-', where=where)
-        axs[3].plot(np.log10(epsilon), z_mean, 'k-o')
-        axs[3].set_xlabel('$\log_{10}\epsilon$ (W kg$^{-1}$)')
-#        axs[4].step(kappa, z_mean, 'k-', where=where)
-        axs[4].plot(np.log10(kappa), z_mean, 'k-o')
-        axs[4].set_xlabel('$\log_{10}\kappa$ (m$^{2}$ s$^{-1}$)')
-
-        for ax in axs:
-            ax.grid()
-#            ax.set_xscale('log')
-            ax.set_xticklabels(ax.get_xticks(), rotation='vertical')
-
-    return z_mean, EK, R_pol, R_om, epsilon, kappa
+    return analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params)
 
 
 def analyse_float(Float, hpids, params=default_params):
