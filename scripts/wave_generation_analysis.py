@@ -214,37 +214,36 @@ E77_hpids = np.arange(N0_77, N0_77+N)
 
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
-fig, axs = plt.subplots(1, 5, sharey=True)
+fig, axs = plt.subplots(1, 7, sharey=True)
 fig.set_size_inches(16, 5)
 
 axs[0].set_ylabel('$z$ (m)')
 
 for pfl in pfls:
-    axs[0].plot(np.sqrt(pfl.N2_ref)*1000., pfl.z, color='grey')
-    axs[0].set_xlabel('$N$ (10$^{-3}$ rad s$^{-1}$)')
-    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation='vertical')
 
-    axs[1].plot(pfl.rho_1, pfl.z, color='grey')
-    axs[1].set_xlabel('$\sigma_1$ (kg m$^{-3}$)')
-    axs[1].ticklabel_format(useOffset=1000.)
-    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation='vertical')
+    axs[0].plot(pfl.T, pfl.z, color='k', alpha=0.3)
+    axs[1].plot(pfl.S, pfl.z, color='k', alpha=0.3)
+    axs[2].plot(pfl.rho_1-1000., pfl.z, color='k', alpha=0.3)
+    axs[3].plot(np.sqrt(pfl.N2_ref)*1000., pfl.z, color='k', alpha=0.3)
+    axs[4].plot(pfl.U_abs*100., pfl.zef, color='k', alpha=0.3)
+    axs[5].plot(pfl.V_abs*100., pfl.zef, color='k', alpha=0.3)
+    axs[6].plot(pfl.Ww*100., pfl.z, color='k', alpha=0.3)
 
-    axs[2].plot(pfl.U_abs, pfl.zef, color='grey')
-    axs[2].set_xlabel('$U$ (m s$^{-1}$)')
-    plt.setp(axs[2].xaxis.get_majorticklabels(), rotation='vertical')
+xlabels = ['$T$ ($^\circ$C)', '$S$ (-)', '$\sigma_1$ (kg m$^{-3}$)',
+           '$N$ (10$^{-3}$ rad s$^{-1}$)', '$u$ (cm s$^{-1}$)',
+           '$v$ (cm s$^{-1}$)', '$w$ (cm s$^{-1}$)']
 
-    axs[3].plot(pfl.V_abs, pfl.zef, color='grey')
-    axs[3].set_xlabel('$V$ (m s$^{-1}$)')
-    plt.setp(axs[3].xaxis.get_majorticklabels(), rotation='vertical')
+#axs[2].ticklabel_format(useOffset=1000.)
 
-    axs[4].plot(pfl.Ww, pfl.z, color='grey')
-    axs[4].set_xlabel('$W$ (m s$^{-1}$)')
-    plt.setp(axs[4].xaxis.get_majorticklabels(), rotation='vertical')
-
+for ax, xlabel in zip(axs, xlabels):
+    ax.set_xticks(ax.get_xticks()[::2])
+    ax.set_xlabel(xlabel)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation='vertical')
 # TODO: Plot mean profiles too!
 
 # Why is this necessary...? I don't know but it has to be done.
 axs[0].ticklabel_format(useOffset=False)
+plt.tight_layout()
 
 pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='double_col')
 
