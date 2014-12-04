@@ -653,24 +653,9 @@ class EMApexFloat(object):
         averaging. Interpolation is then performed back on to a given depth
         grid."""
 
-        dz = 1.
-        if z_interp is None:
-            z_interp = np.arange(-1500, 0, dz)
-
-        if z_return is None:
-            z_return = z_interp
-
-        var = []
-
         pfls = self.get_profiles(hpids)
 
-        for pfl in pfls:
-            var.append(pfl.interp(z_interp, 'z', var_name))
-
-        var_mean = np.mean(np.transpose(np.asarray(var)), axis=-1)
-        var_return = utils.nan_interp(z_return, z_interp, var_mean)
-
-        return var_return
+        return mean_profile(pfls, var_name, z_return, z_interp)
 
     def get_interp_grid(self, hpids, var_2_vals, var_2_name, var_1_name):
         """Grid data from multiple profiles into a matrix. Linear interpolation
@@ -827,3 +812,27 @@ def what_floats_are_in_here(fname):
     """Finds all unique float ID numbers from a given allprofs##.mat file."""
     fs = io.loadmat(fname, squeeze_me=True, variable_names='flid')['flid']
     return np.unique(fs[~np.isnan(fs)])
+
+
+def mean_profile(pfls, var_name, z_return=None, z_interp=None):
+    """Calculates an average profile of some variable from a given list of
+    profiles by first interpolating on to equal depth grid and then
+    averaging. Interpolation is then performed back on to a given depth
+    grid."""
+
+    dz = 1.
+    if z_interp is None:
+        z_interp = np.arange(-1500, 0, dz)
+
+    if z_return is None:
+        z_return = z_interp
+
+    var = []
+
+    for pfl in pfls:
+        var.append(pfl.interp(z_interp, 'z', var_name))
+
+    var_mean = np.mean(np.transpose(np.asarray(var)), axis=-1)
+    var_return = utils.nan_interp(z_return, z_interp, var_mean)
+
+    return var_return
