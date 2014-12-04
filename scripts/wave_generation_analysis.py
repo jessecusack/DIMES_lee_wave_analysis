@@ -201,6 +201,20 @@ qk = plt.quiverkey(Q, 0.5, 0.92, 0.5, r'0.5 m s$^{-1}$', labelpos='N')
 cbar = plt.colorbar(orientation='horizontal')
 cbar.set_label('Maximum $W$ (m s$^{-1}$)')
 
+# This addition uses the hpids from the upstream flow stuff below.
+N = 10
+N0_76 = 15
+N0_77 = 10
+E76_hpids = np.arange(N0_76, N0_76+N)
+E77_hpids = np.arange(N0_77, N0_77+N)
+__, i76 = E76.get_profiles(E76_hpids, ret_idxs=True)
+__, i77 = E76.get_profiles(E77_hpids, ret_idxs=True)
+x, y = m(E76.lon_start[i76], E76.lat_start[i76])
+m.plot(x, y, 'rx')
+x, y = m(E77.lon_start[i77], E77.lat_start[i77])
+m.plot(x, y, 'rx')
+
+plt.tight_layout()
 pf.my_savefig(fig, 'both', 'quiver_traj', sdir, fsize='double_col')
 
 # %% Upstream flow properties
@@ -219,6 +233,15 @@ fig.set_size_inches(16, 5)
 
 axs[0].set_ylabel('$z$ (m)')
 
+z_mean = np.arange(-1450, 0, 5)
+T_mean = emapex.mean_profile(pfls, 'T', z_return=z_mean)
+S_mean = emapex.mean_profile(pfls, 'S', z_return=z_mean)
+rho_1_mean = emapex.mean_profile(pfls, 'rho_1', z_return=z_mean)
+N2_ref_mean = emapex.mean_profile(pfls, 'N2_ref', z_return=z_mean)
+U_abs_mean = emapex.mean_profile(pfls, 'U_abs', z_return=z_mean)
+V_abs_mean = emapex.mean_profile(pfls, 'V_abs', z_return=z_mean)
+Ww_mean = emapex.mean_profile(pfls, 'Ww', z_return=z_mean)
+
 for pfl in pfls:
 
     axs[0].plot(pfl.T, pfl.z, color='k', alpha=0.3)
@@ -229,11 +252,17 @@ for pfl in pfls:
     axs[5].plot(pfl.V_abs*100., pfl.zef, color='k', alpha=0.3)
     axs[6].plot(pfl.Ww*100., pfl.z, color='k', alpha=0.3)
 
+axs[0].plot(T_mean, z_mean, color='r')
+axs[1].plot(S_mean, z_mean, color='r')
+axs[2].plot(rho_1_mean-1000., z_mean, color='r')
+axs[3].plot(np.sqrt(N2_ref_mean)*1000., z_mean, color='r')
+axs[4].plot(U_abs_mean*100., z_mean, color='r')
+axs[5].plot(V_abs_mean*100., z_mean, color='r')
+axs[6].plot(Ww_mean*100., z_mean, color='r')
+
 xlabels = ['$T$ ($^\circ$C)', '$S$ (-)', '$\sigma_1$ (kg m$^{-3}$)',
            '$N$ (10$^{-3}$ rad s$^{-1}$)', '$u$ (cm s$^{-1}$)',
            '$v$ (cm s$^{-1}$)', '$w$ (cm s$^{-1}$)']
-
-#axs[2].ticklabel_format(useOffset=1000.)
 
 for ax, xlabel in zip(axs, xlabels):
     ax.set_xticks(ax.get_xticks()[::2])
@@ -248,16 +277,21 @@ plt.tight_layout()
 pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='double_col')
 
 # The average flow properties below
-z_max = -600.
+z_max = -300.
 N_mean = np.nanmean(np.hstack([np.sqrt(pfl.N2_ref)[pfl.z < z_max]
                                for pfl in pfls]))
 U_mean = np.nanmean(np.hstack([pfl.U_abs[pfl.zef < z_max] for pfl in pfls]))
+V_mean = np.nanmean(np.hstack([pfl.V_abs[pfl.zef < z_max] for pfl in pfls]))
+W_mean = np.nanmean(np.hstack([pfl.Ww[pfl.z < z_max] for pfl in pfls]))
 
 print("Mean buoyancy frequency below {:1.0f} m is {:.2E} rad s-1. "
       "The period is {:1.1f} min.".format(z_max, N_mean, 2*np.pi/(60*N_mean)))
 print("Mean zonal speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
       U_mean))
-
+print("Mean meridional speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
+      V_mean))
+print("Mean vertical speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
+      W_mean))
 # %% Topography
 # ----------
 
