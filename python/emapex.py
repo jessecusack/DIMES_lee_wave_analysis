@@ -508,7 +508,7 @@ class EMApexFloat(object):
 
         self.update_profiles()
 
-    def apply_isopycnal_displacement(self, srho_file, rho_1_0=1031.):
+    def apply_isopycnal_displacement(self, srho_file, rho_1_0=1031., method=1):
         """Input the path to picked array of smoothed potential density."""
 
         print("\nAdding isopycnal displacements.")
@@ -519,8 +519,25 @@ class EMApexFloat(object):
         with open(srho_file) as f:
 
             srho_1 = pickle.load(f)
-            setattr(self, 'srho_1', srho_1)
-            print("  Added: srho_1.")
+
+        setattr(self, 'srho_1', srho_1)
+        print("  Added: srho_1.")
+
+        # Use smoothed profiles as they are.
+        if method == 0:
+            pass
+        if method == 1:
+            print("  Further smoothing by averaging adjecent profiles.")
+            # Add initial smooth profiles to Profile objects.
+            self.update_profiles()
+            # Do more smoothing by averaging adjecent profiles.
+            for i in xrange(len(self.hpid)):
+                hpids = np.arange(self.hpid[i] - 5, self.hpid[i] + 6)
+                self.srho_1[:, i] = self.get_mean_profile(hpids, 'srho_1',
+                                                          self.z[:, i])
+
+        else:
+            raise ValueError('Invalid method.')
 
         for i in xrange(len(self.hpid)):
             srho_1dz = utils.finite_diff(self.z[:, i], srho_1[:, i],
