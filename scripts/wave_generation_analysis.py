@@ -8,7 +8,8 @@ Created on Fri Oct 31 16:24:05 2014
 # %% Loads and imports.
 
 import numpy as np
-#import matplotlib
+import matplotlib
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from mpl_toolkits import basemap as bm
 import gsw
@@ -141,8 +142,10 @@ for i, Float in enumerate([E76, E77]):
 
     for j, (zefpfl, zpfl, Upfl, Vpfl, Wpfl) in enumerate(zip(zef.T, z.T, U.T,
                                                              V.T, W.T)):
-        Us[j, i] = np.nanmean(Upfl[(-1400 < zefpfl) & (zefpfl < -1000)])
-        Vs[j, i] = np.nanmean(Vpfl[(-1400 < zefpfl) & (zefpfl < -1000)])
+        Us[j, i] = np.nanmean(Upfl[(-1400 < zefpfl) & (zefpfl < -100)])
+        Vs[j, i] = np.nanmean(Vpfl[(-1400 < zefpfl) & (zefpfl < -100)])
+#        Us[j, i] = Upfl
+#        Vs[j, i] = Vpfl
         Ws[j, i] = np.nanmax(Wpfl[zpfl < -100])
 
 llcrnrlon = np.floor(np.nanmin(lons)) - .2
@@ -292,6 +295,118 @@ print("Mean meridional speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
       V_mean))
 print("Mean vertical speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
       W_mean))
+
+
+# %% Sections in mountain centered coords.
+
+bwr = plt.get_cmap('bwr')
+bwr1 = mcolors.LinearSegmentedColormap.from_list(name='red_white_blue',
+                                                 colors=[(0, 0, 1),
+                                                         (1, 1, 1),
+                                                         (1, 0, 0)],
+                                                 N=9)
+E76_hpids = np.arange(22, 42) # np.arange(31, 33)
+E77_hpids = np.arange(17, 37) # np.arange(26, 28)
+vars = ['Ww']#, 'U_abs', 'V_abs']
+zvars = ['z']#, 'zef', 'zef']
+dvars = ['dist_ctd']#, 'dist_ef', 'dist_ef']
+texvars = ['$w$']#, '$U$', '$V$']
+clims = [(-10., 10.)]#, (-100., 100.), (-100, 100.)]
+
+var_1_vals = np.linspace(-40., 40., 80)
+var_2_vals = np.linspace(-1500, 0, 500)
+Xg, Zg = np.meshgrid(var_1_vals, var_2_vals)
+
+Wgs = []
+ds = []
+zs = []
+
+fig = plt.figure(figsize=(7, 5))
+
+for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+
+    for var, zvar, dvar, texvar, clim in zip(vars, zvars, dvars, texvars,
+                                             clims):
+
+        V = getattr(Float, var)[:, idxs].flatten(order='F')
+        z = getattr(Float, zvar)[:, idxs].flatten(order='F')
+        d = getattr(Float, dvar)[:, idxs].flatten(order='F')
+        zs.append(z.copy())
+
+        tgps = getattr(Float, 'UTC_start')[idxs]
+        lon = getattr(Float, 'lon_start')[idxs]
+        lat = getattr(Float, 'lat_start')[idxs]
+        tctd = getattr(Float, 'UTC')[:, idxs].flatten(order='F')
+        nans = np.isnan(d) | np.isnan(tctd)
+        tctd = tctd[~nans]
+        dctd = d[~nans]
+        lonctd = np.interp(tctd, tgps, lon)
+        latctd = np.interp(tctd, tgps, lat)
+        bathy = sandwell.interp_track(lonctd, latctd, bf)
+
+        d -= dctd[bathy.argmax()]
+        ds.append(d.copy())
+
+        nans = np.isnan(d) | np.isnan(z) | np.isnan(V)
+
+#        Wg = griddata((d[~nans], z[~nans]), V[~nans], (Xg, Zg), method='linear')
+#        Wgs.append(Wg.copy())
+
+        dctd -= dctd[bathy.argmax()]
+
+        thin = 10
+        plt.scatter(d[::thin], z[::thin], s=50, c=V[::thin]*100.,
+                    edgecolor='none', cmap=bwr1)
+
+
+cbar = plt.colorbar(orientation='horizontal', extend='both')
+cbar.set_label(texvar+' (cm s$^{-1}$)')
+plt.clim(*clim)
+
+plt.xlim(np.nanmin(d), np.nanmax(d))
+plt.xlabel('Distance from ridge (km)')
+plt.ylabel('$z$ (m)')
+#title_str = ("Float {}").format(Float.floatID)
+#plt.title(title_str)
+
+plt.fill_between(dctd[::100], bathy[::100], np.nanmin(bathy), color='black',
+                 linewidth=2)
+plt.ylim(np.nanmin(bathy), np.nanmax(z))
+
+plt.grid()
+
+pf.my_savefig(fig, 'both', 'w_section', sdir, fsize='double_col')
+
+
+# %% Wave profiles
+
+E76_hpids = [31, 32]
+E77_hpids = [26, 27]
+
+pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
+
+for pfl in pfls:
+
+    fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14, 6))
+    axs[0].set_ylabel('$z$ (m)')
+    axs[0].plot(utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, 'red')
+    axs[0].set_xlabel('$u$ (m s$^{-1}$)')
+    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
+    axs[1].plot(utils.nan_detrend(pfl.zef, pfl.V_abs, 2), pfl.zef, 'red')
+    axs[1].set_xlabel('$v$ (m s$^{-1}$)')
+    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
+    axs[2].plot(pfl.Ww, pfl.z, color='red')
+    axs[2].set_xlabel('$w$ (m s$^{-1}$)')
+    plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
+    axs[3].plot(pfl.b, pfl.z, 'red')
+    axs[3].set_xlabel('$b$ (m s$^{-2}$)')
+    plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
+    axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
+    axs[4].set_xlabel('$x$ (m)')
+    plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+
 # %% Topography
 # ----------
 
@@ -418,51 +533,3 @@ print("The height of the obstacle that would have a steepness of 0.4 is "
       "either {:1.0f} m or {:1.0f} m.\n"
       "This depends on a factor of 2 pi and possibly another factor of 2 due "
       "to uncertainty in N.".format(hc0, hc1))
-
-
-# %% Mean rho_1 profile
-
-N = 10
-N0_76 = 15
-N0_77 = 10
-E76_hpids = np.arange(N0_76, N0_76+N)
-E77_hpids = np.arange(N0_77, N0_77+N)
-
-dz = 1.
-z = np.arange(-1500, 0, dz)
-rho = []
-
-pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
-
-fig, axs = plt.subplots(1, 2)
-
-axs[0].set_ylabel('$z$ (m)')
-
-for pfl in pfls:
-    axs[0].plot(pfl.rho_1, pfl.z, color='grey')
-    axs[0].set_xlabel('$\sigma_1$ (kg m$^{-3}$)')
-    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=45)
-
-    axs[1].plot(pfl.srho_1, pfl.z, color='grey')
-    axs[1].set_xlabel('$\sigma_1$ (kg m$^{-3}$)')
-    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
-
-    rho.append(pfl.interp(z, 'z', 'rho_1'))
-
-rho = np.transpose(np.asarray(rho))
-mrho = np.mean(rho, axis=-1)
-
-axs[0].plot(mrho, z, 'red')
-axs[1].plot(mrho, z, 'red')
-
-pfl = E76.get_profiles(32)
-srhop = utils.nan_interp(pfl.z, z, mrho)
-b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
-
-fig, axs = plt.subplots(1, 2)
-axs[0].plot(pfl.b, pfl.z, 'grey')
-axs[0].plot(b, pfl.z, 'red')
-axs[0].plot(utils.nan_detrend(pfl.z, b), pfl.z, 'red', linestyle='--')
-axs[1].plot(pfl.rho_1, pfl.z, 'grey')
-axs[1].plot(mrho, z, 'red')
-axs[1].plot(pfl.srho_1, pfl.z, 'grey', linestyle='--')
