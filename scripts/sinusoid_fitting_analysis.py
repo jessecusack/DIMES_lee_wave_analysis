@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 # from matplotlib.colors import LogNorm
 # from matplotlib.ticker import LogFormatterMathtext
 import datetime
@@ -637,12 +638,16 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
         ax.set_xlabel('Distance (km)')
         ax.set_title("{} to {} m".format(dmin, dmax))
 
+#divider2 = make_axes_locatable(axs[2])
+#cax2 = divider2.append_axes("right", size="10%", pad=0.4)
+#cbar = plt.colorbar(C, cax=cax2, extend='both')
+
 fmt = mdates.DateFormatter('%j %Hh')
 axs[0].yaxis.set_major_formatter(fmt)
 axs[0].set_ylabel('Time')
 cbar = plt.colorbar(C, extend='both')
-cbar.set_label('$W_w$ (m s$^{-1}$)')
-[ax.grid() for ax in axs]
+cbar.set_label('$w$ (m s$^{-1}$)')
+[ax.grid() for ax in axs];
 
 pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
@@ -663,13 +668,13 @@ def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f):
     f2 = f**2
     K2 = k**2 + l**2 + m**2
 
-    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t))))/(1 - Wf_g)
+    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
+    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
+    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t))))/(1 - Wf_g)
 
     return np.array([dxdt, dydt, dzdt])
 
-def wave_vel(r, t, phi_0, k, l, m, om, N, f):
+def wave_vel(r, t, phi_0, U, k, l, m, om, N, f):
     x = r[..., 0]
     y = r[..., 1]
     z = r[..., 2]
@@ -678,14 +683,14 @@ def wave_vel(r, t, phi_0, k, l, m, om, N, f):
     f2 = f**2
     K2 = k**2 + l**2 + m**2
 
-    u_x = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    u_y = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    u_z = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
+    u_x = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
+    u_y = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
+    u_z = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
 
     return (np.vstack((u_x, u_y, u_z))).T
 
 
-def buoy(r, t, phi_0, k, l, m, om, N, f):
+def buoy(r, t, phi_0, U, k, l, m, om, N, f):
     x = r[:, 0]
     y = r[:, 1]
     z = r[:, 2]
@@ -693,20 +698,20 @@ def buoy(r, t, phi_0, k, l, m, om, N, f):
     om2 = om**2
     N2 = N**2
 
-    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
+    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
 
     return b
 
 # Model parameters.
-X = -2300.
-Y = 30000.
-Z = -785.
+X = 2000.
+Y = 5000.
+Z = 2000.
 
 # Mean flow.
 #U_surf = 0.0
 #U_depth = 0.0
 #U_pvals = np.polyfit([0., -1500.], [U_surf, U_depth], 1)
-U = 0.5
+U = 0.4
 f = gsw.f(-57.5)
 N = 1.8e-3
 
@@ -718,11 +723,11 @@ W_0 = 0.17
 k = 2*np.pi/X
 l = 2*np.pi/Y
 m = 2*np.pi/Z
-om = gw.omega(N, k, m, l, f) + k*U
+om = gw.omega(N, k, m, l, f) # + k*U
 phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
 args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
-uargs = (phi_0, k, l, m, om, N, f)
+uargs = (phi_0, U, k, l, m, om, N, f)
 
 U_0 = np.abs(((k*om + 1j*l*f)/(om**2 - f**2))*phi_0)
 V_0 = np.abs(((l*om - 1j*k*f)/(om**2 - f**2))*phi_0)
@@ -776,17 +781,17 @@ b = buoy(r, t, *uargs)
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 axs[0].set_ylabel('$z$')
-axs[0].plot(u[:,0]+U, r[:, 2])
-axs[0].set_xlabel('$U$ (wave + mean) (m s$^{-1}$)')
+axs[0].plot(1e2*(u[:, 0]+U), r[:, 2])
+axs[0].set_xlabel('$u$ (cm s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(u[:, 1], r[:, 2])
-axs[1].set_xlabel('$V$ (m s$^{-1}$)')
+axs[1].plot(1e2*u[:, 1], r[:, 2])
+axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
-axs[2].plot(u[:, 2], r[:, 2])
-axs[2].set_xlabel('$W$ (m s$^{-1}$)')
+axs[2].plot(1e2*u[:, 2], r[:, 2])
+axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
 plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
-axs[3].plot(b, r[:, 2])
-axs[3].set_xlabel('$b$ (m s$^{-2}$)')
+axs[3].plot(1e4*b, r[:, 2])
+axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
 axs[4].plot(r[:,0], r[:, 2])
 axs[4].set_xlabel('$x$ (m)')
@@ -804,10 +809,8 @@ Eflux = m*U*W_0**2/(2*k)
 Eflux2 = 0.5*rho_0* U*m*h0**2*(U**2*k**2 - f**2)/k
 #wphi = phi_0**2 *
 
-# EXTRAS
+# %% EXTRAS
 # Domain
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 xg, zg = np.meshgrid(np.arange(-1500, np.max(r[:,0]), 50), np.arange(-1600, 25, 25))
 
@@ -816,35 +819,45 @@ f2 = f**2
 K2 = k**2 + l**2 + m**2
 N2 = N**2
 
-for j, ts in enumerate(np.arange(0, t_1, 2500.)):
+for j, ts in enumerate(np.arange(0, t_1, 500.)):
 
     idx = t.searchsorted(ts)
     C = []
 
-    u_xg = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - om*ts)))
-    u_yg = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - om*ts)))
-    u_zg = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*xg + m*zg - om*ts)))
-    bg = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*xg + m*zg - om*ts)))
+    u_xg = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
+    u_yg = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
+    u_zg = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
+    bg = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
 
     fig, axs = plt.subplots(1, 4, sharey=True, figsize=(14,6))
     fig.suptitle('t = {:1.0f} s'.format(ts))
     axs[0].set_ylabel('$z$ (m)')
-    C.append(axs[0].pcolormesh(xg, zg, u_xg, cmap=plt.get_cmap('bwr')))
-    axs[0].set_title('$U$ (m s$^{-1}$)')
-    C.append(axs[1].pcolormesh(xg, zg, u_yg, cmap=plt.get_cmap('bwr')))
-    axs[1].set_title('$V$ (m s$^{-1}$)')
-    C.append(axs[2].pcolormesh(xg, zg, u_zg, cmap=plt.get_cmap('bwr')))
-    axs[2].set_title('$W$ (m s$^{-1}$)')
+    C.append(axs[0].pcolormesh(xg, zg, 1e2*(u_xg + U), cmap=plt.get_cmap('bwr')))
+    axs[0].set_title('$U$ (cm s$^{-1}$)')
+
+    divider0 = make_axes_locatable(axs[0])
+    cax0 = divider0.append_axes("right", size="10%", pad=0.05)
+    plt.colorbar(C[0], cax=cax0)
+
+    C.append(axs[1].pcolormesh(xg, zg, 1e2*u_yg, cmap=plt.get_cmap('bwr')))
+    axs[1].set_title('$V$ (cm s$^{-1}$)')
+
+    divider1 = make_axes_locatable(axs[1])
+    cax1 = divider1.append_axes("right", size="10%", pad=0.05)
+    plt.colorbar(C[1], cax=cax1)
+
+    C.append(axs[2].pcolormesh(xg, zg, 1e2*u_zg, cmap=plt.get_cmap('bwr')))
+    axs[2].set_title('$W$ (cm s$^{-1}$)')
 
     divider2 = make_axes_locatable(axs[2])
-    cax2 = divider2.append_axes("right", size="20%", pad=0.05)
+    cax2 = divider2.append_axes("right", size="10%", pad=0.05)
     plt.colorbar(C[2], cax=cax2)
 
-    C.append(axs[3].pcolormesh(xg, zg, bg, cmap=plt.get_cmap('bwr')))
-    axs[3].set_title('$b$ (m s$^{-2}$)')
+    C.append(axs[3].pcolormesh(xg, zg, 1e4*bg, cmap=plt.get_cmap('bwr')))
+    axs[3].set_title('$b$ ($10^{-4}$ m s$^{-2}$)')
 
     divider3 = make_axes_locatable(axs[3])
-    cax3 = divider3.append_axes("right", size="20%", pad=0.05)
+    cax3 = divider3.append_axes("right", size="10%", pad=0.05)
     plt.colorbar(C[3], cax=cax3)
 
     for i in xrange(4):
@@ -855,10 +868,14 @@ for j, ts in enumerate(np.arange(0, t_1, 2500.)):
         axs[i].plot(r[:idx, 0], r[:idx, 2], 'k--', linewidth=3)
         axs[i].plot(r[idx, 0], r[idx, 2], 'yo', linewidth=3)
 
-    for i in xrange(3):
-        C[i].set_clim(-W_0, W_0)
 
-#        pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
+    C[0].set_clim(-1e2*(U_0+U), 1e2*(U_0+U))
+    C[1].set_clim(-1e2*V_0, 1e2*V_0)
+    C[2].set_clim(-1e2*W_0, 1e2*W_0)
+    C[3].set_clim(-1e4*b_0, 1e4*b_0)
+
+    pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
+    plt.close()
 
 
 # %%
