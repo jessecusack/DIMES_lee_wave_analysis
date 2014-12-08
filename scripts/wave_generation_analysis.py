@@ -383,29 +383,41 @@ pf.my_savefig(fig, 'both', 'w_section', sdir, fsize='double_col')
 # %% Wave profiles
 
 E76_hpids = [31, 32]
-E77_hpids = [26, 27]
+E77_hpids = [25, 26, 27]
 
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
-for pfl in pfls:
+fig, axm = plt.subplots(len(pfls), 5, sharey='row', sharex='col',
+                        figsize=(14, 20))
+fig.subplots_adjust(hspace=0.05, wspace=0.1)
+rot = 'vertical'
+col = 'black'
 
-    fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14, 6))
+for pfl, axs in zip(pfls, axm):
+
     axs[0].set_ylabel('$z$ (m)')
-    axs[0].plot(utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, 'red')
-    axs[0].set_xlabel('$u$ (m s$^{-1}$)')
-    plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-    axs[1].plot(utils.nan_detrend(pfl.zef, pfl.V_abs, 2), pfl.zef, 'red')
-    axs[1].set_xlabel('$v$ (m s$^{-1}$)')
-    plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
-    axs[2].plot(pfl.Ww, pfl.z, color='red')
-    axs[2].set_xlabel('$w$ (m s$^{-1}$)')
-    plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
-    axs[3].plot(pfl.b, pfl.z, 'red')
-    axs[3].set_xlabel('$b$ (m s$^{-2}$)')
-    plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
-    axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
-    axs[4].set_xlabel('$x$ (m)')
-    plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+    axs[0].plot(100.*utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, col)
+    axs[1].plot(100.*utils.nan_detrend(pfl.zef, pfl.V_abs, 2), pfl.zef, col)
+    axs[2].plot(100.*pfl.Ww, pfl.z, col)
+    axs[3].plot(10000.*pfl.b, pfl.z, col)
+    axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd)), pfl.z, col)
+    axs[4].annotate("Float {}\nhpid {}".format(pfl.floatID, pfl.hpid[0]),
+                    (0.5, -200))
+
+    for ax in axs:
+        ax.vlines(0., *ax.get_ylim())
+        ax.grid()
+
+for ax in axm[-1, :]:
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=rot)
+
+axm[-1, 0].set_xlabel('$u$ (cm s$^{-1}$)')
+axm[-1, 1].set_xlabel('$v$ (cm s$^{-1}$)')
+axm[-1, 2].set_xlabel('$w$ (cm s$^{-1}$)')
+axm[-1, 3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
+axm[-1, 4].set_xlabel('$x$ (km)')
+axm[-1, 0].set_xlim(-30, 30)
+#pf.my_savefig(fig, 'both', 'all_profiles', sdir, fsize='double_col')
 
 # %% Topography
 # ----------
