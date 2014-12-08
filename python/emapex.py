@@ -337,7 +337,8 @@ class EMApexFloat(object):
 
             # If all values are NaN then skip.
             if (np.sum(unans) == unans.size) | (np.sum(vnans) == vnans.size):
-                print('  All NaN, continue.')
+                print("  hpid pair {}, {} all NaNs.".format(self.hpid[idx],
+                      self.hpid[idx+1]))
                 nan_pairs.append(idx)
                 nan_pairs.append(idx+1)
                 continue
