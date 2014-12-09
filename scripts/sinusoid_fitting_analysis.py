@@ -668,39 +668,13 @@ def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f):
     f2 = f**2
     K2 = k**2 + l**2 + m**2
 
-    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
-    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
-    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t))))/(1 - Wf_g)
+    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om + k*U)*t)))
+    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om + k*U)*t)))
+    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om + k*U)*t))))/(1 - Wf_g)
 
     return np.array([dxdt, dydt, dzdt])
 
-def wave_vel(r, t, phi_0, U, k, l, m, om, N, f):
-    x = r[..., 0]
-    y = r[..., 1]
-    z = r[..., 2]
 
-    om2 = om**2
-    f2 = f**2
-    K2 = k**2 + l**2 + m**2
-
-    u_x = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
-    u_y = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
-    u_z = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
-
-    return (np.vstack((u_x, u_y, u_z))).T
-
-
-def buoy(r, t, phi_0, U, k, l, m, om, N, f):
-    x = r[:, 0]
-    y = r[:, 1]
-    z = r[:, 2]
-
-    om2 = om**2
-    N2 = N**2
-
-    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om - k*U)*t)))
-
-    return b
 
 # Model parameters.
 X = 2000.
@@ -729,9 +703,9 @@ phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
 uargs = (phi_0, U, k, l, m, om, N, f)
 
-U_0 = np.abs(((k*om + 1j*l*f)/(om**2 - f**2))*phi_0)
-V_0 = np.abs(((l*om - 1j*k*f)/(om**2 - f**2))*phi_0)
-b_0 = np.abs((1j*m*N**2/(N**2 - om**2))*phi_0)
+U_0 = gw.U_0(phi_0, k, l, om, N, f)
+V_0 = gw.V_0(phi_0, k, l, om, N, f)
+b_0 = gw.B_0(phi_0, m, om, N)
 
 print("N = {:1.2E} rad s-1.\n"
       "om = {:1.2E} rad s-1.\n"
@@ -760,24 +734,10 @@ y_0 = 0.
 z_0 = -1500.
 r_0 = np.array([x_0, y_0, z_0])
 
-# Group velocity.
-#om0 = om - U_depth*k
-om0 = om
-cg = np.array([k*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
-               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
-               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
-cgz = -N**2*(k**2+l**2)/(m**2*(f**2*m**2+N**2*(k**2+l**2))**0.5)
-sin2phi = m**2/(k**2+l**2+m**2)
-phi = np.arcsin(np.sqrt(sin2phi))
-rho0 = 1025.
-h0 = 750.
-E = 0.5*rho0*(W_0/np.cos(phi))**2
-F = cg*E
-Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
 # This integrator calls FORTRAN odepack to solve the problem.
 r = odeint(drdt, r_0, t, args)
-u = wave_vel(r, t, *uargs)
-b = buoy(r, t, *uargs)
+u = gw.wave_vel(r, t, *uargs)
+b = gw.buoy(r, t, *uargs)
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 axs[0].set_ylabel('$z$')
@@ -798,7 +758,7 @@ axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 plt.ylim(z_0, 0)
 
-#pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
+pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
 
 sintheta2 = m**2/(m**2 + k**2 + l**2)
 theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
@@ -807,6 +767,24 @@ rho_0 = 1025.
 h0 = 750.
 Eflux = m*U*W_0**2/(2*k)
 Eflux2 = 0.5*rho_0* U*m*h0**2*(U**2*k**2 - f**2)/k
+
+cp = om/np.sqrt(k**2 + l**2 + m**2)
+
+# Group velocity.
+#om0 = om - U_depth*k
+om0 = om
+cg = np.array([k*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
+               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
+               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
+cgz = -N**2*(k**2+l**2)/(m**2*(f**2*m**2+N**2*(k**2+l**2))**0.5)
+sin2phi = m**2/(k**2+l**2+m**2)
+phi = np.arcsin(np.sqrt(sin2phi))
+rho0 = 1025.
+h0 = 750.
+E = 0.5*rho0*(W_0/np.cos(phi))**2
+F = cg*E
+Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
+
 #wphi = phi_0**2 *
 
 # %% EXTRAS
@@ -824,10 +802,10 @@ for j, ts in enumerate(np.arange(0, t_1, 500.)):
     idx = t.searchsorted(ts)
     C = []
 
-    u_xg = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
-    u_yg = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
-    u_zg = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
-    bg = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*xg + m*zg - (om - k*U)*ts)))
+    u_xg = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
+    u_yg = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
+    u_zg = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
+    bg = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
 
     fig, axs = plt.subplots(1, 4, sharey=True, figsize=(14,6))
     fig.suptitle('t = {:1.0f} s'.format(ts))
