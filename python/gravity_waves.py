@@ -122,6 +122,61 @@ def w(x, y, z, t, phi_0, k, l, m, om, N):
     return np.real(amplitude*np.exp(phase))
 
 
+def wave_vel(r, t, phi_0, U, k, l, m, om, N, f):
+    x = r[..., 0]
+    y = r[..., 1]
+    z = r[..., 2]
+
+    om2 = om**2
+    f2 = f**2
+    K2 = k**2 + l**2 + m**2
+
+    u_0 = ((k*om + 1j*l*f)/(om2 - f2))*phi_0
+    v_0 = ((l*om - 1j*k*f)/(om2 - f2))*phi_0
+    w_0 = ((-om*K2)/((N**2 - f2)*m))*phi_0
+
+    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t)
+
+    u = np.real(u_0*np.exp(phase))
+    v = np.real(v_0*np.exp(phase))
+    w = np.real(w_0*np.exp(phase))
+
+    return (np.vstack((u, v, w))).T
+
+
+def buoy(r, t, phi_0, U, k, l, m, om, N, f):
+    x = r[..., 0]
+    y = r[..., 1]
+    z = r[..., 2]
+
+    om2 = om**2
+    N2 = N**2
+
+    b_0 = (1j*m*N2/(N2 - om2))*phi_0
+
+    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t)
+
+    b = np.real(b_0*np.exp(phase))
+
+    return b
+
+
+def U_0(phi_0, k, l, om, N, f):
+    return np.abs(((k*om + 1j*l*f)/(om**2 - f**2))*phi_0)
+
+
+def V_0(phi_0, k, l, om, N, f):
+    return np.abs(((l*om - 1j*k*f)/(om**2 - f**2))*phi_0)
+
+
+def W_0(phi_0, m, om, N):
+    return np.abs((-om*m/(N**2 - om**2))*phi_0)
+
+
+def B_0(phi_0, m, om, N):
+    return np.abs((1j*m*N**2/(N**2 - om**2))*phi_0)
+
+
 def U(x, y, z, t, phi_0, k, m, N, l=None, om=None, f=None):
     """All components of velocity."""
     om = omega(N, k, m, l, f) if om is None else om
