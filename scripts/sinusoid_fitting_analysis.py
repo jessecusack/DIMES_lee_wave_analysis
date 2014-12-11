@@ -652,123 +652,50 @@ cbar.set_label('$w$ (m s$^{-1}$)')
 pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
 # %% Modelling float motion
-
-# Velocity of the float.
-def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f):
-    x = r[0]
-    y = r[1]
-    z = r[2]
-
-    Wf_g = Wf_pvals[0]
-    Wf_0 = Wf_pvals[1]
-
-#    U = np.polyval(U_pvals, z)
-
-    om2 = om**2
-    f2 = f**2
-    K2 = k**2 + l**2 + m**2
-
-    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om + k*U)*t)))
-    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om + k*U)*t)))
-    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - (om + k*U)*t))))/(1 - Wf_g)
-
-    return np.array([dxdt, dydt, dzdt])
-
-
-
-# Model parameters.
-X = 2000.
-Y = 5000.
-Z = 2000.
-
-# Mean flow.
-#U_surf = 0.0
-#U_depth = 0.0
-#U_pvals = np.polyfit([0., -1500.], [U_surf, U_depth], 1)
-U = 0.4
-f = gsw.f(-57.5)
-N = 1.8e-3
-
-# Float change in buoyancy with velocity.
-Wf_pvals = np.polyfit([0., 0.06], [0.14, 0.12], 1)
-
-# Wave parameters
-W_0 = 0.17
-k = 2*np.pi/X
-l = 2*np.pi/Y
-m = 2*np.pi/Z
-om = gw.omega(N, k, m, l, f) # + k*U
-phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
-
-args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
-uargs = (phi_0, U, k, l, m, om, N, f)
-
-U_0 = gw.U_0(phi_0, k, l, om, N, f)
-V_0 = gw.V_0(phi_0, k, l, om, N, f)
-b_0 = gw.B_0(phi_0, m, om, N)
-
-print("N = {:1.2E} rad s-1.\n"
-      "om = {:1.2E} rad s-1.\n"
-      "U_0 = {:1.2E} m s-1.\n"
-      "V_0 = {:1.2E} m s-1.\n"
-      "W_0 = {:1.2E} m s-1.\n"
-      "phi_0 = {:1.2E} m2 s-2.\n"
-      "b_0 = {:1.2E} m s-2.\n"
-      "X = {:1.0f} m.\n"
-      "k = {:1.2E} rad m-1.\n"
-      "Y = {:1.0f} m.\n"
-      "l = {:1.2E} rad m-1.\n"
-      "Z = {:1.0f} m.\n"
-      "m = {:1.2E} rad m-1.\n"
-      "".format(N, om, U_0, V_0, W_0, phi_0, b_0, X, k, Y, l, Z, m))
-
-# Integration parameters.
-dt = 10.
-t_0 = 0.
-t_1 = 15000.
-t = np.arange(t_0, t_1, dt)
-
-# Initial conditions.
-x_0 = 0.
-y_0 = 0.
-z_0 = -1500.
-r_0 = np.array([x_0, y_0, z_0])
-
-# This integrator calls FORTRAN odepack to solve the problem.
-r = odeint(drdt, r_0, t, args)
-u = gw.wave_vel(r, t, *uargs)
-b = gw.buoy(r, t, *uargs)
+import float_advection_routines as far
+params = far.default_params
+X = far.model_verbose(-2000, 15000, 6000, params)
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 axs[0].set_ylabel('$z$')
-axs[0].plot(1e2*(u[:, 0]+U), r[:, 2])
+axs[0].plot(1e2*X.u[:, 0], X.r[:, 2])
 axs[0].set_xlabel('$u$ (cm s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(1e2*u[:, 1], r[:, 2])
+axs[1].plot(1e2*X.u[:, 1], X.r[:, 2])
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
-axs[2].plot(1e2*u[:, 2], r[:, 2])
+axs[2].plot(1e2*X.u[:, 2], X.r[:, 2])
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
 plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
-axs[3].plot(1e4*b, r[:, 2])
+axs[3].plot(1e4*X.b, X.r[:, 2])
 axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
-axs[4].plot(r[:,0], r[:, 2])
+axs[4].plot(X.r[:,0], X.r[:, 2])
 axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
-plt.ylim(z_0, 0)
+plt.ylim(X.z_0, 0)
 
-pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
+#pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
 
-sintheta2 = m**2/(m**2 + k**2 + l**2)
+k = X.k
+l = X.l
+m = X.m
+om = X.om
+N = X.N
+f = X.f
+U = X.U
+w_0 = X.w_0
+phi_0 = X.phi_0
+
+sintheta2 = X.m**2/(X.m**2 + X.k**2 + X.l**2)
 theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
 
 rho_0 = 1025.
 h0 = 750.
-Eflux = m*U*W_0**2/(2*k)
-Eflux2 = 0.5*rho_0* U*m*h0**2*(U**2*k**2 - f**2)/k
+Eflux = m*U*w_0**2/(2*k)
+Eflux2 = 0.5*rho_0*U*m*h0**2*(U**2*k**2 - f**2)/k
 
-cp = om/np.sqrt(k**2 + l**2 + m**2)
+cp = X.om/np.sqrt(k**2 + l**2 + m**2)
 
 # Group velocity.
 #om0 = om - U_depth*k
@@ -781,7 +708,7 @@ sin2phi = m**2/(k**2+l**2+m**2)
 phi = np.arcsin(np.sqrt(sin2phi))
 rho0 = 1025.
 h0 = 750.
-E = 0.5*rho0*(W_0/np.cos(phi))**2
+E = 0.5*rho0*(w_0/np.cos(phi))**2
 F = cg*E
 Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
 
@@ -797,7 +724,7 @@ f2 = f**2
 K2 = k**2 + l**2 + m**2
 N2 = N**2
 
-for j, ts in enumerate(np.arange(0, t_1, 500.)):
+for j, ts in enumerate(np.arange(0, X.t.max(), 500.)):
 
     idx = t.searchsorted(ts)
     C = []
@@ -840,17 +767,17 @@ for j, ts in enumerate(np.arange(0, t_1, 500.)):
 
     for i in xrange(4):
         axs[i].set_xlabel('$x$ (m)')
-        axs[i].set_ylim(z_0, 0)
+        axs[i].set_ylim(X.z_0, 0)
         axs[i].set_xlim(np.min(xg), np.max(xg))
 
         axs[i].plot(r[:idx, 0], r[:idx, 2], 'k--', linewidth=3)
         axs[i].plot(r[idx, 0], r[idx, 2], 'yo', linewidth=3)
 
 
-    C[0].set_clim(-1e2*(U_0+U), 1e2*(U_0+U))
-    C[1].set_clim(-1e2*V_0, 1e2*V_0)
-    C[2].set_clim(-1e2*W_0, 1e2*W_0)
-    C[3].set_clim(-1e4*b_0, 1e4*b_0)
+    C[0].set_clim(-1e2*(X.u_0+U), 1e2*(X.u_0+U))
+    C[1].set_clim(-1e2*X.v_0, 1e2*X.v_0)
+    C[2].set_clim(-1e2*X.w_0, 1e2*X.w_0)
+    C[3].set_clim(-1e4*X.b_0, 1e4*X.b_0)
 
     pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
     plt.close()
@@ -917,54 +844,6 @@ plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 
 # Velocity of the float.
 
-def drdt(r, t, phi_0, U, Wf_pvals, k, l, m, om, N, f):
-    x = r[0]
-    y = r[1]
-    z = r[2]
-
-    Wf_g = Wf_pvals[0]
-    Wf_0 = Wf_pvals[1]
-
-#    U = np.polyval(U_pvals, z)
-
-    om2 = om**2
-    f2 = f**2
-    K2 = k**2 + l**2 + m**2
-
-    dxdt = U + np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    dydt = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    dzdt = (Wf_0 + np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t))))/(1 - Wf_g)
-
-    return np.array([dxdt, dydt, dzdt])
-
-def wave_vel(r, t, phi_0, k, l, m, om, N, f):
-    x = r[..., 0]
-    y = r[..., 1]
-    z = r[..., 2]
-
-    om2 = om**2
-    f2 = f**2
-    K2 = k**2 + l**2 + m**2
-
-    u_x = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    u_y = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-    u_z = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-
-    return (np.vstack((u_x, u_y, u_z))).T
-
-
-def buoy(r, t, phi_0, k, l, m, om, N, f):
-    x = r[:, 0]
-    y = r[:, 1]
-    z = r[:, 2]
-
-    om2 = om**2
-    N2 = N**2
-
-    b = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*x + l*y + m*z - om*t)))
-
-    return b
-
 
 pfl26 = E77.get_profiles(26)
 zmax = -650.
@@ -973,56 +852,10 @@ zf = pfl26.z[use]
 wf = pfl26.Ww[use]
 uf = pfl26.U_abs[use]
 vf = pfl26.V_abs[use]
-bf = utils.nan_detrend(zf, (gsw.grav(pfl26.lat_start, pfl26.P)*(pfl26.rho_1 - srhop)/1031.)[use])
+bf = pfl26.b[use]
 zmin = np.min(zf)
 
-def model(params, z, sub, var_name):
-    X, Y, Z = params
-    U = 0.5
-    V = -0.0
-    f = gsw.f(-57.5)
-    N = 1.8e-3
-
-    # Float change in buoyancy with velocity.
-    Wf_pvals = np.polyfit([0., 0.06], [0.14, 0.12], 1)
-
-    # Wave parameters
-    W_0 = 0.17
-    k = 2*np.pi/X
-    l = 2*np.pi/Y
-    m = 2*np.pi/Z
-    om = gw.omega(N, k, m, l, f) + k*U + l*V
-    phi_0 = W_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
-
-    args = (phi_0, U, Wf_pvals, k, l, m, om, N, f)
-    uargs = (phi_0, k, l, m, om, N, f)
-
-    # Integration parameters.
-    dt = 10.
-    t_0 = 0.
-    t_1 = 20000.
-    t = np.arange(t_0, t_1, dt)
-
-    # Initial conditions.
-    x_0 = 0.
-    y_0 = 0.
-    z_0 = zmin
-    r_0 = np.array([x_0, y_0, z_0])
-
-    # This integrator calls FORTRAN odepack to solve the problem.
-    r = odeint(drdt, r_0, t, args)
-    u = wave_vel(r, t, *uargs)
-    u[:, 0] += U
-    u[:, 1] += V
-    b = buoy(r, t, *uargs)
-
-    #Variable to return.
-    var_dict = {'w':u[:,2], 'u':u[:,0], 'v':u[:,1], 'b':b}
-    var = var_dict[var_name]
-    ivar = np.interp(z, r[:, 2], var)
-
-    return ivar - sub
-
+model = far.model_leastsq
 
 popt1, __ = op.leastsq(model, x0=[5000., 15000., 8000.], args=(zf, wf, 'w'))
 plt.figure()
