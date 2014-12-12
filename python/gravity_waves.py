@@ -122,7 +122,7 @@ def w(x, y, z, t, phi_0, k, l, m, om, N, U=0., phase_0=0.):
     return np.real(amplitude*np.exp(phase))
 
 
-def wave_vel(r, t, phi_0, U, k, l, m, om, N, f):
+def wave_vel(r, t, phi_0, U, k, l, m, om, N, f, phase_0=0.):
     x = r[..., 0]
     y = r[..., 1]
     z = r[..., 2]
@@ -135,7 +135,7 @@ def wave_vel(r, t, phi_0, U, k, l, m, om, N, f):
     v_0 = ((l*om - 1j*k*f)/(om2 - f2))*phi_0
     w_0 = ((-om*K2)/((N**2 - f2)*m))*phi_0
 
-    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t)
+    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t + phase_0)
 
     u = np.real(u_0*np.exp(phase))
     v = np.real(v_0*np.exp(phase))
@@ -144,7 +144,7 @@ def wave_vel(r, t, phi_0, U, k, l, m, om, N, f):
     return (np.vstack((u, v, w))).T
 
 
-def buoy(r, t, phi_0, U, k, l, m, om, N, f):
+def buoy(r, t, phi_0, U, k, l, m, om, N, f, phase_0=0.):
     x = r[..., 0]
     y = r[..., 1]
     z = r[..., 2]
@@ -154,7 +154,7 @@ def buoy(r, t, phi_0, U, k, l, m, om, N, f):
 
     b_0 = (1j*m*N2/(N2 - om2))*phi_0
 
-    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t)
+    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t + phase_0)
 
     b = np.real(b_0*np.exp(phase))
 
