@@ -654,14 +654,43 @@ pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 # %% Modelling float motion
 import float_advection_routines as far
 params = far.default_params
-X = far.model_verbose(-2000, 15000, 6000, params)
+X = far.model_verbose(2500, 2500, 4000, 0., params)
+
+# An attempt at calculating pressure perturbation.
+pfl = E77.get_profiles(26)
+#rhop = utils.nan_detrend(pfl.z, pfl.rho_1 - srhop)
+#nans = np.isnan(rhop)
+#nnrhop = rhop[~nans]
+#nnz = pfl.z[~nans]
+#nnP = pfl.P[~nans]
+#pp = cumtrapz(nnrhop, nnz, initial=0.)
+#phi = pp*9.81/1031.
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
+#axs[0].set_ylabel('$z$ (m)')
+axs[0].plot(1e2*pfl.U_abs, pfl.zef, 'red')
+#axs[0].set_xlabel('$U$ (m s$^{-1}$)')
+plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
+axs[1].plot(1e2*pfl.V_abs, pfl.zef, 'red')
+#axs[1].set_xlabel('$V$ (m s$^{-1}$)')
+plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
+axs[2].plot(1e2*pfl.Ww, pfl.z, color='red')
+#axs[2].set_xlabel('$W$ (m s$^{-1}$)')
+plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
+axs[3].plot(1e4*pfl.b, pfl.z, 'red')
+#axs[3].set_xlabel('$b$ (m s$^{-2}$)')
+plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
+axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
+axs[4].set_xlabel('$x$ (m)')
+plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+
+#pf.my_savefig(fig, '4977', 'pfl26_UVWB', sdir, fsize='double_col')
+
 axs[0].set_ylabel('$z$')
 axs[0].plot(1e2*X.u[:, 0], X.r[:, 2])
 axs[0].set_xlabel('$u$ (cm s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(1e2*X.u[:, 1], X.r[:, 2])
+axs[1].plot(1e2*X.u[:, 1] - 15, X.r[:, 2])
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
 axs[2].plot(1e2*X.u[:, 2], X.r[:, 2])
@@ -686,6 +715,8 @@ f = X.f
 U = X.U
 w_0 = X.w_0
 phi_0 = X.phi_0
+r = X.r
+t = X.t
 
 sintheta2 = X.m**2/(X.m**2 + X.k**2 + X.l**2)
 theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
@@ -785,59 +816,6 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)):
 
 # %%
 
-N = 10
-N0_76 = 15
-N0_77 = 10
-E76_hpids = np.arange(N0_76, N0_76+N)
-E77_hpids = np.arange(N0_77, N0_77+N)
-
-dz = 1.
-z = np.arange(-1500, 0, dz)
-rho = []
-
-pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
-
-for pfl in pfls:
-    rho.append(pfl.interp(z, 'z', 'rho_1'))
-
-rho = np.transpose(np.asarray(rho))
-mrho = np.mean(rho, axis=-1)
-
-axs[0].plot(mrho, z, 'red')
-axs[1].plot(mrho, z, 'red')
-
-pfl = E77.get_profiles(26)
-srhop = utils.nan_interp(pfl.z, z, mrho)
-b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
-
-# An attempt at calculating pressure perturbation.
-rhop = utils.nan_detrend(pfl.z, pfl.rho_1 - srhop)
-nans = np.isnan(rhop)
-nnrhop = rhop[~nans]
-nnz = pfl.z[~nans]
-nnP = pfl.P[~nans]
-pp = cumtrapz(nnrhop, nnz, initial=0.)
-phi = pp*9.81/1031.
-
-fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
-axs[0].set_ylabel('$z$ (m)')
-axs[0].plot(pfl.U_abs, pfl.zef, 'red')
-axs[0].set_xlabel('$U$ (m s$^{-1}$)')
-plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(pfl.V_abs, pfl.zef, 'red')
-axs[1].set_xlabel('$V$ (m s$^{-1}$)')
-plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
-axs[2].plot(pfl.Ww, pfl.z, color='red')
-axs[2].set_xlabel('$W$ (m s$^{-1}$)')
-plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
-axs[3].plot(utils.nan_detrend(pfl.z, b), pfl.z, 'red')
-axs[3].set_xlabel('$b$ (m s$^{-2}$)')
-plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
-axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
-axs[4].set_xlabel('$x$ (m)')
-plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
-
-#pf.my_savefig(fig, '4977', 'pfl26_UVWB', sdir, fsize='double_col')
 
 # %%
 ################### HEAVY MODEL FITTING #######################################
