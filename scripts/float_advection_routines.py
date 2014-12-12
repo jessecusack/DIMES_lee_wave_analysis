@@ -46,7 +46,7 @@ default_params = {
     't_1': 15000.,
     'x_0': 0.,
     'y_0': 0.,
-    'z_0': -1500,
+    'z_0': -1500
     }
 
 
@@ -67,7 +67,7 @@ def drdt(r, t, phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f=0., phase_0=0.):
     return np.array([dxdt, dydt, dzdt])
 
 
-def model_basic(X, Y, Z, oparams):
+def model_basic(X, Y, Z, phase_0=0., oparams=default_params):
 
     Ufunc = oparams['Ufunc']
     f = oparams['f']
@@ -84,8 +84,8 @@ def model_basic(X, Y, Z, oparams):
     om = gw.omega(N, k, m, l, f)
     phi_0 = w_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
-    args = (phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f)
-    uargs = (phi_0, k, l, m, om, N, f)
+    args = (phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f, phase_0)
+    uargs = (phi_0, k, l, m, om, N, f, phase_0)
 
     # Integration parameters.
     dt = oparams['dt']
@@ -117,7 +117,7 @@ def model_leastsq(params, z, sub, var_name, oparams=default_params):
 
     """
     X, Y, Z = params
-    __, r, u, b = model_basic(X, Y, Z, oparams)
+    __, r, u, b = model_basic(X, Y, Z, 0., oparams)
 
     # Variable to return.
     var_dict = {'w': u[:, 2], 'u': u[:, 0], 'v': u[:, 1], 'b': b}
@@ -127,10 +127,10 @@ def model_leastsq(params, z, sub, var_name, oparams=default_params):
     return ivar - sub
 
 
-def model_pymc(zf, X, Y, Z, phase, bscale=250., oparams=default_params):
+def model_pymc(zf, X, Y, Z, phase_0, bscale=250., oparams=default_params):
     """Return a stack of all velocity components and buoyancy."""
 
-    __, r, u, b = model_basic(X, Y, Z, oparams)
+    __, r, u, b = model_basic(X, Y, Z, phase_0, oparams)
 
     um = np.interp(zf, r[:, 2], u[:, 0])
     vm = np.interp(zf, r[:, 2], u[:, 1])
@@ -140,10 +140,10 @@ def model_pymc(zf, X, Y, Z, phase, bscale=250., oparams=default_params):
     return np.hstack((um, vm, wm, bm))
 
 
-def model_verbose(X, Y, Z, oparams=default_params):
+def model_verbose(X, Y, Z, phase_0=0., oparams=default_params):
     """Return loads and loads of info."""
 
-    t, r, u, b = model_basic(X, Y, Z, oparams)
+    t, r, u, b = model_basic(X, Y, Z, phase_0, oparams)
 
     Ufunc = oparams['Ufunc']
     f = oparams['f']
