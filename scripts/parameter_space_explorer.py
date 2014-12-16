@@ -52,22 +52,49 @@ matplotlib.rc('font', **{'size': 9})
 # %% ##########################################################################
 
 # Parameters to check.
-Xs = np.arange(-20000., 24000., 4000.)
-Ys = np.arange(-20000., 24000., 4000.)
-Zs = np.arange(-10000., 12000., 2000.)
+Xs = np.arange(-20000., 24000., 2000.)
+Ys = np.arange(-20000., 24000., 2000.)
+Zs = np.arange(-10000., 12000., 1000.)
 
 params = far.default_params
 pfl = E77.get_profiles(26)
+use = ~np.isnan(pfl.zef) & (pfl.zef < -600.)
+bscale = 250.
+
+zf = pfl.zef[use]
+uf = pfl.interp(zf, 'zef', 'U_abs')
+vf = pfl.interp(zf, 'zef', 'V_abs')
+wf = pfl.interp(zf, 'zef', 'Ww')
+bf = bscale*pfl.interp(zf, 'z', 'b')
+
+ps = []
+cost = []
 
 for LX, LY, LZ in itertools.product(Xs, Ys, Zs):
 
+    ps.append((LX, LY, LZ))
+
+    if LX == 0. or LY == 0. or LZ == 0.:
+        cost.append(1e10)
+        continue
+
     X = far.model_verbose(LX, LY, LZ, 0., params)
 
-    # Create subdirectory for saving.
-    subname = "X_{:g}_Y_{:g}_Z_{:g}".format(LX, LY, LZ)
-    s2dir = os.path.join(sdir, subname)
-    if not os.path.exists(s2dir):
-        os.makedirs(s2dir)
+    um = np.interp(zf, X.r[:, 2], X.u[:, 0])
+    vm = np.interp(zf, X.r[:, 2], X.u[:, 1])
+    wm = np.interp(zf, X.r[:, 2], X.u[:, 2])
+    bm = bscale*np.interp(zf, X.r[:, 2], X.b)
+
+    c = np.std(um - uf) + np.std(vm - vf) + np.std(wm - wf) + np.std(bm - bf)
+    cost.append(c)
+
+    print(LX, LY, LZ, c)
+
+#    # Create subdirectory for saving.
+#    subname = "X_{:g}_Y_{:g}_Z_{:g}".format(LX, LY, LZ)
+#    s2dir = os.path.join(sdir, subname)
+#    if not os.path.exists(s2dir):
+#        os.makedirs(s2dir)
 
 #    fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 #    axs[0].plot(1e2*pfl.U_abs, pfl.zef, 'red')
@@ -103,17 +130,17 @@ for LX, LY, LZ in itertools.product(Xs, Ys, Zs):
 #    pf.my_savefig(fig, 'model', 'data', s2dir)
 #    plt.close()
 
-    k = X.k
-    l = X.l
-    m = X.m
-    om = X.om
-    N = X.N
-    f = X.f
-    U = X.U
-    w_0 = X.w_0
-    phi_0 = X.phi_0
-    r = X.r
-    t = X.t
+#    k = X.k
+#    l = X.l
+#    m = X.m
+#    om = X.om
+#    N = X.N
+#    f = X.f
+#    U = X.U
+#    w_0 = X.w_0
+#    phi_0 = X.phi_0
+#    r = X.r
+#    t = X.t
 
 ###############################################################################
 
