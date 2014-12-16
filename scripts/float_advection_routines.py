@@ -46,7 +46,8 @@ default_params = {
     't_1': 15000.,
     'x_0': 0.,
     'y_0': 0.,
-    'z_0': -1500
+    'z_0': -1500,
+    'print': False
     }
 
 
@@ -164,20 +165,21 @@ def model_verbose(X, Y, Z, phase_0=0., oparams=default_params):
     v_0 = gw.V_0(phi_0, k, l, om, N, f)
     b_0 = gw.B_0(phi_0, m, om, N)
 
-    print("N = {:1.2E} rad s-1.\n"
-          "om = {:1.2E} rad s-1.\n"
-          "u_0 = {:1.2E} m s-1.\n"
-          "v_0 = {:1.2E} m s-1.\n"
-          "w_0 = {:1.2E} m s-1.\n"
-          "phi_0 = {:1.2E} m2 s-2.\n"
-          "b_0 = {:1.2E} m s-2.\n"
-          "X = {:1.0f} m.\n"
-          "k = {:1.2E} rad m-1.\n"
-          "Y = {:1.0f} m.\n"
-          "l = {:1.2E} rad m-1.\n"
-          "Z = {:1.0f} m.\n"
-          "m = {:1.2E} rad m-1.\n"
-          "".format(N, om, u_0, v_0, w_0, phi_0, b_0, X, k, Y, l, Z, m))
+    if oparams['print']:
+        print("N = {:1.2E} rad s-1.\n"
+              "om = {:1.2E} rad s-1.\n"
+              "u_0 = {:1.2E} m s-1.\n"
+              "v_0 = {:1.2E} m s-1.\n"
+              "w_0 = {:1.2E} m s-1.\n"
+              "phi_0 = {:1.2E} m2 s-2.\n"
+              "b_0 = {:1.2E} m s-2.\n"
+              "X = {:1.0f} m.\n"
+              "k = {:1.2E} rad m-1.\n"
+              "Y = {:1.0f} m.\n"
+              "l = {:1.2E} rad m-1.\n"
+              "Z = {:1.0f} m.\n"
+              "m = {:1.2E} rad m-1.\n"
+              "".format(N, om, u_0, v_0, w_0, phi_0, b_0, X, k, Y, l, Z, m))
 
     output = utils.Bunch(Ufunc=Ufunc,
                          U=Ufunc(r[:, 2]),
