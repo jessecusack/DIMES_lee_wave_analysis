@@ -654,7 +654,7 @@ pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 # %% Modelling float motion
 import float_advection_routines as far
 params = far.default_params
-X = far.model_verbose(2500, 2500, 4000, 0., params)
+X = far.model_verbose(-4000, -2000, -2000, 0., params)
 
 # An attempt at calculating pressure perturbation.
 pfl = E77.get_profiles(26)
