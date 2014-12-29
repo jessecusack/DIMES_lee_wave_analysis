@@ -165,8 +165,6 @@ class Profile(object):
             elif d == 2:
                 setattr(self, key, np.squeeze(dat[:, indx]))
 
-        pass
-
 
 class EMApexFloat(object):
     """Initialise this class with the path to an 'allprofs##.mat' file where
@@ -408,6 +406,10 @@ class EMApexFloat(object):
         dVdz_ca = np.diff(self.V, axis=0)/np.diff(self.zef, axis=0)
         self.dUdz = self.__regrid('ef_ca', 'ef', dUdz_ca)
         self.dVdz = self.__regrid('ef_ca', 'ef', dVdz_ca)
+
+        print("Calculating Richardson number.")
+        N2ef = self.__regrid('ctd', 'ef', self.N2)
+        self.Ri = N2ef/(self.dUdz**2 + self.dVdz**2)
 
         print("Regridding piston position to ctd.\n")
         # Regrid piston position.
