@@ -147,11 +147,11 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 #    __, b = Float.get_timeseries(hpids, 'b')
     __, z = Float.get_timeseries(hpids, 'z')
 
-    posidxs = detect_peaks(w, mph=0.08, mpd=100.)
-    negidxs = detect_peaks(w, mph=0.08, mpd=100., valley=True)
-    pidxs = np.hstack((negidxs, posidxs))
-    TF = np.arange(len(pidxs))
-    tpeaks = t[pidxs]
+    posidxs = detect_peaks(w, mph=0.05, mpd=100.)
+    negidxs = detect_peaks(w, mph=0.05, mpd=100., valley=True)
+    pidxs = np.sort(np.hstack((negidxs, posidxs)))
+#    TF = np.arange(len(pidxs))
+#    tpeaks = t[pidxs]
 #    pidxsef = np.searchsorted(tef, tpeaks)
 
 #    t = utils.datenum_to_datetime(t)
@@ -178,60 +178,91 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
         ax.set_ylabel('$w$')
 
     print("Float {}, peak coordinates:".format(Float.floatID))
-    print("x = {}".format(x[pidxs]))
+    print("x = {}".format(x[pidxs] - x[pidxs][0]))
     print("z = {}".format(z[pidxs]))
-    print("t = {}".format(t[pidxs]))
+    print("t = {}".format(t[pidxs] - t[pidxs][0]))
 
-    a = np.transpose(np.vstack((x[pidxs], z[pidxs], t[pidxs])))
-    b = np.pi*TF
-    x, resid, rank, s = lstsq(a, b)
-    print(x)
-    print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
-          "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
-                                       np.pi*2/x[2]/60.))
+#    a = np.transpose(np.vstack((x[pidxs], z[pidxs], t[pidxs])))
+#    b = np.pi*TF
+#    x, resid, rank, s = lstsq(a, b)
+#    print(x)
+#    print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
+#          "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
+#                                       np.pi*2/x[2]/60.))
 
-xq = np.array([98650.04863147, 99100.,   99645.62198467,  100959.04961829,  102753.52791723,
-  104098.19159536,   98133.38286495,  100127.3972755,   101718.14166566,
-  103380.68708482])
-zq = np.array([-788.92712687, -1246.54503641, -1573.86360897, -1026.39032746,  -567.31845563,
-  -602.50953952, -1376.43262381, -1352.10223918,  -807.29489018])
-tq = np.array([6.34613303e+10,   6.34613324e+10,   6.34613352e+10,   6.34613389e+10,
-   6.34613417e+10,   6.34613292e+10,   6.34613334e+10,   6.34613367e+10,
-   6.34613402e+10])
+# Estimate position (x, z, t) of wave peaks from combination of profiles 31 and
+# 32 from float 4976.
+xq = np.array([0.,  516.66576652, 882., 1512.23911972,  1994.01441055,  2825.66675334,
+  3584.75880071,  4620.14505228,  5247.30421987,  5964.80873041])
+zq = np.array([-602.50953952,  -788.92712687, -1000., -1246.54503641, -1376.43262381, -1573.86360897,
+ -1352.10223918, -1026.39032746, -807.29489018, -567.31845563,])
+tq = np.array([0., 1081., 2000., 3164.00000763, 4172., 5911.99999237,
+   7500., 9666., 10978., 12479.])
+
+xqd = np.diff(xq)
+zqd = np.diff(zq)
+tqd = -np.diff(tq)
+pis = np.pi*np.ones_like(tqd)
+
+a = np.transpose(np.vstack((xqd, zqd, tqd)))
+X, resid, rank, s = lstsq(a, pis)
+
+print(X)
+print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
+      "Period: {:1.0f} min".format(np.pi*2/X[0], np.pi*2/X[1],
+                                   np.pi*2/X[2]/60.))
+
+# Estimate position (x, z, t) of wave peaks from combination of profiles 26 and
+# 27 from float 4977.
+xq = [0., 637.03576161, 1297.34685781, 1879.7361852, 5746.97095521, 6452.82920205, 6899.69383473, 7464.2015048]
+zq = [-1.29372258e+03, -1.10985553e+03, -8.92841297e+02, -7.02023797e+02, -3.41960178e+02, -5.52210564e+02, -7.03930538e+02, -9.38402544e+02]
+tq = [0., 1259., 2564., 3715.00000763, 11803., 13381., 14380., 15642.]
+#step = [0., 0., 0., 0., 1., 1., 1.,]
+
+xqd = np.diff(xq)
+zqd = np.diff(zq)
+tqd = -np.diff(tq)
+#stepd = np.diff(step)
+pis = np.pi*np.ones_like(tqd)
+
+# Big step at surface, I think we missed 6 phase lines.
+pis[3] *= 6.
+
+a = np.transpose(np.vstack((xqd, zqd, tqd)))
+X, resid, rank, s = lstsq(a, pis)
+
+print(X)
+print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
+      "Period: {:1.0f} min".format(np.pi*2/X[0], np.pi*2/X[1],
+                                   np.pi*2/X[2]/60.))
 
 # %%
 
-a = np.array([[1300., -700., 25*60.],
-              [0., -1200., 0.],
-              [800., -900., 20*60.],
-              [-600., -1400., -20*60.]])
-
-b = np.array([np.pi, np.pi, 0., 0.])
-x, resid, rank, s = lstsq(a, b)
-print(x)
-print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
-      "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
-                                   np.pi*2/x[2]/60.))
 
 #                 G1    B1   G2   B1     B2     G1
 w_amp = np.array([-0.2, 0.2, 0.2, -0.23, -0.15, 0.15])
 b_amp = np.array([4e-4, 3e-4, 3e-4, 4e-4, 3.5e-4, 2e-4])
 u_amp = np.array([0.2, 0.2, 0.2, 0.15, 0.15, 0.1])
 v_amp = np.array([0.2, 0.1, 0.1, 0.25, 0.2, 0.15])
-N = 0.0017
+N = 1e-3
 f = 1.2e-4
 
 om = np.abs(w_amp*N**2/b_amp)
 
-r = np.abs((1j*u_amp/v_amp*f + om)/(u_amp/v_amp*om - 1j*f))
+# With rotation.
+r1 = np.abs((1j*u_amp/v_amp*f + om)/(u_amp/v_amp*om - 1j*f))
+# Without rotation.
+r2 = np.abs(v_amp/u_amp)
 
-print(np.mean(om))
-print(r)
+print("{:1.2e} +/- {:1.2e}".format(np.mean(om), np.std(om)))
+print(r1)
+print(r2)
+print(np.mean(r2))
 
 w0 = 0.2
 U0 = 0.2
-U1 = 0.4
-h0 = 500
-h1 = 1000
+U1 = 0.5
+h0 = 200
+h1 = 1200
 
 print(2*np.pi/(w0/(U0*h0)), 2*np.pi/(w0/(U1*h1)))
