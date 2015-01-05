@@ -84,30 +84,30 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
 # %% CRAZY MEAN MINUS plot for pfl 26
 
-N = 10
-N0_76 = 15
-N0_77 = 10
-E76_hpids = np.arange(N0_76, N0_76+N)
-E77_hpids = np.arange(N0_77, N0_77+N)
+#N = 10
+#N0_76 = 15
+#N0_77 = 10
+#E76_hpids = np.arange(N0_76, N0_76+N)
+#E77_hpids = np.arange(N0_77, N0_77+N)
+#
+#dz = 1.
+#z = np.arange(-1500, 0, dz)
+#rho = []
+#
+#pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
+#
+#for pfl in pfls:
+#    rho.append(pfl.interp(z, 'z', 'rho_1'))
+#
+#rho = np.transpose(np.asarray(rho))
+#mrho = np.mean(rho, axis=-1)
 
-dz = 1.
-z = np.arange(-1500, 0, dz)
-rho = []
-
-pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
-
-for pfl in pfls:
-    rho.append(pfl.interp(z, 'z', 'rho_1'))
-
-rho = np.transpose(np.asarray(rho))
-mrho = np.mean(rho, axis=-1)
-
-axs[0].plot(mrho, z, 'red')
-axs[1].plot(mrho, z, 'red')
+#axs[0].plot(mrho, z, 'red')
+#axs[1].plot(mrho, z, 'red')
 
 pfl = E77.get_profiles(26)
-srhop = utils.nan_interp(pfl.z, z, mrho)
-b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
+#srhop = utils.nan_interp(pfl.z, z, mrho)
+#b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
 
 zmax = -650
 use = pfl.z < zmax
@@ -126,25 +126,25 @@ plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
 axs[2].plot(pfl.Ww[use], pfl.z[use], color='red')
 axs[2].set_xlabel('$W$ (m s$^{-1}$)')
 plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=45)
-axs[3].plot(utils.nan_detrend(pfl.z[use], b[use]), pfl.z[use], 'red')
+axs[3].plot(pfl.b[use], pfl.z[use], color='red')
 axs[3].set_xlabel('$b$ (m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=45)
 
-pf.my_savefig(fig, '4977', 'UVWB', sdir, fsize='double_col')
+#pf.my_savefig(fig, '4977', 'UVWB', sdir, fsize='double_col')
 
 # %%
 
-E76_hpids = np.array([31])
-E77_hpids = np.array([26])
+E76_hpids = np.array([31, 32])
+E77_hpids = np.array([26, 27])
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
     t, x = Float.get_timeseries(hpids, 'dist_ctd')
-    tef, xef = Float.get_timeseries(hpids, 'dist_ef')
-    __, u = Float.get_timeseries(hpids, 'U_abs')
-    __, v = Float.get_timeseries(hpids, 'V_abs')
+#    tef, xef = Float.get_timeseries(hpids, 'dist_ef')
+#    __, u = Float.get_timeseries(hpids, 'U_abs')
+#    __, v = Float.get_timeseries(hpids, 'V_abs')
     __, w = Float.get_timeseries(hpids, 'Ww')
-    __, b = Float.get_timeseries(hpids, 'b')
+#    __, b = Float.get_timeseries(hpids, 'b')
     __, z = Float.get_timeseries(hpids, 'z')
 
     posidxs = detect_peaks(w, mph=0.08, mpd=100.)
@@ -152,39 +152,35 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     pidxs = np.hstack((negidxs, posidxs))
     TF = np.arange(len(pidxs))
     tpeaks = t[pidxs]
-    pidxsef = np.searchsorted(tef, tpeaks)
+#    pidxsef = np.searchsorted(tef, tpeaks)
 
 #    t = utils.datenum_to_datetime(t)
 #    tef = utils.datenum_to_datetime(tef)
     t *= 86400.
-    tef *= 86400.
+#    tef *= 86400.
     x *= 1000.
-    xef *= 1000.
+#    xef *= 1000.
 
-    fig, axs = plt.subplots(4, 2, sharex='col', sharey='row', figsize=(12, 10))
-    axs[-1, 0].set_xlabel('$x$')
-    axs[-1, 1].set_xlabel('$t$')
+    fig, axs = plt.subplots(3, 1, figsize=(12, 10))
 
-    axs[0, 0].plot(xef, u)
-    axs[0, 0].plot(xef[pidxsef], u[pidxsef], 'ro')
-    axs[0, 0].set_ylabel('$u$')
-    axs[1, 0].plot(xef, v)
-    axs[1, 0].plot(xef[pidxsef], v[pidxsef], 'ro')
-    axs[1, 0].set_ylabel('$v$')
-    axs[2, 0].plot(x, w)
-    axs[2, 0].plot(x[pidxs], w[pidxs], 'ro')
-    axs[2, 0].set_ylabel('$w$')
-    axs[3, 0].plot(x, b)
-    axs[3, 0].plot(x[pidxs], b[pidxs], 'ro')
-    axs[3, 0].set_ylabel('$b$')
-
-    axs[0, 1].plot(tef, u)
-    axs[1, 1].plot(tef, v)
-    axs[2, 1].plot(t, w)
-    axs[3, 1].plot(t, b)
+    axs[0].plot(x, w)
+    axs[0].plot(x[pidxs], w[pidxs], 'ro')
+    axs[0].set_xlabel('$x$')
+    axs[1].plot(t, w)
+    axs[1].plot(t[pidxs], w[pidxs], 'ro')
+    axs[1].set_xlabel('$t$')
+    axs[2].plot(z, w)
+    axs[2].plot(z[pidxs], w[pidxs], 'ro')
+    axs[2].set_xlabel('$z$')
 
     for ax in axs.flatten():
         ax.grid()
+        ax.set_ylabel('$w$')
+
+    print("Float {}, peak coordinates:".format(Float.floatID))
+    print("x = {}".format(x[pidxs]))
+    print("z = {}".format(z[pidxs]))
+    print("t = {}".format(t[pidxs]))
 
     a = np.transpose(np.vstack((x[pidxs], z[pidxs], t[pidxs])))
     b = np.pi*TF
@@ -193,6 +189,15 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
           "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
                                        np.pi*2/x[2]/60.))
+
+xq = np.array([98650.04863147, 99100.,   99645.62198467,  100959.04961829,  102753.52791723,
+  104098.19159536,   98133.38286495,  100127.3972755,   101718.14166566,
+  103380.68708482])
+zq = np.array([-788.92712687, -1246.54503641, -1573.86360897, -1026.39032746,  -567.31845563,
+  -602.50953952, -1376.43262381, -1352.10223918,  -807.29489018])
+tq = np.array([6.34613303e+10,   6.34613324e+10,   6.34613352e+10,   6.34613389e+10,
+   6.34613417e+10,   6.34613292e+10,   6.34613334e+10,   6.34613367e+10,
+   6.34613402e+10])
 
 # %%
 

@@ -13,7 +13,7 @@ import utils
 
 # want an odd-even pair
 Float = E76
-pfls, idxs = Float.get_profiles(np.array([315, 316]), ret_idxs=True)
+pfls, idxs = Float.get_profiles(np.array([115, 116]), ret_idxs=True)
 
 plt.figure()
 plt.plot(Float.dist_ctd[:, idxs], Float.z[:, idxs])
@@ -21,8 +21,8 @@ plt.xlabel('Distance (km)')
 plt.ylabel('z (m)')
 
 z = Float.zef[:,idxs]
-U = Float.U_abs[:, idxs]# - 0.1
-V = Float.V_abs[:, idxs]# + 0.03
+U = Float.U_abs[:, idxs] - Float.U[:, idxs]# - 0.1
+V = Float.V_abs[:, idxs] - Float.V[:, idxs]# + 0.03
 T = Float.UTCef[:, idxs]*86400
 
 fig, axs = plt.subplots(1, 2, sharey=True)
