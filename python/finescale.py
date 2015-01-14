@@ -662,3 +662,48 @@ def analyse_float(Float, hpids, params=default_params):
     # Nothing special for now. It doesn't even work.
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     return [analyse_profile(Pfl, params) for Pfl in Float.Profiles[idxs]]
+
+
+def thorpe_scales(z, x):
+    """ """
+
+    # z should be increasing apparently
+    # x should be increasing too... I'm personally not sure about this but ok.
+    # Make sure that no overturns involve the first data point, why?
+    x[0] = x.min() - 1.
+
+    # Sort the profile.
+    idxs = np.argsort(x)
+    x_sorted = x[idxs]
+
+    # Calculate thorpe displacements.
+    thorpe_disp = z[idxs] - z
+
+    # Indix displacements.
+    idxs_disp = idxs - np.arange(0, len(idxs))
+
+    # Overturn bounds where cumulative sum is zero.
+    idxs_sum = np.cumsum(idxs_disp)
+
+    jdxs = np.argwhere(idxs_sum == 0)
+
+    thorpe_scales = np.zeros_like(x)
+
+    # Calculate the RMS thorpe displacement over each overturn.
+    for i in xrange(len(jdxs)-1):
+        if jdxs[i+1] - jdxs[i] > 1:
+            # Check for noise.
+            q = x_sorted[jdxs[i+1]] - x_sorted[jdxs[i]]
+            if q < 1e-3:
+                continue
+
+            zrms = np.std(thorpe_disp[jdxs[i]:jdxs[i+1]])
+            thorpe_scales[jdxs[i]:jdxs[i+1]] = zrms
+
+    # Lastly if the arrays were not increasing at the beginning and were
+    # flipped they need to be put back how they were.
+
+    return thorpe_scales, thorpe_disp, x_sorted, idxs
+
+
+def w_scales(z, w)
