@@ -21,6 +21,7 @@ if pymc3_path in sys.path:
 import pymc
 import emapex
 import float_advection_routines as far
+import utils
 
 try:
     print("Floats {} and {} exist!".format(E76.floatID, E77.floatID))
@@ -45,6 +46,10 @@ vf = pfl26.V_abs[use]
 bf = pfl26.b[use]
 zmin = np.min(zf)
 
+uf = utils.nan_detrend(zf, uf, 0)
+vf = utils.nan_detrend(zf, vf, 0)
+
+
 data_stack = np.hstack((uf, vf, wf, 250*bf))
 
 
@@ -52,14 +57,13 @@ def model():
 
     # Priors.
     sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
-    X = pymc.Uniform('X', -2e4, 2e4, value=5e3)
-    Y = pymc.Uniform('Y', -1e5, 1e5, value=1e4)
-    Z = pymc.Uniform('Z', -2e4, 2e4, value=6e3)
-    phase = pymc.Uniform('phase', 0., 2.*np.pi, value=0.)
+    X = pymc.Uniform('X', -2e4, 2e4, value=-2e3)
+    Y = pymc.Uniform('Y', -1e5, 1e5, value=-4e3)
+    Z = pymc.Uniform('Z', -2e4, 2e4, value=-2e3)
 
     @pymc.deterministic()
-    def wave_model(zf=zf, X=X, Y=Y, Z=Z, phase=phase):
-        return far.model_pymc(zf, X, Y, Z, phase)
+    def wave_model(zf=zf, X=X, Y=Y, Z=Z):
+        return far.model_pymc(zf, X, Y, Z)
 
     # Likelihood
     y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack, observed=True)
@@ -67,16 +71,16 @@ def model():
     return locals()
 
 M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
-samples = 500000
-burn = 200000
-thin = 10
+samples = 100000
+burn = 40000
+thin = 6
 M.sample(samples, burn, thin)
 pymc.Matplot.plot(M, common_scale=False)
 
 plt.figure()
 plt.plot(data_stack)
 plt.plot(far.model_pymc(zf, np.median(M.trace('X')[:]), np.median(M.trace('Y')[:]),
-                      np.median(M.trace('Z')[:]), np.median(M.trace('phase')[:])))
+                      np.median(M.trace('Z')[:])))
 plt.savefig('output.png')
 
 plt.figure()

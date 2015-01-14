@@ -52,9 +52,9 @@ matplotlib.rc('font', **{'size': 9})
 # %% ##########################################################################
 
 # Parameters to check.
-Xs = np.arange(-20000., 24000., 2000.)
-Ys = np.arange(-20000., 24000., 2000.)
-Zs = np.arange(-10000., 12000., 1000.)
+Xs = np.arange(-10000., 11000., 1000.)
+Ys = np.arange(-10000., 11000., 1000.)
+Zs = np.arange(-6000., 6500., 500.)
 
 params = far.default_params
 pfl = E77.get_profiles(26)

@@ -382,8 +382,8 @@ pf.my_savefig(fig, 'both', 'w_section', sdir, fsize='double_col')
 
 # %% Wave profiles
 
-E76_hpids = [31, 32]
-E77_hpids = [25, 26, 27]
+E76_hpids = [30, 31, 32, 33]
+E77_hpids = [25, 26, 27, 28]
 
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
@@ -392,12 +392,20 @@ fig, axm = plt.subplots(len(pfls), 5, sharey='row', sharex='col',
 fig.subplots_adjust(hspace=0.05, wspace=0.1)
 rot = 'vertical'
 col = 'black'
+deg = 1
+
+U_var = 'U'
+V_var = 'V'
 
 for pfl, axs in zip(pfls, axm):
 
     axs[0].set_ylabel('$z$ (m)')
-    axs[0].plot(100.*utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, col)
-    axs[1].plot(100.*utils.nan_detrend(pfl.zef, pfl.V_abs, 2), pfl.zef, col)
+    axs[0].plot(100.*utils.nan_detrend(pfl.zef, getattr(pfl, U_var), deg), pfl.zef, col)
+    axs[0].plot(100.*getattr(pfl, U_var), pfl.zef, 'grey')
+    axs[0].plot(100.*utils.nan_polyvalfit(pfl.zef, getattr(pfl, U_var), deg), pfl.zef, 'grey')
+    axs[1].plot(100.*utils.nan_detrend(pfl.zef, getattr(pfl, V_var), deg), pfl.zef, col)
+    axs[1].plot(100.*getattr(pfl, V_var), pfl.zef, 'grey')
+    axs[1].plot(100.*utils.nan_polyvalfit(pfl.zef, getattr(pfl, V_var), deg), pfl.zef, 'grey')
     axs[2].plot(100.*pfl.Ww, pfl.z, col)
     axs[3].plot(10000.*pfl.b, pfl.z, col)
     axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd)), pfl.z, col)
@@ -412,11 +420,12 @@ for ax in axm[-1, :]:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=rot)
 
 axm[-1, 0].set_xlabel('$u$ (cm s$^{-1}$)')
+axm[-1, 0].set_xlim(-30, 80)
 axm[-1, 1].set_xlabel('$v$ (cm s$^{-1}$)')
+axm[-1, 1].set_xlim(-30, 30)
 axm[-1, 2].set_xlabel('$w$ (cm s$^{-1}$)')
 axm[-1, 3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 axm[-1, 4].set_xlabel('$x$ (km)')
-axm[-1, 0].set_xlim(-30, 30)
 #pf.my_savefig(fig, 'both', 'all_profiles', sdir, fsize='double_col')
 
 # %% Topography

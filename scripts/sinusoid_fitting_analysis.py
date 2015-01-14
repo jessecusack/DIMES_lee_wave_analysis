@@ -654,7 +654,7 @@ pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 # %% Modelling float motion
 import float_advection_routines as far
 params = far.default_params
-X = far.model_verbose(-4000, -2000, -2000, 0., params)
+X = far.model_verbose(-2000, -4000, -2000, 0., params)
 
 # An attempt at calculating pressure perturbation.
 pfl = E77.get_profiles(26)
@@ -685,26 +685,27 @@ axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 
 #pf.my_savefig(fig, '4977', 'pfl26_UVWB', sdir, fsize='double_col')
+use = X.r[:, 2] < -600.
 
 axs[0].set_ylabel('$z$')
-axs[0].plot(1e2*X.u[:, 0], X.r[:, 2])
+axs[0].plot(1e2*X.u[use, 0], X.r[use, 2])
 axs[0].set_xlabel('$u$ (cm s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(1e2*X.u[:, 1] - 15, X.r[:, 2])
+axs[1].plot(1e2*X.u[use, 1] - 15, X.r[use, 2])
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
-axs[2].plot(1e2*X.u[:, 2], X.r[:, 2])
+axs[2].plot(1e2*X.u[use, 2], X.r[use, 2])
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
 plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
-axs[3].plot(1e4*X.b, X.r[:, 2])
+axs[3].plot(1e4*X.b[use], X.r[use, 2])
 axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
-axs[4].plot(X.r[:,0], X.r[:, 2])
+axs[4].plot(X.r[use,0], X.r[use, 2])
 axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 plt.ylim(X.z_0, 0)
 
-#pf.my_savefig(fig, 'model', 'pfl26', sdir, fsize='double_col')
+#pf.my_savefig(fig, 'model_data_pfl26', 'comparison', sdir, fsize='double_col')
 
 k = X.k
 l = X.l
@@ -718,32 +719,37 @@ phi_0 = X.phi_0
 r = X.r
 t = X.t
 
-sintheta2 = X.m**2/(X.m**2 + X.k**2 + X.l**2)
-theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
-
-rho_0 = 1025.
-h0 = 750.
-Eflux = m*U*w_0**2/(2*k)
-Eflux2 = 0.5*rho_0*U*m*h0**2*(U**2*k**2 - f**2)/k
-
-cp = X.om/np.sqrt(k**2 + l**2 + m**2)
-
-# Group velocity.
-#om0 = om - U_depth*k
-om0 = om
-cg = np.array([k*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
-               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
-               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
-cgz = -N**2*(k**2+l**2)/(m**2*(f**2*m**2+N**2*(k**2+l**2))**0.5)
+#sintheta2 = X.m**2/(X.m**2 + X.k**2 + X.l**2)
+#theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
+#
+#rho_0 = 1025.
+#h0 = 750.
+#Eflux = m*U*w_0**2/(2*k)
+#Eflux2 = 0.5*rho_0*U*m*h0**2*(U**2*k**2 - f**2)/k
+#
+#cp = X.om/np.sqrt(k**2 + l**2 + m**2)
+#
+## Group velocity.
+##om0 = om - U_depth*k
+#om0 = om
+#cg = np.array([k*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
+#               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
+#               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
+cgz = -m*(N**2 - f**2)*(k**2+l**2)/((k**2+l**2+m**2)**1.5*(f**2*m**2+N**2*(k**2+l**2))**0.5)
 sin2phi = m**2/(k**2+l**2+m**2)
-phi = np.arcsin(np.sqrt(sin2phi))
+phip = np.arcsin(np.sqrt(sin2phi))
 rho0 = 1025.
-h0 = 750.
-E = 0.5*rho0*(w_0/np.cos(phi))**2
-F = cg*E
-Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
 
-#wphi = phi_0**2 *
+E = 0.5*rho0*(w_0/np.cos(phip))**2
+#F = cg*E
+#Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
+#
+##wphi = phi_0**2 *
+
+Fz = E*cgz
+print("cgz", cgz)
+print("E", E)
+print("Fz", Fz)
 
 # %% EXTRAS
 # Domain
@@ -810,7 +816,7 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)):
     C[2].set_clim(-1e2*X.w_0, 1e2*X.w_0)
     C[3].set_clim(-1e4*X.b_0, 1e4*X.b_0)
 
-    pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
+#    pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
     plt.close()
 
 

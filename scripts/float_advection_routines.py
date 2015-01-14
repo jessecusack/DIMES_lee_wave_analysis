@@ -128,10 +128,11 @@ def model_leastsq(params, z, sub, var_name, oparams=default_params):
     return ivar - sub
 
 
-def model_pymc(zf, X, Y, Z, phase_0, bscale=250., oparams=default_params):
+def model_pymc(zf, X, Y, Z, phase_0=0., bscale=250., oparams=default_params):
     """Return a stack of all velocity components and buoyancy."""
 
     __, r, u, b = model_basic(X, Y, Z, phase_0, oparams)
+    u[:, 0] -= oparams['Ufunc'](r[:, 2])
 
     um = np.interp(zf, r[:, 2], u[:, 0])
     vm = np.interp(zf, r[:, 2], u[:, 1])

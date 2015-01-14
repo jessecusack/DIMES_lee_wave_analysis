@@ -28,26 +28,28 @@ def main():
                          np.arange(-3000., 0., 10.))
 
     N = 2e-3
-    k = 2.*np.pi/3000.
-    m = 2.*np.pi/3000.
+    k = -2.*np.pi/2000.
+    m = -2.*np.pi/2000.
 
     om = gw.omega(N, k, m)
 
-    U = -om/k
+    U = 0.0 # -om/k
     u_0 = 0.1
 
-    for phase_0 in np.linspace(0., 2*np.pi, 10):
+    phase_0 = 0. # np.pi
 
-        ug = u2D(xg, zg, 0., k, m, om, u_0, U, phase_0)
-
-        plt.figure()
-        plt.pcolormesh(xg, zg, ug, cmap=plt.get_cmap('bwr'))
-        plt.colorbar()
-        plt.title("{:1.2f} rad".format(phase_0))
+#    for phase_0 in np.linspace(0., 2*np.pi, 10):
+#
+#        ug = u2D(xg, zg, 0., k, m, om, u_0, U, phase_0)
+#
+#        plt.figure()
+#        plt.pcolormesh(xg, zg, ug, cmap=plt.get_cmap('bwr'))
+#        plt.colorbar()
+#        plt.title("{:1.2f} rad".format(phase_0))
 
     for t in np.arange(0., 10000., 500.):
 
-        ug = u2D(xg, zg, t, k, m, om, u_0, U)
+        ug = u2D(xg, zg, t, k, m, om, u_0, U, phase_0)
 
         plt.figure()
         plt.pcolormesh(xg, zg, ug, cmap=plt.get_cmap('bwr'))
