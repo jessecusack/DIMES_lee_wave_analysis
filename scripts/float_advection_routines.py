@@ -86,7 +86,6 @@ def model_basic(X, Y, Z, phase_0=0., oparams=default_params):
     phi_0 = w_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     args = (phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f, phase_0)
-    uargs = (phi_0, k, l, m, om, N, f, phase_0)
 
     # Integration parameters.
     dt = oparams['dt']
@@ -103,7 +102,7 @@ def model_basic(X, Y, Z, phase_0=0., oparams=default_params):
     # This integrator calls FORTRAN odepack to solve the problem.
     r = odeint(drdt, r_0, t, args)
 
-    uargs = (phi_0, Ufunc(r[:, 2]), k, l, m, om, N, f)
+    uargs = (phi_0, Ufunc(r[:, 2]), k, l, m, om, N, f, phase_0)
 
     u = gw.wave_vel(r, t, *uargs)
     u[:, 0] += Ufunc(r[:, 2])
