@@ -793,17 +793,16 @@ class EMApexFloat(object):
 
         # Shorten some names.
         var = getattr(self, var_name)
+        t = getattr(self, 'UTC')
+        tef = getattr(self, 'UTCef')
+        r_t = getattr(self, 'r_UTC', None)
 
-        t = self.UTC
-        tef = self.UTCef
-
-        var_1_ef = var.size == tef.size
-        var_1_ctd = var.size == t.size
-
-        if var_1_ef:
+        if var.size == tef.size:
             times, vals = make_timeseries(tef, var)
-        elif var_1_ctd:
+        elif var.size == t.size:
             times, vals = make_timeseries(t, var)
+        elif r_t is not None and r_t.size == var.size:
+            times, vals = make_timeseries(r_t, var)
         else:
             raise RuntimeError('Cannot match time array and/or variable'
                                ' array sizes.')
