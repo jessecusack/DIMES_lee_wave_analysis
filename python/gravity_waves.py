@@ -193,6 +193,21 @@ def U(x, y, z, t, phi_0, k, m, N, l=None, om=None, f=None):
         return U_x, U_y, U_z
 
 
+def cgz(k, m, N, l=0., f=0.):
+    num = -m*(N**2 - f**2)*(k**2 + l**2)
+    den = (k**2 + l**2 + m**2)**1.5 * (f**2*m**2 + N**2*(k**2 + l**2))**0.5
+    return num/den
+
+
+def phip(k, l, m):
+    return np.arctan2(m, np.sqrt(k**2 + l**2))
+
+
+def Edens(w_0, k, l, m, rho_0=1025.):
+    phi = phip(k, l, m)
+    return 0.5*rho_0*(w_0/np.cos(phi))**2
+
+
 def m_topo(k, N, U, f):
     """Relationship between vertical and horizontal wavenumbers for a
     topographically generated internal wave.
