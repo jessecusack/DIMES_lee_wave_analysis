@@ -706,7 +706,7 @@ def thorpe_scales(z, x):
     return thorpe_scales, thorpe_disp, x_sorted, idxs
 
 
-def w_scales(w, z, N2, dz=5., c=0.5):
+def w_scales(w, z, N2, dz=5., c=0.5, eff=0.2):
     """Inputs should be regularly spaced."""
 
     # First we have to design the high pass filter the data. Beaird et. al.
@@ -730,8 +730,9 @@ def w_scales(w, z, N2, dz=5., c=0.5):
         N2_mean[i] = np.mean(N2_wdw[1])
 
     epsilon = c*np.sqrt(N2_mean)*w_rms**2
+    kappa = eff*epsilon/N2_mean
 
-    return epsilon
+    return epsilon, kappa
 
 
 def w_scales_float(Float):
@@ -742,9 +743,11 @@ def w_scales_float(Float):
 
     dz = z[0] - z[1]
 
-    eps = np.zeros_like(w)
+    epsilon = np.zeros_like(w)
+    kappa = np.zeros_like(w)
 
     for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-        eps[:, i] = w_scales(w_row, z, N2_row, dz)
+        epsilon[:, i], kappa[:, i] = w_scales(w_row, z, N2_row, dz)
 
-    return eps
+
+    return epsilon, kappa
