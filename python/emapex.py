@@ -16,6 +16,8 @@ import gsw
 import utils
 import pickle
 import copy
+import glob
+import os
 
 
 class Profile(object):
@@ -810,6 +812,30 @@ class EMApexFloat(object):
         return times, vals
 
 
+def mean_profile(pfls, var_name, z_return=None, z_interp=None):
+    """Calculates an average profile of some variable from a given list of
+    profiles by first interpolating on to equal depth grid and then
+    averaging. Interpolation is then performed back on to a given depth
+    grid."""
+
+    dz = 1.
+    if z_interp is None:
+        z_interp = np.arange(-1500, 0, dz)
+
+    if z_return is None:
+        z_return = z_interp
+
+    var = []
+
+    for pfl in pfls:
+        var.append(pfl.interp(z_interp, 'z', var_name))
+
+    var_mean = np.mean(np.transpose(np.asarray(var)), axis=-1)
+    var_return = utils.nan_interp(z_return, z_interp, var_mean)
+
+    return var_return
+
+
 def up_down_indices(hpid_array, up_or_down='up'):
     """Given an array of hpid numbers return the indices of numbers that
     correspond to either ascents or decents.
@@ -833,25 +859,40 @@ def what_floats_are_in_here(fname):
     return np.unique(fs[~np.isnan(fs)])
 
 
-def mean_profile(pfls, var_name, z_return=None, z_interp=None):
-    """Calculates an average profile of some variable from a given list of
-    profiles by first interpolating on to equal depth grid and then
-    averaging. Interpolation is then performed back on to a given depth
-    grid."""
+def find_file(floatID, data_dir='/noc/users/jc3e13/data/EM-APEX/'):
+    """Locate the file that contains data for the given ID number."""
 
-    dz = 1.
-    if z_interp is None:
-        z_interp = np.arange(-1500, 0, dz)
+    file_paths = glob.glob(os.path.join(data_dir, 'allprofs*.mat'))
 
-    if z_return is None:
-        z_return = z_interp
+    for file_path in file_paths:
+        floatIDs = what_floats_are_in_here(file_path)
+        if (floatIDs == floatID).any():
+            return file_path
 
-    var = []
+    raise ValueError("Float not found in database, check ID.")
 
-    for pfl in pfls:
-        var.append(pfl.interp(z_interp, 'z', var_name))
 
-    var_mean = np.mean(np.transpose(np.asarray(var)), axis=-1)
-    var_return = utils.nan_interp(z_return, z_interp, var_mean)
+def load(floatID, data_dir='/noc/users/jc3e13/data/EM-APEX/', apply_w=True,
+         apply_strain=True, apply_iso=True):
+    """Given an ID number this function will attempt to load data. Use the
+    optional boolean arguments to turn off additional processing if not
+    required as this is performed by default. The hardcoded additional
+    processing paths may fail for some floats."""
 
-    return var_return
+    float_path = find_file(floatID, data_dir)
+
+    Float = EMApexFloat(float_path, floatID)
+
+    if apply_w:
+        data_file = "{:g}_fix_p0k0M_fit_info.p".format(floatID)
+        Float.apply_w_model(os.path.join(data_dir, data_file))
+
+    if apply_strain:
+        data_file = "{:g}_N2_ref_300dbar.p".format(floatID)
+        Float.apply_strain(os.path.join(data_dir, data_file))
+
+    if apply_iso:
+        data_file = "srho_{:g}_100mbin.p".format(floatID)
+        Float.apply_isopycnal_displacement(os.path.join(data_dir, data_file))
+
+    return Float
