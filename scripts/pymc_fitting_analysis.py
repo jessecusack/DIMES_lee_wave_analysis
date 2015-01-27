@@ -46,11 +46,13 @@ vf = pfl26.V_abs[use]
 bf = pfl26.b[use]
 zmin = np.min(zf)
 
-uf = utils.nan_detrend(zf, uf, 0)
-vf = utils.nan_detrend(zf, vf, 0)
-
+uf = utils.nan_detrend(zf, uf, 2)
+vf = utils.nan_detrend(zf, vf, 2)
 
 data_stack = np.hstack((uf, vf, wf, 250*bf))
+
+plt.figure()
+plt.plot(data_stack)
 
 
 def model():
@@ -60,10 +62,11 @@ def model():
     X = pymc.Uniform('X', -2e4, 2e4, value=-2e3)
     Y = pymc.Uniform('Y', -1e5, 1e5, value=-4e3)
     Z = pymc.Uniform('Z', -2e4, 2e4, value=-2e3)
+    phase = pymc.Uniform('phase', 0., np.pi*2, value=0.)
 
     @pymc.deterministic()
-    def wave_model(zf=zf, X=X, Y=Y, Z=Z):
-        return far.model_pymc(zf, X, Y, Z)
+    def wave_model(zf=zf, X=X, Y=Y, Z=Z, phase=phase):
+        return far.model_pymc(zf, X, Y, Z, phase)
 
     # Likelihood
     y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack, observed=True)
@@ -72,8 +75,8 @@ def model():
 
 M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
 samples = 100000
-burn = 40000
-thin = 6
+burn = 50000
+thin = 5
 M.sample(samples, burn, thin)
 pymc.Matplot.plot(M, common_scale=False)
 

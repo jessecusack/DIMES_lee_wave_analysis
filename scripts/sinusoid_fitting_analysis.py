@@ -653,8 +653,20 @@ pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
 # %% Modelling float motion
 import float_advection_routines as far
+
 params = far.default_params
-X = far.model_verbose(-2000, -4000, -2000, 0., params)
+
+#def U_const(z):
+#    return 0.
+#
+#params['Ufunc'] = U_const
+
+lx = 9000.
+ly = 8000.
+lz = -13000.
+phase_0 = 4.7
+
+X = far.model_verbose(lx, ly, lz, phase_0, params)
 
 # An attempt at calculating pressure perturbation.
 pfl = E77.get_profiles(26)
@@ -691,7 +703,7 @@ axs[0].set_ylabel('$z$')
 axs[0].plot(1e2*X.u[use, 0], X.r[use, 2])
 axs[0].set_xlabel('$u$ (cm s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(1e2*X.u[use, 1] - 15, X.r[use, 2])
+axs[1].plot(1e2*X.u[use, 1], X.r[use, 2])
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
 axs[2].plot(1e2*X.u[use, 2], X.r[use, 2])
@@ -736,8 +748,9 @@ t = X.t
 #               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
 #               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
 cgz = -m*(N**2 - f**2)*(k**2+l**2)/((k**2+l**2+m**2)**1.5*(f**2*m**2+N**2*(k**2+l**2))**0.5)
-sin2phi = m**2/(k**2+l**2+m**2)
-phip = np.arcsin(np.sqrt(sin2phi))
+phip = np.arctan2(m, np.sqrt(k**2 + l**2))
+#sin2phi = m**2/(k**2+l**2+m**2)
+#phip = np.arcsin(np.sqrt(sin2phi))
 rho0 = 1025.
 
 E = 0.5*rho0*(w_0/np.cos(phip))**2
@@ -761,15 +774,15 @@ f2 = f**2
 K2 = k**2 + l**2 + m**2
 N2 = N**2
 
-for j, ts in enumerate(np.arange(0, X.t.max(), 500.)):
+for j, ts in enumerate(np.arange(0, X.t.max(), 500.)): #
 
     idx = t.searchsorted(ts)
     C = []
 
-    u_xg = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
-    u_yg = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
-    u_zg = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
-    bg = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts)))
+    u_xg = np.real(((k*om + 1j*l*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts + phase_0)))
+    u_yg = np.real(((l*om - 1j*k*f)/(om2 - f2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts + phase_0)))
+    u_zg = np.real(((-om*K2)/((N**2 - f2)*m))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts + phase_0)))
+    bg = np.real((1j*m*N2/(N2 - om2))*phi_0*np.exp(1j*(k*xg + m*zg - (om + k*U)*ts + phase_0)))
 
     fig, axs = plt.subplots(1, 4, sharey=True, figsize=(14,6))
     fig.suptitle('t = {:1.0f} s'.format(ts))
@@ -817,7 +830,7 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)):
     C[3].set_clim(-1e4*X.b_0, 1e4*X.b_0)
 
 #    pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
-    plt.close()
+#    plt.close()
 
 
 # %%
@@ -839,9 +852,12 @@ vf = pfl26.V_abs[use]
 bf = pfl26.b[use]
 zmin = np.min(zf)
 
+uf = utils.nan_detrend(zf, uf, 2)
+vf = utils.nan_detrend(zf, vf, 2)
+
 model = far.model_leastsq
 
-popt1, __ = op.leastsq(model, x0=[5000., 15000., 8000.], args=(zf, wf, 'w'))
+popt1, __ = op.leastsq(model, x0=[-2000, -2000, -2000, 0.], args=(zf, wf, 'w'))
 plt.figure()
 plt.plot(wf, zf, model(popt1, z=zf, sub=wf, var_name='w') + wf, zf)
 
