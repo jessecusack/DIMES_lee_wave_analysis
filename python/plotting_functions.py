@@ -434,8 +434,8 @@ def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
                ftype='png', font_size=None):
     """My modified version of savefig."""
 
-    scol = 3.125
-    dcol = 6.5
+    scol = 3.125  # inches
+    dcol = 6.5  # inches
 
     if fsize is None:
         pass
