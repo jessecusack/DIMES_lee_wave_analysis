@@ -116,8 +116,9 @@ def model_leastsq(params, z, sub, var_name, oparams=default_params):
     Subtract data given by 'sub' to return residual.
 
     """
-    X, Y, Z = params
-    __, r, u, b = model_basic(X, Y, Z, 0., oparams)
+    X, Y, Z, phi_0 = params
+    __, r, u, b = model_basic(X, Y, Z, phi_0, oparams)
+    u[:, 0] -= oparams['Ufunc'](r[:, 2])
 
     # Variable to return.
     var_dict = {'w': u[:, 2], 'u': u[:, 0], 'v': u[:, 1], 'b': b}
