@@ -23,17 +23,12 @@ import emapex
 import float_advection_routines as far
 import utils
 
+
 try:
-    print("Floats {} and {} exist!".format(E76.floatID, E77.floatID))
+    print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
 except NameError:
-    E76 = emapex.EMApexFloat('/noc/users/jc3e13/data/EM-APEX/allprofs11.mat', 4976)
-    E76.apply_w_model('/noc/users/jc3e13/data/EM-APEX/4976_fix_p0k0M_fit_info.p')
-    E76.apply_strain('/noc/users/jc3e13/data/EM-APEX/4976_N2_ref_300dbar.p')
-    E76.apply_isopycnal_displacement('/noc/users/jc3e13/data/EM-APEX/srho_4976_100mbin.p')
-    E77 = emapex.EMApexFloat('/noc/users/jc3e13/data/EM-APEX/allprofs11.mat', 4977)
-    E77.apply_w_model('/noc/users/jc3e13/data/EM-APEX/4977_fix_p0k0M_fit_info.p')
-    E77.apply_strain('/noc/users/jc3e13/data/EM-APEX/4977_N2_ref_300dbar.p')
-    E77.apply_isopycnal_displacement('/noc/users/jc3e13/data/EM-APEX/srho_4977_100mbin.p')
+    E76 = emapex.load(4976)
+    E77 = emapex.load(4977)
 
 pfl26 = E77.get_profiles(26)
 

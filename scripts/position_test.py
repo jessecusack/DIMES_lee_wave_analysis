@@ -9,7 +9,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import cumtrapz
 import utils
+import emapex
 
+try:
+    print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
+except NameError:
+    E76 = emapex.load(4976)
+    E77 = emapex.load(4977)
 
 # want an odd-even pair
 Float = E76

@@ -228,10 +228,10 @@ def assess_w_fit(Float, save_id=''):
 ###############################################################################
 
 try:
-    print("Floats {} and {}.".format(E76.floatID, E77.floatID))
+    print("Floats {} and {} exist!".format(E76.floatID, E77.floatID))
 except NameError:
-    E76 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4976)
-    E77 = emapex.EMApexFloat('../../data/EM-APEX/allprofs11.mat', 4977)
+    E76 = emapex.load(4976, apply_w=False)
+    E77 = emapex.load(4977, apply_w=False)
 
 
 # model = '1'
