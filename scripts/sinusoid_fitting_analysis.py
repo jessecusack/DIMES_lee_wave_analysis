@@ -5,6 +5,12 @@ Created on Fri Oct 31 16:20:33 2014
 @author: jc3e13
 """
 
+import datetime
+import gsw
+import os
+import sys
+import glob
+
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -12,11 +18,6 @@ import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 # from matplotlib.colors import LogNorm
 # from matplotlib.ticker import LogFormatterMathtext
-import datetime
-import gsw
-import os
-import sys
-import glob
 import scipy.signal as sig
 import scipy.optimize as op
 from scipy.integrate import cumtrapz
@@ -30,6 +31,7 @@ import sandwell
 import utils
 import emapex
 import plotting_functions as pf
+import float_advection_routines as far
 
 try:
     print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
@@ -644,7 +646,6 @@ cbar.set_label('$w$ (m s$^{-1}$)')
 pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
 # %% Modelling float motion
-import float_advection_routines as far
 
 params = far.default_params
 
@@ -653,29 +654,24 @@ params = far.default_params
 #
 #params['Ufunc'] = U_const
 
-lx = 9000.
-ly = 8000.
-lz = -13000.
-phase_0 = 4.7
+lx = -4000.
+ly = -2000.
+lz = -2000.
+phase_0 = np.pi*3./2.
+
+params['z_0'] = -1600
 
 X = far.model_verbose(lx, ly, lz, phase_0, params)
+X.u[:, 0] -= X.U
 
-# An attempt at calculating pressure perturbation.
-pfl = E77.get_profiles(26)
-#rhop = utils.nan_detrend(pfl.z, pfl.rho_1 - srhop)
-#nans = np.isnan(rhop)
-#nnrhop = rhop[~nans]
-#nnz = pfl.z[~nans]
-#nnP = pfl.P[~nans]
-#pp = cumtrapz(nnrhop, nnz, initial=0.)
-#phi = pp*9.81/1031.
+pfl = E76.get_profiles(32)
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 #axs[0].set_ylabel('$z$ (m)')
-axs[0].plot(1e2*pfl.U_abs, pfl.zef, 'red')
+axs[0].plot(1e2*utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, 'red')
 #axs[0].set_xlabel('$U$ (m s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
-axs[1].plot(1e2*pfl.V_abs, pfl.zef, 'red')
+axs[1].plot(1e2*utils.nan_detrend(pfl.zef, pfl.V_abs, 2), pfl.zef, 'red')
 #axs[1].set_xlabel('$V$ (m s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
 axs[2].plot(1e2*pfl.Ww, pfl.z, color='red')
@@ -689,7 +685,7 @@ axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 
 #pf.my_savefig(fig, '4977', 'pfl26_UVWB', sdir, fsize='double_col')
-use = X.r[:, 2] < -600.
+use = X.r[:, 2] < -400.
 
 axs[0].set_ylabel('$z$')
 axs[0].plot(1e2*X.u[use, 0], X.r[use, 2])
@@ -834,31 +830,35 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)): #
 # Velocity of the float.
 
 
-pfl26 = E77.get_profiles(26)
-zmax = -650.
-use = ~np.isnan(pfl26.z) & (pfl26.z < zmax)
-zf = pfl26.z[use]
-wf = pfl26.Ww[use]
-uf = pfl26.U_abs[use]
-vf = pfl26.V_abs[use]
-bf = pfl26.b[use]
+pfl = E76.get_profiles(32)
+zmax = -400.
+use = ~np.isnan(pfl.z) & (pfl.z < zmax)
+zf = pfl.z[use]
+wf = pfl.Ww[use]
+uf = pfl.U_abs[use]
+vf = pfl.V_abs[use]
+bf = pfl.b[use]
 zmin = np.min(zf)
 
 uf = utils.nan_detrend(zf, uf, 2)
 vf = utils.nan_detrend(zf, vf, 2)
 
+
+params = far.default_params
+params['z_0'] = -1600
+
 model = far.model_leastsq
 
-popt1, __ = op.leastsq(model, x0=[-2000, -2000, -2000, 0.], args=(zf, wf, 'w'))
+popt1, __ = op.leastsq(model, x0=[-2000, -2000, -2000, 0.], args=(zf, wf, 'w', params))
 plt.figure()
 plt.plot(wf, zf, model(popt1, z=zf, sub=wf, var_name='w') + wf, zf)
 
-popt2, __ = op.leastsq(model, x0=popt1, args=(zf, uf, 'u'))
+popt2, __ = op.leastsq(model, x0=popt1, args=(zf, uf, 'u', params))
 plt.figure()
 plt.plot(uf, zf, model(popt2, z=zf, sub=uf, var_name='u') + uf, zf)
 plt.plot(model(popt1, z=zf, sub=uf, var_name='u') + uf, zf)
 
-popt3, __ = op.leastsq(model, x0=popt1, args=(zf, bf, 'b'))
+popt3, __ = op.leastsq(model, x0=popt1, args=(zf, bf, 'b', params))
 plt.figure()
 plt.plot(bf, zf, model(popt3, z=zf, sub=bf, var_name='b') + bf, zf)
 plt.plot(model(popt1, z=zf, sub=bf, var_name='b') + bf, zf)
