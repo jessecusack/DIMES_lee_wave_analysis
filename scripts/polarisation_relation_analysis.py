@@ -14,7 +14,7 @@ import glob
 from scipy.linalg import lstsq
 import gsw
 
-lib_path = os.path.abspath('../python')
+lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
@@ -23,12 +23,12 @@ import emapex
 from detect_peaks import detect_peaks
 import plotting_functions as pf
 
+
 try:
     print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
 except NameError:
     E76 = emapex.load(4976)
     E77 = emapex.load(4977)
-
 
 # %% Script params.
 

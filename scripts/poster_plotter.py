@@ -8,18 +8,23 @@ Created on Thu Jul 24 11:00:03 2014
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import plotting_functions as pf
-import emapex
 import scipy.optimize as op
 import gsw
 import os
-import sandwell
+import sys
 from scipy.interpolate import griddata
 from scipy.integrate import cumtrapz
 import scipy.signal as sig
 import mpl_toolkits.basemap as bm
 
-reload(emapex)
+lib_path = os.path.abspath('../modules')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
+import emapex
+import sandwell
+import plotting_functions as pf
+
 
 try:
     print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))

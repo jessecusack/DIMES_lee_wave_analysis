@@ -14,7 +14,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import scipy.signal as sig
 
-lib_path = '/noc/users/jc3e13/emapex/python'
+lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 

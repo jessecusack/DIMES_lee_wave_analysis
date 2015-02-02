@@ -5,14 +5,23 @@ Created on Tue Oct  7 11:34:21 2014
 @author: jc3e13
 """
 
-import emapex
+
 import numpy as np
 from glob import glob
 from scipy import io
-import sandwell
 import matplotlib.pyplot as plt
 import mpl_toolkits.basemap as bm
+import os
+import sys
+
+
+lib_path = os.path.abspath('../modules')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 import utils
+import emapex
+import sandwell
 
 
 # Fine all float IDs

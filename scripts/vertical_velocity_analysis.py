@@ -5,8 +5,6 @@ Created on Thu May 15 12:07:00 2014
 @author: jc3e13
 """
 
-import emapex
-import vertical_velocity_model as vvm
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -15,9 +13,14 @@ import matplotlib.colors as mcolors
 import pandas as pd
 import os
 import pickle
+import sys
 
-reload(emapex)
-reload(vvm)
+lib_path = os.path.abspath('../modules')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
+import emapex
+import vertical_velocity_model as vvm
 
 
 def assess_w_fit(Float, save_id=''):

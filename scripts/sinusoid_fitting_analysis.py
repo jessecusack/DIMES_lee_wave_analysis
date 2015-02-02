@@ -23,7 +23,7 @@ import scipy.optimize as op
 from scipy.integrate import cumtrapz
 from scipy.interpolate import griddata
 
-lib_path = os.path.abspath('../python')
+lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 

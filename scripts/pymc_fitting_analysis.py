@@ -8,15 +8,11 @@ Created on Thu Nov 20 12:58:56 2014
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+import os
 
-lib_path = '/noc/users/jc3e13/emapex/python'
-pymc3_path = '/noc/users/jc3e13/envs/my_root/lib/python2.7/site-packages/pymc-3.0-py2.7.egg'
+lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
-
-# We want pymc 2.3
-if pymc3_path in sys.path:
-    sys.path.remove(pymc3_path)
 
 import pymc
 import emapex

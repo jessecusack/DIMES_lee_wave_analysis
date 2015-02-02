@@ -5,15 +5,21 @@ Plot a LOT of things.
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import plotting_functions as pf
-import emapex
 import scipy.optimize as op
 import gsw
 import os
-import sandwell
+import sys
 from scipy.interpolate import griddata
 from scipy.integrate import cumtrapz
 import scipy.signal as sig
+
+lib_path = os.path.abspath('../modules')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
+import sandwell
+import emapex
+import plotting_functions as pf
 
 
 try:

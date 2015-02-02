@@ -18,7 +18,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # from matplotlib.colors import LogNorm
 # from matplotlib.ticker import LogFormatterMathtext
 
-lib_path = os.path.abspath('../python')
+lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
