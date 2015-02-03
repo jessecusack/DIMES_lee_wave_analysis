@@ -375,8 +375,8 @@ pf.my_savefig(fig, 'both', 'w_section', sdir, fsize='double_col')
 
 # %% Wave profiles
 
-E76_hpids = [30, 31, 32, 33]
-E77_hpids = [25, 26, 27, 28]
+E76_hpids = [29, 30, 31, 32, 33, 34]
+E77_hpids = [24, 25, 26, 27, 28, 29]
 
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
@@ -385,7 +385,7 @@ fig, axm = plt.subplots(len(pfls), 5, sharey='row', sharex='col',
 fig.subplots_adjust(hspace=0.05, wspace=0.1)
 rot = 'vertical'
 col = 'black'
-deg = 1
+deg = 2
 
 U_var = 'U'
 V_var = 'V'
