@@ -68,4 +68,10 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         u = utils.nan_detrend(z, u, deg)
         v = utils.nan_detrend(z, v, deg)
 
+        print("Float {}. hpid {}.".format(pfl.floatID, pfl.hpid))
+        print(1025.*sp.integrate.trapz(w*u, z)/(z[0]-z[-1]))
+        print(1025.*sp.integrate.trapz(w*v, z)/(z[0]-z[-1]))
+
+#        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
+
         plt.plot(u*w, z, v*w, z)
