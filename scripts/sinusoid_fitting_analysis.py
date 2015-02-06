@@ -657,17 +657,17 @@ params = far.default_params
 #
 #params['Ufunc'] = U_const
 
-lx = -4000.
+lx = -2000.
 ly = -2000.
 lz = -2000.
-phase_0 = np.pi*3./2.
+phase_0 = 0.
 
-params['z_0'] = -1600
+params['z_0'] = -1550
 
 X = far.model_verbose(lx, ly, lz, phase_0, params)
 X.u[:, 0] -= X.U
 
-pfl = E76.get_profiles(32)
+pfl = E77.get_profiles(26)
 
 fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
 #axs[0].set_ylabel('$z$ (m)')
@@ -870,10 +870,10 @@ plt.plot(model(popt1, z=zf, sub=bf, var_name='b') + bf, zf)
 # %%
 # Model fitting using EM-APEX positions
 
-def w_model(params, pfl, zlims, deg):
+def w_model(params, pfl, zlim, deg):
 
     X, Z, phase_0 = params
-    zmin, zmax = zlims
+    zmin, zmax = zlim
     nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
 
     t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
@@ -892,10 +892,10 @@ def w_model(params, pfl, zlims, deg):
     return w[~nope] - pfl.Ww[~nope]
 
 
-def u_model(params, pfl, zlims, deg):
+def u_model(params, pfl, zlim, deg):
 
     X, Z, phase_0 = params
-    zmin, zmax = zlims
+    zmin, zmax = zlim
     nope = np.isnan(pfl.zef) | (pfl.zef < zmin) | (pfl.zef > zmax)
 
     t = 60*60*24*(pfl.UTCef - np.nanmin(pfl.UTCef))
@@ -915,10 +915,10 @@ def u_model(params, pfl, zlims, deg):
     return u[~nope] - utils.nan_detrend(pfl.zef[~nope], pfl.U[~nope], deg)
 
 
-#def v_model(params, pfl, zlims, deg):
+#def v_model(params, pfl, zlim, deg):
 #
 #    X, Z, phase_0 = params
-#    zmin, zmax = zlims
+#    zmin, zmax = zlim
 #    nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
 #
 #    t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
@@ -936,10 +936,10 @@ def u_model(params, pfl, zlims, deg):
 #    return utils.nan_detrend(z[~nope], pfl.V[~nope], deg) - u[~nope]
 
 
-def b_model(params, pfl, zlims, deg):
+def b_model(params, pfl, zlim, deg):
 
     X, Z, phase_0 = params
-    zmin, zmax = zlims
+    zmin, zmax = zlim
     nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
 
     t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
@@ -990,7 +990,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         zlim = zlims[Float.floatID][hpid]
         pfl = Float.get_profiles(hpid)
 
-        popt1, __, info, __, __ = op.leastsq(full_model, x0=[-1000., -2000., 0.],
+        popt1, __, info, __, __ = op.leastsq(full_model, x0=[-2000., -2000., 0.],
                                              args=(pfl, zlim, deg),
                                              full_output=True)
 
@@ -1000,11 +1000,12 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         fig, axs = plt.subplots(1, 3, sharey=True)
         axs[0].plot(pfl.Ww, pfl.z, pfl.Ww[~nope] + w_model(popt1, pfl, zlim, deg),
                  pfl.z[~nope])
-        axs[1].plot(utils.nan_detrend(pfl.zef, pfl.U, deg), pfl.zef,
+        axs[1].plot(utils.nan_detrend(pfl.zef[~nope2], pfl.U[~nope2], deg),
+                    pfl.zef[~nope2],
                     utils.nan_detrend(pfl.zef[~nope2], pfl.U[~nope2], deg)
                     + u_model(popt1, pfl, zlim, deg),
-                    pfl.z[~nope2])
-        axs[2].plot(250.*pfl.b, pfl.z, pfl.b[~nope] + b_model(popt1, pfl, zlim, deg),
+                    pfl.zef[~nope2])
+        axs[2].plot(250.*pfl.b, pfl.z, 250*pfl.b[~nope] + b_model(popt1, pfl, zlim, deg),
                  pfl.z[~nope])
         fig.suptitle("Float {}. hpid {:}.".format(pfl.floatID, pfl.hpid))
 
