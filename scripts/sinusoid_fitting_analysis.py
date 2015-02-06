@@ -23,6 +23,8 @@ import scipy.optimize as op
 from scipy.integrate import cumtrapz
 from scipy.interpolate import griddata
 
+import gsw
+
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
@@ -32,6 +34,7 @@ import utils
 import emapex
 import plotting_functions as pf
 import float_advection_routines as far
+import gravity_waves as gw
 
 try:
     print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
@@ -862,3 +865,148 @@ popt3, __ = op.leastsq(model, x0=popt1, args=(zf, bf, 'b', params))
 plt.figure()
 plt.plot(bf, zf, model(popt3, z=zf, sub=bf, var_name='b') + bf, zf)
 plt.plot(model(popt1, z=zf, sub=bf, var_name='b') + bf, zf)
+
+
+# %%
+# Model fitting using EM-APEX positions
+
+def w_model(params, pfl, zlims, deg):
+
+    X, Z, phase_0 = params
+    zmin, zmax = zlims
+    nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
+
+    t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
+    x = 1000.*(pfl.dist_ctd - np.nanmin(pfl.dist_ctd))
+
+    k = 2*np.pi/X
+    l = 0.
+    m = 2*np.pi/Z
+    f = gsw.f(pfl.lat_start)
+    N = np.mean(np.sqrt(pfl.N2_ref[~nope]))
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.nanmax(pfl.Ww[~nope])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    w = gw.w(x, 0., pfl.z, t, phi_0, k, l, m, om, N, phase_0=phase_0)
+
+    return w[~nope] - pfl.Ww[~nope]
+
+
+def u_model(params, pfl, zlims, deg):
+
+    X, Z, phase_0 = params
+    zmin, zmax = zlims
+    nope = np.isnan(pfl.zef) | (pfl.zef < zmin) | (pfl.zef > zmax)
+
+    t = 60*60*24*(pfl.UTCef - np.nanmin(pfl.UTCef))
+    x = 1000.*(pfl.dist_ef - np.nanmin(pfl.dist_ef))
+    k = 2*np.pi/X
+    l = 0.
+    m = 2*np.pi/Z
+    f = gsw.f(pfl.lat_start)
+
+    om = gw.omega(N, k, m, l, f)
+
+    nope2 = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
+    phi_0 = np.nanmax(pfl.Ww[~nope2])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    u = gw.u(x, 0., pfl.zef, t, phi_0, k, l, m, om, phase_0=phase_0)
+
+    return u[~nope] - utils.nan_detrend(pfl.zef[~nope], pfl.U[~nope], deg)
+
+
+#def v_model(params, pfl, zlims, deg):
+#
+#    X, Z, phase_0 = params
+#    zmin, zmax = zlims
+#    nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
+#
+#    t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
+#    x = 1000.*(pfl.dist_ctd - np.nanmin(pfl.dist_ctd))
+#    k = 2*np.pi/X
+#    l = 0.
+#    m = 2*np.pi/Z
+#    f = gsw.f(pfl.lat_start)
+#
+#    om = gw.omega(N, k, m, l, f)
+#    phi_0 = np.nanmax(pfl.Ww[~nope])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+#
+#    u = gw.v(x, 0., pfl.z, t, phi_0, k, l, m, om, phase_0=phase_0)
+#
+#    return utils.nan_detrend(z[~nope], pfl.V[~nope], deg) - u[~nope]
+
+
+def b_model(params, pfl, zlims, deg):
+
+    X, Z, phase_0 = params
+    zmin, zmax = zlims
+    nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
+
+    t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
+    x = 1000.*(pfl.dist_ctd - np.nanmin(pfl.dist_ctd))
+
+    k = 2*np.pi/X
+    l = 0.
+    m = 2*np.pi/Z
+    f = gsw.f(pfl.lat_start)
+    N = np.mean(np.sqrt(pfl.N2_ref[~nope]))
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.nanmax(pfl.Ww[~nope])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    b = gw.b(x, 0., pfl.z, t, phi_0, k, l, m, om, N, phase_0=phase_0)
+
+    resid = b[~nope] - pfl.b[~nope]
+
+    return 250.*resid
+
+
+def full_model(params, pfl, zlims, deg):
+    return np.hstack((w_model(params, pfl, zlims, deg),
+                      u_model(params, pfl, zlims, deg),
+#                      v_model(params, pfl, zlims, deg),
+                      b_model(params, pfl, zlims, deg)))
+
+
+# The portions of the profiles that contain the wave. Found by eye.
+zlims = {4976: {29: (-1600, -200),
+                30: (-1000, -200),
+                31: (-1600, -600),
+                32: (-1600, -400)},
+         4977: {24: (-1600, -200),
+                25: (-1400, -600),
+                26: (-1600, -600),
+                27: (-1200, -200)}}
+
+hpids_76 = np.array([29, 30, 31, 32])
+hpids_77 = np.array([24, 25, 26, 27])
+
+
+# Detrend degre
+deg = 2
+
+
+for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
+    for hpid in hpids:
+        zlim = zlims[Float.floatID][hpid]
+        pfl = Float.get_profiles(hpid)
+
+        popt1, __, info, __, __ = op.leastsq(full_model, x0=[-1000., -2000., 0.],
+                                             args=(pfl, zlim, deg),
+                                             full_output=True)
+
+        zmin, zmax = zlim
+        nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
+        nope2 = np.isnan(pfl.zef) | (pfl.zef < zmin) | (pfl.zef > zmax)
+        fig, axs = plt.subplots(1, 3, sharey=True)
+        axs[0].plot(pfl.Ww, pfl.z, pfl.Ww[~nope] + w_model(popt1, pfl, zlim, deg),
+                 pfl.z[~nope])
+        axs[1].plot(utils.nan_detrend(pfl.zef, pfl.U, deg), pfl.zef,
+                    utils.nan_detrend(pfl.zef[~nope2], pfl.U[~nope2], deg)
+                    + u_model(popt1, pfl, zlim, deg),
+                    pfl.z[~nope2])
+        axs[2].plot(250.*pfl.b, pfl.z, pfl.b[~nope] + b_model(popt1, pfl, zlim, deg),
+                 pfl.z[~nope])
+        fig.suptitle("Float {}. hpid {:}.".format(pfl.floatID, pfl.hpid))
+
+        print("Float {}. hpid {:}.".format(pfl.floatID, pfl.hpid))
+        print("X = {:g}, Z = {:g}, phase = {:1.1f}".format(*popt1))
