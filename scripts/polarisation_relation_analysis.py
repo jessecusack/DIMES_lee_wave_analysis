@@ -184,6 +184,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 #          "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
 #                                       np.pi*2/x[2]/60.))
 
+# %%
 # Estimate position (x, z, t) of wave peaks from combination of profiles 31 and
 # 32 from float 4976.
 xq = np.array([0.,  516.66576652, 882., 1512.23911972,  1994.01441055,  2825.66675334,
@@ -196,15 +197,46 @@ tq = np.array([0., 1081., 2000., 3164.00000763, 4172., 5911.99999237,
 xqd = np.diff(xq)
 zqd = np.diff(zq)
 tqd = -np.diff(tq)
+#U = 0.3
+#xqd -= U*tqd
 pis = np.pi*np.ones_like(tqd)
 
 a = np.transpose(np.vstack((xqd, zqd, tqd)))
 X, resid, rank, s = lstsq(a, pis)
 
+# See how susceptible to random noise in X this result is.
+Neq = len(a[:, 0])
+N = 10000
+X_dist = []
+for i in xrange(N):
+    b = a.copy()
+    b[:, 0] += 100.*np.random.randn(Neq)
+    Xt, __, __, __ = lstsq(b, pis)
+    X_dist.append(Xt)
+
+X_dist = np.pi*2./np.asarray(X_dist)
+# Convert to minutes.
+X_dist[:, 2] /= 60.
+X_mean = np.mean(X_dist, axis=0)
+X_std = np.std(X_dist, axis=0)
+
+fig, axs = plt.subplots(1, 3, figsize=(10, 6))
+
+axs[0].hist(X_dist[:,0], bins=np.arange(-20000, 20000, 500),
+            normed=True, log=False, alpha=0.8);
+axs[1].hist(X_dist[:,1], bins=np.arange(-20000, 20000, 500),
+            normed=True, log=False, alpha=0.8);
+axs[2].hist(X_dist[:,2], bins=np.arange(-300, 300, 10),
+            normed=True, log=False, alpha=0.8, label='4976');
+
+
 print(X)
 print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
       "Period: {:1.0f} min".format(np.pi*2/X[0], np.pi*2/X[1],
                                    np.pi*2/X[2]/60.))
+print(X_mean)
+print(X_std)
+print(np.percentile(X_dist, [5, 25, 50, 75, 95] , axis=0))
 
 # Estimate position (x, z, t) of wave peaks from combination of profiles 26 and
 # 27 from float 4977.
@@ -217,19 +249,62 @@ xqd = np.diff(xq)
 zqd = np.diff(zq)
 tqd = -np.diff(tq)
 #stepd = np.diff(step)
+#U = 0.3
+#xqd -= U*tqd
 pis = np.pi*np.ones_like(tqd)
 
-# Big step at surface, I think we missed 6 phase lines.
-pis[3] *= 6.
+## Big step at surface, I think we missed 6 phase lines.
+#pis[3] *= 6.
+use = np.arange(len(pis)) != 3
 
-a = np.transpose(np.vstack((xqd, zqd, tqd)))
+a = np.transpose(np.vstack((xqd[use], zqd[use], tqd[use])))
+pis = pis[use]
 X, resid, rank, s = lstsq(a, pis)
+
+# See how susceptible to random noise in X this result is.
+Neq = len(a[:, 0])
+N = 10000
+X_dist = []
+for i in xrange(N):
+    b = a.copy()
+    b[:, 0] += 100.*np.random.randn(Neq)
+    Xt, __, __, __ = lstsq(b, pis)
+    X_dist.append(Xt)
+
+X_dist = np.pi*2./np.asarray(X_dist)
+# Convert to minutes.
+X_dist[:, 2] /= 60.
+X_mean = np.mean(X_dist, axis=0)
+X_std = np.std(X_dist, axis=0)
+
+axs[0].hist(X_dist[:,0], bins=np.arange(-20000, 20000, 500),
+            normed=True, log=False, alpha=0.4);
+axs[1].hist(X_dist[:,1], bins=np.arange(-20000, 20000, 500),
+            normed=True, log=False, alpha=0.4);
+axs[2].hist(X_dist[:,2], bins=np.arange(-300, 300, 10),
+            normed=True, log=False, alpha=0.4, label='4977');
+
+axs[2].legend()
+
+for ax in axs:
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=60)
+    ax.set_yticks([])
+    ax.grid()
+
+axs[0].set_ylabel('Occurances (-)')
+axs[0].set_xlabel('$\lambda_x$ (m)')
+axs[1].set_xlabel('$\lambda_z$ (m)')
+axs[2].set_xlabel('$T$ (min)')
+
+pf.my_savefig(fig, 'both_matrix_inversion', 'hist', sdir, fsize='double_col')
 
 print(X)
 print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
       "Period: {:1.0f} min".format(np.pi*2/X[0], np.pi*2/X[1],
                                    np.pi*2/X[2]/60.))
-
+print(X_mean)
+print(X_std)
+print(np.percentile(X_dist, [5, 25, 50, 75, 95], axis=0))
 # %%
 
 
