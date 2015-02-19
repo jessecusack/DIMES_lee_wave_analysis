@@ -722,11 +722,14 @@ phi_0 = X.phi_0
 r = X.r
 t = X.t
 
+phi = gw.phi(r[:, 0], r[:, 1], r[:, 2], t, phi_0, k, l, m, om, U, phase_0)
+eta = gw.buoy(r, t, phi_0, U, k, l, m, om, N, f, phase_0)/N**2
+
 #sintheta2 = X.m**2/(X.m**2 + X.k**2 + X.l**2)
 #theta = np.rad2deg(np.arcsin(np.sqrt(sintheta2)))
 #
 #rho_0 = 1025.
-#h0 = 750.
+h0 = 750.
 #Eflux = m*U*w_0**2/(2*k)
 #Eflux2 = 0.5*rho_0*U*m*h0**2*(U**2*k**2 - f**2)/k
 #
@@ -738,16 +741,16 @@ t = X.t
 #cg = np.array([k*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
 #               l*(N**2-om0**2)**2/(om0*m**2*(N**2-f**2)),
 #               -(om0**2-f**2)*(N**2-om0**2)/(om0*m**2*(N**2-f**2))])
-cgz = -m*(N**2 - f**2)*(k**2+l**2)/((k**2+l**2+m**2)**1.5*(f**2*m**2+N**2*(k**2+l**2))**0.5)
+cgz = gw.cgz(k, m, N, l, f)
 phip = np.arctan2(m, np.sqrt(k**2 + l**2))
 #sin2phi = m**2/(k**2+l**2+m**2)
 #phip = np.arcsin(np.sqrt(sin2phi))
 rho0 = 1025.
 
 E = 0.5*rho0*(w_0/np.cos(phip))**2
-#F = cg*E
-#Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
-#
+
+Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
+
 ##wphi = phi_0**2 *
 
 Fz = E*cgz
@@ -904,6 +907,7 @@ def u_model(params, pfl, zlim, deg):
     l = 0.
     m = 2*np.pi/Z
     f = gsw.f(pfl.lat_start)
+    N = np.mean(np.sqrt(pfl.N2_ref[~nope]))
 
     om = gw.omega(N, k, m, l, f)
 
