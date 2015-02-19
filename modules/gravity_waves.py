@@ -93,7 +93,7 @@ def phi(x, y, z, t, phi_0, k, l, m, om, U=0., phase_0=0.):
 
 
 def b(x, y, z, t, phi_0, k, l, m, om, N, U=0., phase_0=0.):
-    """Buoyancy pertubation."""
+    """Buoyancy pertubation. TODO... check weirdness happening."""
     amplitude = phi_0*1j*m*N**2/(N**2 - om**2)
     phase = 1j*(k*x + l*y + m*z - (om + k*U)*t + phase_0)
     return np.real(amplitude*np.exp(phase))
@@ -118,6 +118,13 @@ def v(x, y, z, t, phi_0, k, l, m, om, f=None, U=0., phase_0=0.):
 def w(x, y, z, t, phi_0, k, l, m, om, N, U=0., phase_0=0.):
     """Vertical velocity pertubation."""
     amplitude = -phi_0*m*om/(N**2 - om**2)
+    phase = 1j*(k*x + l*y + m*z - (om + k*U)*t + phase_0)
+    return np.real(amplitude*np.exp(phase))
+
+
+def eta(x, y, z, t, phi_0, k, l, m, om, N, U=0., phase_0=0.):
+    """Vertical displacement of isopycnals. TODO... check weirdness happening."""
+    amplitude = phi_0*1j*m/(N**2 - om**2)
     phase = 1j*(k*x + l*y + m*z - (om + k*U)*t + phase_0)
     return np.real(amplitude*np.exp(phase))
 
@@ -175,6 +182,10 @@ def W_0(phi_0, m, om, N):
 
 def B_0(phi_0, m, om, N):
     return np.abs((1j*m*N**2/(N**2 - om**2))*phi_0)
+
+
+def ETA_0(phi_0, m, om, N):
+    return np.abs(phi_0*1j*m/(N**2 - om**2))
 
 
 def U(x, y, z, t, phi_0, k, m, N, l=None, om=None, f=None):
