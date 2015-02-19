@@ -495,7 +495,7 @@ plt.clabel(CS, inline=1, fontsize=8, fmt='%1.f')
 # ---------------------------
 
 # The inertial frequency...
-lat_mean = np.mean(lats)
+lat_mean = -57.5  # np.mean(lats)
 f = np.abs(gsw.f(lat_mean))
 print("Mean inertial frequency at {:1.1f} degrees is {:.2E} rad s-1. "
       "The period is {:1.1f} hours.".format(lat_mean, f, 2*np.pi/(60*60*f)))
@@ -513,16 +513,18 @@ print("Mean inertial frequency at {:1.1f} degrees is {:.2E} rad s-1. "
 # - Buoyancy period, $T_N \approx 50$ mins.
 # - Inertial period, $T_f \approx 14$ hours.
 
-N0 = 0.8e-3
+N0 = 1.0e-3
 N1 = 1.0e-3
 U0 = 0.2
 U1 = 0.5
 f = 1.2e-4
-h0 = 300.
+h0 = 1.5e3
 h1 = 1.5e3
-L0 = 2e3
-L1 = 1e4
+L0 = 4e4
+L1 = 4e4
 rho0 = 1000.
+
+h0, h1 = h0/2., h1/2.
 
 # Assuming waves generated have a frequency near N, the horizontal scale is...
 L_N0 = 2*np.pi*U0/N1
