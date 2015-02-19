@@ -41,8 +41,8 @@ zlims = {4976: {29: (-1600, -200),
 hpids_76 = np.array([29, 30, 31, 32])
 hpids_77 = np.array([24, 25, 26, 27])
 
-
-# Detrend degre
+rho0 = 1025.
+# Detrend degree
 deg = 2
 
 plt.figure()
@@ -62,15 +62,30 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         u = pfl.U[useef]
         v = pfl.V[useef]
         w = pfl.Ww[use]
+        b = pfl.b[use]
 
         w = np.interp(tef, t, w)
+        b = np.interp(tef, t, b)
 
         u = utils.nan_detrend(z, u, deg)
         v = utils.nan_detrend(z, v, deg)
 
+        DT = np.max(tef) - np.min(tef)
+
         print("Float {}. hpid {}.".format(pfl.floatID, pfl.hpid))
-        print(1025.*sp.integrate.trapz(w*u, z)/(z[0]-z[-1]))
-        print(1025.*sp.integrate.trapz(w*v, z)/(z[0]-z[-1]))
+
+        uwbar = rho0*sp.integrate.trapz(w*u, tef)/DT
+        vwbar = rho0*sp.integrate.trapz(w*v, tef)/DT
+
+        tau = np.sqrt(uwbar**2 + vwbar**2)
+
+        kinetic = 0.5*rho0*sp.integrate.trapz(u**2 + v**2 + w**2, tef)/DT
+        potential = 0.5*rho0*sp.integrate.trapz(b**2, tef)/DT
+        E = kinetic + potential
+
+        print("Reynolds stress: {:1.2f} N m-2".format(tau))
+        print("Components: ({:1.2f}, {:1.2f}) N m-2".format(uwbar, vwbar))
+        print("Energy density: {:1.2f} J m-3".format(E))
 
 #        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
 
