@@ -652,15 +652,15 @@ pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
 params = far.default_params
 
-#def U_const(z):
-#    return 0.
-#
-#params['Ufunc'] = U_const
+def U_const(z):
+    return 0.4
 
-lx = -13236.1
-ly = -13000.1
-lz = -13000
-phase_0 = 5.5
+params['Ufunc'] = U_const
+
+lx = -10000.
+ly = -10000.
+lz = -10000.
+phase_0 = 5.
 
 params['z_0'] = -1520
 
@@ -708,7 +708,7 @@ axs[4].set_xlabel('$x$ (m)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
 plt.ylim(X.z_0, 0)
 
-#pf.my_savefig(fig, 'model_data_pfl26', 'comparison', sdir, fsize='double_col')
+pf.my_savefig(fig, 'model_data_pfl26', 'comparison', sdir, fsize='double_col')
 
 k = X.k
 l = X.l
@@ -749,14 +749,16 @@ rho0 = 1025.
 
 E = 0.5*rho0*(w_0/np.cos(phip))**2
 
-Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
+#Fv = 0.5*rho0*U*m/k*h0**2*(U**2*k**2 - f**2)
 
 ##wphi = phi_0**2 *
 
 Fz = E*cgz
+Fv = Fz*k/om
 print("cgz", cgz)
 print("E", E)
 print("Fz", Fz)
+print("Fv", Fv)
 
 # %% EXTRAS
 # Domain
@@ -816,6 +818,7 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)): #
 
         axs[i].plot(r[:idx, 0], r[:idx, 2], 'k--', linewidth=3)
         axs[i].plot(r[idx, 0], r[idx, 2], 'yo', linewidth=3)
+        plt.setp(axs[i].xaxis.get_majorticklabels(), rotation=60)
 
 
     C[0].set_clim(-1e2*(X.u_0+U), 1e2*(X.u_0+U))
@@ -823,8 +826,9 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)): #
     C[2].set_clim(-1e2*X.w_0, 1e2*X.w_0)
     C[3].set_clim(-1e4*X.b_0, 1e4*X.b_0)
 
-#    pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir)
-#    plt.close()
+    pf.my_savefig(fig, 'model_contour', 't{:1.0f}'.format(j), sdir,
+                  fsize='double_col')
+    plt.close()
 
 
 # %%
