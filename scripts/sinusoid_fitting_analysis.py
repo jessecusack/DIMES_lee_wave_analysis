@@ -657,12 +657,12 @@ params = far.default_params
 #
 #params['Ufunc'] = U_const
 
-lx = -2000.
-ly = -2000.
-lz = -2000.
-phase_0 = 0.
+lx = -13236.1
+ly = -13000.1
+lz = -13000
+phase_0 = 5.5
 
-params['z_0'] = -1550
+params['z_0'] = -1520
 
 X = far.model_verbose(lx, ly, lz, phase_0, params)
 X.u[:, 0] -= X.U
@@ -1015,3 +1015,174 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
         print("Float {}. hpid {:}.".format(pfl.floatID, pfl.hpid))
         print("X = {:g}, Z = {:g}, phase = {:1.1f}".format(*popt1))
+
+# %% EDIT TO ABOVE FITTING CODE:
+
+def w_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+    f = gsw.f(pfl.lat_start)
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    w = gw.w(dist, 0., depth, time, phi_0, k, l, m, om, N, phase_0=phase_0)
+
+    return w - W
+
+
+def u_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+    f = gsw.f(-57.5)
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    u = gw.u(dist, 0., depth, time, phi_0, k, l, m, om, phase_0=phase_0)
+
+    return u - U
+
+
+def v_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+    f = gsw.f(-57.5)
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    v = gw.v(dist, 0., depth, time, phi_0, k, l, m, om, phase_0=phase_0)
+
+    return v - V
+
+
+def b_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+    f = gsw.f(pfl.lat_start)
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    b = gw.b(dist, 0., depth, time, phi_0, k, l, m, om, N, phase_0=phase_0)
+
+    resid = b - B
+
+    return 250.*resid
+
+
+def full_model(params, data):
+    return np.hstack((w_model(params, data),
+                      u_model(params, data),
+                      v_model(params, data),
+                      b_model(params, data)))
+
+
+# Previously this looked like E76.get_timeseries([31, 32], ) etc. and the below
+# bits of code were uncommented.
+
+time, depth = E77.get_timeseries(26, 'z')
+__, dist = E77.get_timeseries(26, 'dist_ctd')
+timeef, U = E77.get_timeseries(26, 'U')
+__, V = E77.get_timeseries(26, 'V')
+__, W = E77.get_timeseries(26, 'Ww')
+__, B = E77.get_timeseries(26, 'b')
+__, N2 = E77.get_timeseries(26, 'N2_ref')
+
+#t_split = E76.get_profiles(31).UTC_end
+
+nope = depth > -600.
+
+time = time[~nope]
+dist = dist[~nope]
+depth = depth[~nope]
+W = W[~nope]
+B = B[~nope]
+
+N = np.nanmean(np.sqrt(N2))
+
+Unope = np.isnan(U)
+
+timeef = timeef[~Unope]
+U = U[~Unope]
+V = V[~Unope]
+
+U = np.interp(time, timeef, U)
+V = np.interp(time, timeef, V)
+
+#U[time > t_split] = utils.nan_detrend(depth[time > t_split], U[time > t_split], 2)
+#U[time < t_split] = utils.nan_detrend(depth[time < t_split], U[time < t_split], 2)
+#U[U > 0.3] = 0.
+#
+#V[time > t_split] = utils.nan_detrend(depth[time > t_split], V[time > t_split], 2)
+#V[time < t_split] = utils.nan_detrend(depth[time < t_split], V[time < t_split], 2)
+
+U = utils.nan_detrend(depth, U, 2)
+V = utils.nan_detrend(depth, V, 2)
+
+time *= 60.*60.*24
+dist *= 1000.
+time -= np.min(time)
+dist -= np.min(dist)
+
+data = [time, dist, depth, U, V, W, B, N]
+
+
+L = 4000
+popt = []
+
+for i in xrange(L):
+
+    print(i)
+
+    x0 = np.hstack((8e3*np.random.randn(3), 1 + 0.5*np.random.randn()))
+    popt1, __, info, __, __ = op.leastsq(full_model, x0=x0, args=(data),
+                                         full_output=True)
+
+    popt.append(popt1)
+
+popt = np.asarray(popt)
+
+fig, axs = plt.subplots(1, 3, figsize=(10, 6))
+axs[0].hist(popt[:,0], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8);
+axs[1].hist(popt[:,1], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8);
+axs[2].hist(popt[:,2], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8);
+
+
+#popt1 = [-2000., -2000., -2000., 0.]
+
+#fig, axs = plt.subplots(4, 1)
+#axs[0].plot(time, U, time, U + u_model(popt1, data))
+#axs[1].plot(time, V, time, V + v_model(popt1, data))
+#axs[2].plot(time, W, time, W + w_model(popt1, data))
+#axs[3].plot(time, 250.*B, time, 250*B + b_model(popt1, data))
+#
+#fig, axs = plt.subplots(1, 4, sharey=True)
+#axs[0].plot(U, depth, U + u_model(popt1, data), depth)
+#axs[1].plot(V, depth, V + v_model(popt1, data), depth)
+#axs[2].plot(W, depth, W + w_model(popt1, data), depth)
+#axs[3].plot(250.*B, depth, 250*B + b_model(popt1, data), depth)
