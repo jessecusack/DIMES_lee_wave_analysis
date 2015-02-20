@@ -76,11 +76,13 @@ def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2):
     return epsilon, kappa
 
 
-def w_scales_float_experimental(Float):
+def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2):
 
-    w = Float.r_Ww
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+
+    w = Float.r_Ww[:, idxs]
     z = Float.r_z[:, 0]
-    N2 = Float.r_N2_ref
+    N2 = Float.r_N2_ref[:, idxs]
 
     dz = z[0] - z[1]
 
@@ -88,7 +90,7 @@ def w_scales_float_experimental(Float):
     kappa = np.zeros_like(w)
 
     for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row, dz)
+        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row, dz, c, eff)
 
     return epsilon, kappa
 
@@ -98,15 +100,18 @@ def w_scales_float_experimental(Float):
 
 for Float in [E76, E77]:
 
-    bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
-    epsilon, kappa = fs.w_scales_float(Float)
+    hpids = np.arange(1, 150)
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-    Z = Float.r_z.flatten()
+    bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
+    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=0.3)
+
+    Z = (Float.r_z[:, idxs]).flatten()
 
     use = (Z < -100) & (Z > -1400)
 
     Z = Z[use]
-    X = Float.r_dist_ctd.flatten()[use]
+    X = (Float.r_dist_ctd[:, idxs]).flatten()[use]
     LOG_EPS = (np.log10(epsilon)).flatten()[use]
     LOG_KAP = (np.log10(kappa)).flatten()[use]
 
@@ -122,7 +127,7 @@ for Float in [E76, E77]:
     plt.xlabel('Distance (km)')
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir)
+    pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir, fsize='double_col')
 
     ##
 
@@ -136,7 +141,7 @@ for Float in [E76, E77]:
     plt.xlabel('Distance (km)')
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'kappa_lem', sdir)
+    pf.my_savefig(fig, Float.floatID, 'kappa_lem', sdir, fsize='double_col')
 
     __, d_ef = Float.get_timeseries(np.arange(1, 600), 'dist_ef')
     __, d_ctd = Float.get_timeseries(np.arange(1, 600), 'dist_ctd')
@@ -160,7 +165,7 @@ for Float in [E76, E77]:
     plt.xlabel('Distance (km)')
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'u_rel', sdir)
+    pf.my_savefig(fig, Float.floatID, 'u_rel', sdir, fsize='double_col')
 
     fig = plt.figure(figsize=(10, 6))
     plt.scatter(d_ef, zef, s=5., c=v, edgecolor='none', cmap=plt.get_cmap('bwr'))
@@ -172,7 +177,7 @@ for Float in [E76, E77]:
     plt.xlabel('Distance (km)')
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'v_rel', sdir)
+    pf.my_savefig(fig, Float.floatID, 'v_rel', sdir, fsize='double_col')
 
     fig = plt.figure(figsize=(10, 6))
     plt.scatter(d_ctd, z, s=5., c=w, edgecolor='none', cmap=plt.get_cmap('bwr'))
@@ -184,7 +189,7 @@ for Float in [E76, E77]:
     plt.xlabel('Distance (km)')
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'w', sdir)
+    pf.my_savefig(fig, Float.floatID, 'w', sdir, fsize='double_col')
 
     fig = plt.figure(figsize=(10, 6))
     plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('bwr'))
@@ -196,7 +201,7 @@ for Float in [E76, E77]:
     plt.xlabel('Distance (km)')
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir)
+    pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir, fsize='double_col')
 
 # %% Using finescale parameterisation
 
