@@ -12,7 +12,9 @@ import glob
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import scipy.signal as sig
+from scipy.integrate import trapz
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
@@ -104,7 +106,15 @@ for Float in [E76, E77]:
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
     bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
-    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=0.3)
+    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=0.2)
+
+    ieps = 0.*np.zeros_like(idxs)
+
+    iZ = Float.r_z[:, 0]
+    iuse = (iZ < -100) & (iZ > -1400)
+
+    for i in xrange(len(idxs)):
+        ieps[i] = 1025.*trapz(epsilon[iuse, i], iZ[iuse])
 
     Z = (Float.r_z[:, idxs]).flatten()
 
@@ -117,21 +127,34 @@ for Float in [E76, E77]:
 
     # Plotting #
 
-    fig = plt.figure(figsize=(10, 6))
-    plt.scatter(X, Z, s=5, c=LOG_EPS, edgecolor='none', cmap=plt.get_cmap('bwr'))
-    C = plt.colorbar(extend='both')
+    fig = plt.figure(figsize=(10, 4))
+    gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
+    ax0 = plt.subplot(gs[1])
+    ax1 = plt.subplot(gs[0])
+
+    ax1.plot(Float.dist[idxs], 1000.*ieps, color='black')
+    ax1.set_ylabel('$P$ (mW m$^{-2}$)')
+    ax1.yaxis.set_ticks(np.array([0., 40.]))
+
+    sc = ax0.scatter(X, Z, s=5, c=LOG_EPS, edgecolor='none',
+                     cmap=plt.get_cmap('bwr'), vmin=-11., vmax=-7)
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
+    C = fig.colorbar(sc, cax=cbar_ax, extend='both')
     C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
-    plt.clim(-11., -7.)
-    plt.xlim(np.min(X), np.max(X))
-    plt.ylim(-5000., 0.)
-    plt.xlabel('Distance (km)')
-    plt.ylabel('$z$ (m)')
-    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+
+#    plt.clim(-11., -7.)
+    ax0.set_xlim(np.min(X), np.max(X))
+    ax0.set_ylim(-5000., 0.)
+    ax0.set_xlabel('Distance (km)')
+    ax0.set_ylabel('$z$ (m)')
+    ax0.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
     pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir, fsize='double_col')
 
     ##
 
-    fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 4))
     plt.scatter(X, Z, s=5, c=LOG_KAP, edgecolor='none', cmap=plt.get_cmap('bwr'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$\log_{10}(\kappa_\rho)$ (m$^2$ s$^{-1}$)')
@@ -155,7 +178,7 @@ for Float in [E76, E77]:
     u[np.abs(u) > 1.5] = np.NaN
     v[np.abs(v) > 1.5] = np.NaN
 
-    fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 4))
     plt.scatter(d_ef, zef, s=5., c=u, edgecolor='none', cmap=plt.get_cmap('bwr'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$u$ (m s$^{-1}$)')
@@ -167,7 +190,7 @@ for Float in [E76, E77]:
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
     pf.my_savefig(fig, Float.floatID, 'u_rel', sdir, fsize='double_col')
 
-    fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 4))
     plt.scatter(d_ef, zef, s=5., c=v, edgecolor='none', cmap=plt.get_cmap('bwr'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$v$ (m s$^{-1}$)')
@@ -179,7 +202,7 @@ for Float in [E76, E77]:
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
     pf.my_savefig(fig, Float.floatID, 'v_rel', sdir, fsize='double_col')
 
-    fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 4))
     plt.scatter(d_ctd, z, s=5., c=w, edgecolor='none', cmap=plt.get_cmap('bwr'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$w$ (m s$^{-1}$)')
@@ -191,7 +214,7 @@ for Float in [E76, E77]:
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
     pf.my_savefig(fig, Float.floatID, 'w', sdir, fsize='double_col')
 
-    fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 4))
     plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('bwr'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$N$ (rad s$^{-1}$)')
