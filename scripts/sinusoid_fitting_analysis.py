@@ -657,12 +657,13 @@ def U_const(z):
 
 params['Ufunc'] = U_const
 
-lx = -10000.
-ly = -10000.
-lz = -10000.
-phase_0 = 5.
+lx = -14000.
+ly = -14000.
+lz = -14000.
+phase_0 = 1.
 
 params['z_0'] = -1520
+params['N'] = 2.0e-3
 
 X = far.model_verbose(lx, ly, lz, phase_0, params)
 X.u[:, 0] -= X.U
@@ -856,6 +857,7 @@ vf = utils.nan_detrend(zf, vf, 2)
 
 params = far.default_params
 params['z_0'] = -1600
+params['N'] = 2e-3
 
 model = far.model_leastsq
 
@@ -1106,13 +1108,13 @@ def full_model(params, data):
 # Previously this looked like E76.get_timeseries([31, 32], ) etc. and the below
 # bits of code were uncommented.
 
-time, depth = E77.get_timeseries(26, 'z')
-__, dist = E77.get_timeseries(26, 'dist_ctd')
-timeef, U = E77.get_timeseries(26, 'U')
-__, V = E77.get_timeseries(26, 'V')
-__, W = E77.get_timeseries(26, 'Ww')
-__, B = E77.get_timeseries(26, 'b')
-__, N2 = E77.get_timeseries(26, 'N2_ref')
+time, depth = E76.get_timeseries(31, 'z')
+__, dist = E76.get_timeseries(31, 'dist_ctd')
+timeef, U = E76.get_timeseries(31, 'U')
+__, V = E76.get_timeseries(31, 'V')
+__, W = E76.get_timeseries(31, 'Ww')
+__, B = E76.get_timeseries(31, 'b')
+__, N2 = E76.get_timeseries(31, 'N2_ref')
 
 #t_split = E76.get_profiles(31).UTC_end
 
@@ -1176,9 +1178,9 @@ axs[1].hist(popt[:,1], bins=np.arange(-40000, 40000, 1000),
 axs[2].hist(popt[:,2], bins=np.arange(-40000, 40000, 1000),
             normed=False, log=False, alpha=0.8);
 
-
+#
 #popt1 = [-2000., -2000., -2000., 0.]
-
+#
 #fig, axs = plt.subplots(4, 1)
 #axs[0].plot(time, U, time, U + u_model(popt1, data))
 #axs[1].plot(time, V, time, V + v_model(popt1, data))
