@@ -41,7 +41,7 @@ def chunk(x, x_range, y):
 
 
 def window(x, y, width, overlap=0., x_0=None, expansion=None, cap_left=True,
-           cap_right=True):
+           cap_right=True, ret_x=True):
     """Break arrays x and y into slices.
 
     Parameters
@@ -127,7 +127,10 @@ def window(x, y, width, overlap=0., x_0=None, expansion=None, cap_left=True,
 
     bins = np.transpose(np.vstack((left, right)))
 
-    vals = np.asarray([chunk(x, b, y) for b in bins])
+    if ret_x:
+        vals = np.asarray([chunk(x, b, y) for b in bins])
+    else:
+        vals = np.asarray([chunk(x, b, y)[1] for b in bins])
 
     if not_monotonic:
         vals = np.flipud(vals)
