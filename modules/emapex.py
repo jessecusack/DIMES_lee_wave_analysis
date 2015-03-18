@@ -859,7 +859,7 @@ def what_floats_are_in_here(fname):
     return np.unique(fs[~np.isnan(fs)])
 
 
-def find_file(floatID, data_dir='/noc/users/jc3e13/data/EM-APEX/'):
+def find_file(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX'):
     """Locate the file that contains data for the given ID number."""
 
     file_paths = glob.glob(os.path.join(data_dir, 'allprofs*.mat'))
@@ -872,7 +872,8 @@ def find_file(floatID, data_dir='/noc/users/jc3e13/data/EM-APEX/'):
     raise ValueError("Float not found in database, check ID.")
 
 
-def load(floatID, data_dir='/noc/users/jc3e13/data/EM-APEX/', apply_w=True,
+def load(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX',
+         pp_dir='/noc/users/jc3e13/storage/processed', apply_w=True,
          apply_strain=True, apply_iso=True):
     """Given an ID number this function will attempt to load data. Use the
     optional boolean arguments to turn off additional processing if not
@@ -885,14 +886,14 @@ def load(floatID, data_dir='/noc/users/jc3e13/data/EM-APEX/', apply_w=True,
 
     if apply_w:
         data_file = "{:g}_fix_p0k0M_fit_info.p".format(floatID)
-        Float.apply_w_model(os.path.join(data_dir, data_file))
+        Float.apply_w_model(os.path.join(pp_dir, data_file))
 
     if apply_strain:
         data_file = "{:g}_N2_ref_300dbar.p".format(floatID)
-        Float.apply_strain(os.path.join(data_dir, data_file))
+        Float.apply_strain(os.path.join(pp_dir, data_file))
 
     if apply_iso:
         data_file = "srho_{:g}_100mbin.p".format(floatID)
-        Float.apply_isopycnal_displacement(os.path.join(data_dir, data_file))
+        Float.apply_isopycnal_displacement(os.path.join(pp_dir, data_file))
 
     return Float
