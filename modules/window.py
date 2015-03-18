@@ -96,7 +96,7 @@ def window(x, y, width, overlap=0., x_0=None, expansion=None, cap_left=True,
         y = utils.flip_cols(y)
 
     if x_0 is not None:
-        idxs = ~np.isnan(x) & (x > x_0)
+        idxs = ~np.isnan(x) & (x >= x_0)
     else:
         idxs = ~np.isnan(x)
 
