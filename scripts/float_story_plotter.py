@@ -180,7 +180,7 @@ for Float in [E76, E77]:
 # %% Zoomed in variables near the wave.
 
 hpids = np.arange(10, 50)
-bathy_file = '../../data/sandwell_bathymetry/topo_17.1.img'
+bathy_file = '/noc/users/jc3e13/storage/smith_sandwell/topo_17.1.img'
 vars = ['Ww', 'U_abs', 'V_abs']
 zvars = ['z', 'zef', 'zef']
 dvars = ['dist_ctd', 'dist_ef', 'dist_ef']

@@ -52,7 +52,7 @@ def my_savefig(fid, fname):
 bwr = plt.get_cmap('bwr')
 E76_hpids = np.arange(20, 40) # np.arange(31, 33)
 E77_hpids = np.arange(15, 35) # np.arange(26, 28)
-bathy_file = '../../data/sandwell_bathymetry/topo_17.1.img'
+bathy_file = '/noc/users/jc3e13/storage/smith_sandwell/topo_17.1.img'
 vars = ['Ww']#, 'U_abs', 'V_abs']
 zvars = ['z']#, 'zef', 'zef']
 dvars = ['dist_ctd']#, 'dist_ef', 'dist_ef']

@@ -36,7 +36,7 @@ except NameError:
 # %% Script params.
 
 # Bathymetry file path.
-bf = os.path.abspath(glob.glob('../../data/sandwell_bathymetry/topo_*.img')[0])
+bf = os.path.abspath(glob.glob('/noc/users/jc3e13/storage/smith_sandwell/topo_*.img')[0])
 # Figure save path.
 sdir = '../figures/parameter_space_explorer'
 if not os.path.exists(sdir):

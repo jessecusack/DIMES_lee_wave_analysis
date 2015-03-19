@@ -25,7 +25,7 @@ import sandwell
 
 
 # Fine all float IDs
-files = glob('../../data/EM-APEX/allprof*.mat')
+files = glob('/noc/users/jc3e13/storage/DIMES/EM-APEX/allprof*.mat')
 FIDs = np.array([])  # Stores all float IDs.
 in_file = []
 var_keys = ['flid', 'lon_gps', 'lat_gps', 'utc_dep']
