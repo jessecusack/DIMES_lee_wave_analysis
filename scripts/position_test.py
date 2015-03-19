@@ -17,7 +17,6 @@ lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
-import utils
 import emapex
 
 try:
@@ -28,27 +27,25 @@ except NameError:
 
 # %% want an odd-even pair
 Float = E76
-pfls, idxs = Float.get_profiles(np.array([61, 62]), ret_idxs=True)
+pfls, idxs = Float.get_profiles(np.array([305, 306]), ret_idxs=True)
 
-plt.figure()
-plt.plot(Float.dist_ctd[:, idxs], Float.z[:, idxs])
-plt.xlabel('Distance (km)')
-plt.ylabel('z (m)')
+#plt.figure()
+#plt.plot(Float.dist_ctd[:, idxs], Float.z[:, idxs])
+#plt.xlabel('Distance (km)')
+#plt.ylabel('z (m)')
 
 z = Float.zef[:, idxs]
 U = Float.U[:, idxs]
 V = Float.V[:, idxs]
+Ua = Float.U_abs[:, idxs]
+Va = Float.V_abs[:, idxs]
 T = Float.UTCef[:, idxs]*86400
 
-fig, axs = plt.subplots(1, 2, sharey=True)
-axs[0].plot(U, z)
-axs[0].set_ylabel('z (m)')
-axs[0].set_xlabel('U (m/s)')
-axs[1].plot(V, z)
-axs[1].set_xlabel('V (m/s)')
-
+zf = z.flatten(order='F')
 Uf = U.flatten(order='F')
 Vf = V.flatten(order='F')
+Uaf = Ua.flatten(order='F')
+Vaf = Va.flatten(order='F')
 Tf = T.flatten(order='F')
 dT = np.nanmax(Tf) - np.nanmin(Tf)
 
@@ -83,10 +80,24 @@ V_abs = Vf[~nans] + Y/dT - trapz(Vf[~nans], Tf[~nans], axis=0)/dT
 x2 = cumtrapz(U_abs, Tf[~nans], axis=0, initial=0.)
 y2 = cumtrapz(V_abs, Tf[~nans], axis=0, initial=0.)
 
+x3 = cumtrapz(Uaf[~nans], Tf[~nans], axis=0, initial=0.)
+y3 = cumtrapz(Vaf[~nans], Tf[~nans], axis=0, initial=0.)
+
+fig, axs = plt.subplots(1, 2, sharey=True)
+axs[0].plot(U, z)
+axs[0].set_ylabel('z (m)')
+axs[0].set_xlabel('U (m/s)')
+axs[1].plot(V, z)
+axs[1].set_xlabel('V (m/s)')
+
+axs[0].plot(U_abs, zf[~nans], 'k--')
+axs[1].plot(V_abs, zf[~nans], 'k--')
+
 plt.figure()
 #plt.plot(lons, lats, 'k--')
-plt.plot(x1, y1, 'b')
+plt.plot(x1, y1, 'y')
 plt.plot(x2, y2, 'r')
+plt.plot(x3, y3, 'k--')
 plt.plot([X, X], [0., Y], 'k')
 plt.plot([0., X], [0., 0.], 'k')
 plt.plot([0., X], [0., Y], 'k')
