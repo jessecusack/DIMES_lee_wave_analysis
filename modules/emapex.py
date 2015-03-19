@@ -310,64 +310,8 @@ class EMApexFloat(object):
         self.U = self.__fill_missing(self.U)
         self.V = self.__fill_missing(self.V)
 
-        print("Estimating absolute velocity.")
-        # Absolute velocity defined as relative velocity plus mean velocity
-        # minus depth integrated relative velocity. It attempts to use the
-        # profile pair integral of velocity, but if it can't then it will use
-        # the single profile approximation.
-        self.U_abs = self.U + self.sub_surf_u
-        self.V_abs = self.V + self.sub_surf_v
-
-        didxs = up_down_indices(self.hpid, 'down')
-        successful_pairs = []
-        nan_pairs = []
-
-        for idx in didxs:
-            # Check that a down up profile pair exists, if not, then skip.
-            if (self.hpid[idx] + 1) != self.hpid[idx+1]:
-                print('  No pair, continue.')
-                continue
-
-            hpids = self.hpid[[idx, idx+1]]
-            t, U = self.get_timeseries(hpids, 'U')
-            __, V = self.get_timeseries(hpids, 'V')
-
-            unans = np.isnan(U) | np.isnan(t)
-            vnans = np.isnan(V) | np.isnan(t)
-
-            # If all values are NaN then skip.
-            if (np.sum(unans) == unans.size) | (np.sum(vnans) == vnans.size):
-                print("  hpid pair {}, {} all NaNs.".format(self.hpid[idx],
-                      self.hpid[idx+1]))
-                nan_pairs.append(idx)
-                nan_pairs.append(idx+1)
-                continue
-
-            dt = np.nanmax(t) - np.nanmin(t)
-
-            self.U_abs[:, [idx, idx+1]] -= trapz(U[~unans], t[~unans])/dt
-            self.V_abs[:, [idx, idx+1]] -= trapz(U[~unans], t[~unans])/dt
-
-            successful_pairs.append(idx)
-            successful_pairs.append(idx+1)
-            print("  hpid pair {}, {}.".format(self.hpid[idx],
-                  self.hpid[idx+1]))
-
-        failed_idxs = list(set(np.arange(len(self.hpid))) -
-                           set(successful_pairs) -
-                           set(nan_pairs))
-        print("Pair integration failed for the following hpids:\n"
-              "{}".format(self.hpid[failed_idxs]))
-
-        for i in failed_idxs:
-            unans = np.isnan(self.U[:, i]) | np.isnan(self.UTCef[:, i])
-            vnans = np.isnan(self.V[:, i]) | np.isnan(self.UTCef[:, i])
-            self.U_abs[~unans, i] -= \
-                trapz(self.U[~unans, i], self.UTCef[~unans, i]*86400.) \
-                / self.profile_dt[i]
-            self.V_abs[~vnans, i] -= \
-                trapz(self.V[~vnans, i], self.UTCef[~vnans, i]*86400.) \
-                / self.profile_dt[i]
+        # Absolute velocity
+        self.calculate_absolute_velocity()
 
         print("Calculating thermodynamic variables.")
         # Derive some important thermodynamics variables.
@@ -418,6 +362,74 @@ class EMApexFloat(object):
         self.ppos = self.__regrid('ctd_ca', 'ctd', self.ppos_ca)
 
         self.update_profiles()
+
+    def calculate_absolute_velocity(self):
+
+        print("Estimating absolute velocity.")
+        # Absolute velocity defined as relative velocity plus mean velocity
+        # minus depth integrated relative velocity. It attempts to use the
+        # profile pair integral of velocity, but if it can't then it will use
+        # the single profile approximation.
+        self.U_abs = self.U.copy()
+        self.V_abs = self.V.copy()
+
+        didxs = up_down_indices(self.hpid, 'down')
+        successful_pairs = []
+        nan_pairs = []
+
+        for idx in didxs:
+            # Check that a down up profile pair exists, if not, then skip.
+            if (self.hpid[idx] + 1) != self.hpid[idx+1]:
+                print('  No pair, continue.')
+                continue
+
+            hpids = self.hpid[[idx, idx+1]]
+            t, U = self.get_timeseries(hpids, 'U')
+            __, V = self.get_timeseries(hpids, 'V')
+
+            nans = np.isnan(U) | np.isnan(V) | np.isnan(t)
+
+            # If all values are NaN then skip.
+            if np.sum(nans) == nans.size:
+                print("  hpid pair {}, {} all NaNs.".format(self.hpid[idx],
+                      self.hpid[idx+1]))
+                nan_pairs.append(idx)
+                nan_pairs.append(idx+1)
+                continue
+
+            # A half profile pair is bounded by a box defined by the lon-lat
+            # positions at its corners.
+            lon1 = self.lon_start[idx]
+            lon2 = self.lon_end[idx+1]
+            lat1 = self.lat_start[idx]
+            lat2 = self.lat_end[idx+1]
+
+            fX = -1 if lon1 > lon2 else 1.
+            fY = -1 if lat1 > lat2 else 1.
+
+            X = 1000.*fX*utils.lldist((lon1, lon2), (lat1, lat1))
+            Y = 1000.*fY*utils.lldist((lon1, lon1), (lat1, lat2))
+
+            # Convert to seconds, find time difference.
+            t *= 86400.
+            dt = np.nanmax(t) - np.nanmin(t)
+
+            idxs = np.array([idx, idx+1])
+
+            # I use the += here because U_abs is initialised as a copy of U.
+            self.U_abs[:, idxs] += X/dt - trapz(U[~nans], t[~nans], axis=0)/dt
+            self.V_abs[:, idxs] += Y/dt - trapz(V[~nans], t[~nans], axis=0)/dt
+
+            successful_pairs.append(idx)
+            successful_pairs.append(idx+1)
+            print("  hpid pair {}, {}.".format(self.hpid[idx],
+                  self.hpid[idx+1]))
+
+        failed_idxs = list(set(np.arange(len(self.hpid))) -
+                           set(successful_pairs) -
+                           set(nan_pairs))
+        print("Absolute velocity calculation failed for the following hpids:\n"
+              "{}".format(self.hpid[failed_idxs]))
 
     def generate_regular_grids(self, zmin=-1400., dz=5.):
 
