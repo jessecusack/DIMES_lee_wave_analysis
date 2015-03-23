@@ -11,7 +11,7 @@ data.
 import numpy as np
 import scipy.io as io
 from scipy.interpolate import griddata
-from scipy.integrate import trapz
+from scipy.integrate import trapz, cumtrapz
 import gsw
 import utils
 import pickle
@@ -365,13 +365,17 @@ class EMApexFloat(object):
 
     def calculate_absolute_velocity(self):
 
-        print("Estimating absolute velocity.")
+        print("Estimating absolute velocity and subsurface position.")
         # Absolute velocity defined as relative velocity plus mean velocity
         # minus depth integrated relative velocity. It attempts to use the
         # profile pair integral of velocity, but if it can't then it will use
         # the single profile approximation.
         self.U_abs = self.U.copy()
         self.V_abs = self.V.copy()
+        self.x_ctd = np.NaN*self.dist_ctd.copy()
+        self.y_ctd = np.NaN*self.dist_ctd.copy()
+        self.x_ef = np.NaN*self.dist_ef.copy()
+        self.y_ef = np.NaN*self.dist_ef.copy()
 
         didxs = up_down_indices(self.hpid, 'down')
         successful_pairs = []
@@ -407,23 +411,40 @@ class EMApexFloat(object):
             fX = -1 if lon1 > lon2 else 1.
             fY = -1 if lat1 > lat2 else 1.
 
+            # Convert to m.
             X = 1000.*fX*utils.lldist((lon1, lon2), (lat1, lat1))
             Y = 1000.*fY*utils.lldist((lon1, lon1), (lat1, lat2))
 
             # Convert to seconds, find time difference.
-            t *= 86400.
-            dt = np.nanmax(t) - np.nanmin(t)
+            ts = 86400.*t
+            dt = np.nanmax(ts) - np.nanmin(ts)
 
             idxs = np.array([idx, idx+1])
 
             # I use the += here because U_abs is initialised as a copy of U.
-            self.U_abs[:, idxs] += X/dt - trapz(U[~nans], t[~nans], axis=0)/dt
-            self.V_abs[:, idxs] += Y/dt - trapz(V[~nans], t[~nans], axis=0)/dt
+            self.U_abs[:, idxs] += X/dt - trapz(U[~nans], ts[~nans], axis=0)/dt
+            self.V_abs[:, idxs] += Y/dt - trapz(V[~nans], ts[~nans], axis=0)/dt
+
+            # This bit is for working out the distances.
+            U_abs = U + X/dt - trapz(U[~nans], ts[~nans], axis=0)/dt
+            V_abs = V + Y/dt - trapz(V[~nans], ts[~nans], axis=0)/dt
+
+            x = cumtrapz(U_abs[~nans], ts[~nans], initial=0.)
+            y = cumtrapz(V_abs[~nans], ts[~nans], initial=0.)
+
+            for idx in idxs:
+                self.x_ef[:, idx] = utils.nan_interp(self.UTCef[:, idx],
+                                                     t[~nans], x)
+                self.y_ef[:, idx] = utils.nan_interp(self.UTCef[:, idx],
+                                                     t[~nans], y)
 
             successful_pairs.append(idx)
             successful_pairs.append(idx+1)
             print("  hpid pair {}, {}.".format(self.hpid[idx],
                   self.hpid[idx+1]))
+
+        self.x_ctd = self.__regrid('ef', 'ctd', self.x_ef)
+        self.y_ctd = self.__regrid('ef', 'ctd', self.y_ef)
 
         failed_idxs = list(set(np.arange(len(self.hpid))) -
                            set(successful_pairs) -
