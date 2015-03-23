@@ -26,6 +26,10 @@ except NameError:
     E76 = emapex.load(4976)
     E77 = emapex.load(4977)
 
+
+# %% Using the integrated model
+
+
 pfl26 = E77.get_profiles(26)
 
 zmax = -650.
@@ -80,3 +84,168 @@ plt.savefig('output.png')
 plt.figure()
 plt.plot(data_stack)
 plt.plot(far.model_pymc(zf, 5000., 15000, 8000, 0.))
+
+# %% Fitting to profiles
+
+
+def w_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N, f = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    w = gw.w(dist, 0., depth, time, phi_0, k, l, m, om, N, phase_0=phase_0)
+
+    return w - W
+
+
+def u_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N, f = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    u = gw.u(dist, 0., depth, time, phi_0, k, l, m, om, phase_0=phase_0)
+
+    return u - U
+
+
+def v_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N, f = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    v = gw.v(dist, 0., depth, time, phi_0, k, l, m, om, phase_0=phase_0)
+
+    return v - V
+
+
+def b_model(params, data):
+
+    X, Y, Z, phase_0 = params
+
+    time, dist, depth, U, V, W, B, N, f = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+
+    om = gw.omega(N, k, m, l, f)
+    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
+
+    b = gw.b(dist, 0., depth, time, phi_0, k, l, m, om, N, phase_0=phase_0)
+
+    resid = b - B
+
+    return 250.*resid
+
+
+def full_model(params, data):
+    return np.hstack((w_model(params, data),
+                      u_model(params, data),
+                      v_model(params, data),
+                      b_model(params, data)))
+
+
+# Previously this looked like E76.get_timeseries([31, 32], ) etc. and the below
+# bits of code were uncommented.
+
+time, depth = E76.get_timeseries([31, 32], 'z')
+__, dist = E76.get_timeseries([31, 32], 'dist_ctd')
+timeef, U = E76.get_timeseries([31, 32], 'U')
+__, V = E76.get_timeseries([31, 32], 'V')
+__, W = E76.get_timeseries([31, 32], 'Ww')
+__, B = E76.get_timeseries([31, 32], 'b')
+__, N2 = E76.get_timeseries([31, 32], 'N2_ref')
+
+t_split = E76.get_profiles(31).UTC_end
+
+nope = depth > -600.
+
+time = time[~nope]
+dist = dist[~nope]
+depth = depth[~nope]
+W = W[~nope]
+B = B[~nope]
+
+N = np.nanmean(np.sqrt(N2))
+f = gsw.f(-57.5)
+
+Unope = np.isnan(U)
+
+timeef = timeef[~Unope]
+U = U[~Unope]
+V = V[~Unope]
+
+U = np.interp(time, timeef, U)
+V = np.interp(time, timeef, V)
+
+U[time > t_split] = utils.nan_detrend(depth[time > t_split], U[time > t_split], 2)
+U[time < t_split] = utils.nan_detrend(depth[time < t_split], U[time < t_split], 2)
+U[U > 0.3] = 0.
+
+V[time > t_split] = utils.nan_detrend(depth[time > t_split], V[time > t_split], 2)
+V[time < t_split] = utils.nan_detrend(depth[time < t_split], V[time < t_split], 2)
+
+#U = utils.nan_detrend(depth, U, 2)
+#V = utils.nan_detrend(depth, V, 2)
+
+time *= 60.*60.*24
+dist *= 1000.
+time -= np.min(time)
+dist -= np.min(dist)
+
+data = [time, dist, depth, U, V, W, B, N, f]
+
+# Needs work
+def model():
+
+    # Priors.
+    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
+    X = pymc.Uniform('X', -4e4, 4e4, value=-2e3)
+    Y = pymc.Uniform('Y', -1e5, 1e5, value=-4e3)
+    Z = pymc.Uniform('Z', -2e4, 2e4, value=-2e3)
+    phase = pymc.Uniform('phase', 0., np.pi*2, value=0.)
+
+    @pymc.deterministic()
+    def wave_model(zf=zf, X=X, Y=Y, Z=Z, phase=phase):
+        return far.model_pymc(zf, X, Y, Z, phase)
+
+    # Likelihood
+    y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack, observed=True)
+
+    return locals()
+
+M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
+samples = 100000
+burn = 50000
+thin = 5
+M.sample(samples, burn, thin)
+pymc.Matplot.plot(M, common_scale=False)
+
+plt.figure()
+plt.plot(data_stack)
+plt.plot(far.model_pymc(zf, np.median(M.trace('X')[:]), np.median(M.trace('Y')[:]),
+                      np.median(M.trace('Z')[:])))

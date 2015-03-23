@@ -53,362 +53,6 @@ if not os.path.exists(sdir):
 # Universal figure font size.
 matplotlib.rc('font', **{'size': 9})
 
-# %% Spectral analysis
-
-def plane_wave(x, A, k, phase):
-    return A*np.cos((k*x + phase))
-
-E76_hpids = np.arange(27, 34)
-E77_hpids = np.arange(23, 30)
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-
-    for pfl in Float.get_profiles(hpids):
-
-        z = getattr(pfl, 'z')
-        Ww = getattr(pfl, 'Ww')
-
-        # Remove nans and the top 50 m.
-        nans = np.isnan(z) | np.isnan(Ww) | (z > -50)
-        z, Ww = z[~nans], Ww[~nans]
-
-        # Setting up the spectral analysis.
-        dz = np.abs(np.round(np.mean(np.diff(z))))
-        dk = 1./dz
-        iz = np.arange(np.min(z), np.max(z), dz)
-        idxs = np.argsort(z)
-        iWw = np.interp(iz, z[idxs], Ww[idxs])
-        diWw = sig.detrend(iWw)
-
-        # Doing the spectral analysis.
-        m, Pw = sig.welch(iWw, fs=dk, detrend='linear')
-
-        # Try fitting plane wave.
-        popt, __ = op.curve_fit(plane_wave, iz, iWw,
-                                p0=[0.1, 0.02, 0.])
-        mfit = popt[1]/(2.*np.pi)
-
-        plt.figure(figsize=(12, 6))
-
-        plt.subplot(1, 2, 1)
-        plt.plot(iWw, iz, plane_wave(iz, *popt), iz)
-        plt.xticks(rotation=45)
-        plt.xlabel('$W_w$ (m s$^{-1}$)')
-        plt.ylabel('$z$ (m)')
-        title = ("Float {}, profile {}\nm_fit {:1.1e} m$^{{-1}}$"
-                 "\nlambda_fit {:4.0f} m"
-                 "").format(Float.floatID, pfl.hpid[0], mfit, 1./mfit)
-        plt.title(title)
-
-        plt.subplot(1, 2, 2)
-        plt.loglog(m, Pw)
-        mmax = m[Pw.argmax()]
-        title = ("Float {}, profile {}\nm_max {:1.1e} m$^{{-1}}$"
-                 "\nlambda_max {:4.0f} m"
-                 "").format(Float.floatID, pfl.hpid, mmax, 1./mmax)
-        ylim = plt.ylim()
-        plt.plot(2*[mmax], ylim, 'r', 2*[mfit], ylim, 'g')
-        plt.title(title)
-        plt.xlabel('$m$ (m$^{-1}$)')
-
-
-# %%
-
-def plane_wave(x, A, k, phase):
-    return A*np.cos((k*x + phase))
-
-E76_hpids = np.arange(27, 34)
-E77_hpids = np.arange(23, 30)
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-
-    for pfl in Float.get_profiles(hpids):
-
-        z = getattr(pfl, 'z')
-        t = getattr(pfl, 'UTC')
-        t = 24.*60.*(t - np.nanmin(t))  # Convert to minutes.
-
-        Ww = getattr(pfl, 'Ww')
-        N2_ref = getattr(pfl, 'N2_ref')
-
-        nans = np.isnan(z) | np.isnan(t) | np.isnan(Ww) | np.isnan(N2_ref) | (z > -50)
-        z, t, Ww, N2_ref = z[~nans], t[~nans], Ww[~nans], N2_ref[~nans]
-
-        # Setting up the spectral analysis.
-        ts = 60.*t  # Convert to seconds.
-        dt = np.round(np.mean(np.diff(ts)))
-        fs = 1./dt
-        it = np.arange(np.min(ts), np.max(ts), dt)
-        iWw = np.interp(it, ts, Ww)
-        diWw = sig.detrend(iWw)
-
-        # Get an idea of the buoyancy frequency.
-        N_mean = np.mean(np.sqrt(N2_ref[z < -200]))/(2.*np.pi)
-        # The inertial frequency.
-        fcor = np.abs(gsw.f(-57.5))/(2.*np.pi)
-
-        # Perform the spectral analysis.
-        freqs, Pw = sig.welch(iWw, fs=fs, detrend='linear')
-
-        # Fit a curve.
-        popt, __ = op.curve_fit(plane_wave, it, diWw,
-                                p0=[0.1, 0.002, 0.])
-        omfit = popt[1]/(2.*np.pi)
-        period = 1/omfit/60.
-
-        plt.figure(figsize=(12, 6))
-
-        plt.subplot(1, 2, 1)
-        plt.plot(diWw, it, plane_wave(it, *popt), it)
-        plt.xticks(rotation=45)
-        plt.xlabel('$W_w$ (m s$^{-1}$)')
-        plt.ylabel('$t$ (s)')
-        title = ("Float {}, profile {}\nperiod {} min").format(Float.floatID, pfl.hpid[0], period)
-        plt.title(title)
-
-        plt.subplot(1, 2, 2)
-        plt.loglog(freqs, Pw)
-        ylim = plt.ylim()
-        plt.plot(2*[N_mean], ylim, 'r', 2*[fcor], ylim, 'r',  2*[omfit], ylim, 'g')
-        plt.title(title)
-        plt.xlabel('$f$ (s$^{-1}$)')
-        title = ("Float {}, profile {}").format(Float.floatID, pfl.hpid[0])
-
-# %% More complex fitting
-
-
-def plane_wave2(params, x):
-    A, k, m, om, phi = params
-    return A*np.cos(k*x[:, 0] + m*x[:, 1] + om*x[:, 2] + phi)
-
-
-def cost(params, data, func, y):
-    return (func(params, data) - y).flatten()
-
-res = []
-
-E76_hpids = np.arange(31, 33)  # np.arange(31, 33)
-E77_hpids = np.arange(26, 28)  # np.arange(26, 28)
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-
-    z = Float.z[:, idxs].flatten(order='F')
-    x = Float.dist_ctd[:, idxs].flatten(order='F')*1000.
-    t = Float.UTC[:, idxs].flatten(order='F')*86400.
-    t -= np.nanmin(t)
-    W = Float.Ww[:, idxs].flatten(order='F')
-
-    nans = np.isnan(z) | np.isnan(x) | np.isnan(t) | np.isnan(W) | (z > -200)
-    data = np.array([x[~nans], z[~nans], t[~nans]]).T
-    W = W[~nans]
-
-    x0 = [0.15, 0.004, 0.01, 0.0003, 0.]
-    fit = op.leastsq(cost, x0=x0, args=(data, plane_wave2, W))[0]
-    print(fit)
-    res.append(fit)
-
-    Wm = plane_wave2(fit, data)
-    Wm0 = plane_wave2(x0, data)
-
-    plt.figure()
-    plt.subplot(3, 1, 1)
-    plt.plot(data[:, 0], Wm, data[:, 0], W, data[:, 0], Wm0)
-    plt.subplot(3, 1, 2)
-    plt.plot(Wm, data[:, 1], W, data[:, 1], Wm0, data[:, 1])
-    plt.subplot(3, 1, 3)
-    plt.plot(data[:, 2], Wm, data[:, 2], W, data[:, 2], Wm0)
-
-
-# %%
-
-E76_hpids = np.arange(24, 27)  # np.arange(31, 33)
-E77_hpids = np.arange(20, 24)  # np.arange(26, 28)
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-    z = Float.z[:, idxs]
-    zef = Float.zef[:, idxs]
-    U = Float.U_abs[:, idxs]
-    N2 = Float.N2_ref[:, idxs]
-    nans = np.isnan(z) | np.isnan(N2)
-    nansef = np.isnan(zef) | np.isnan(U)
-    z, zef, N2, U = z[~nans], zef[~nansef], N2[~nans], U[~nansef]
-
-    U_mean = np.mean(U[zef < -1000.])
-    N_mean = np.mean(np.sqrt(N2[z < -200]))
-    print("Float {}, U mean: {} m s-1, N mean: {} s-1".format(Float.floatID, U_mean, N_mean))
-    print("U/N = {}".format(U_mean/N_mean))
-
-# %% Plots of $W$ with topography
-
-bwr = plt.get_cmap('bwr')
-E76_hpids = np.arange(20, 40)  # np.arange(31, 33)
-E77_hpids = np.arange(15, 35)  # np.arange(26, 28)
-bathy_file = '../../data/sandwell_bathymetry/topo_17.1.img'
-vars = ['Ww']  # , 'U_abs', 'V_abs']
-zvars = ['z']  # , 'zef', 'zef']
-dvars = ['dist_ctd']  # , 'dist_ef', 'dist_ef']
-texvars = ['$W_w$']  # , '$U$', '$V$']
-clims = [(-10., 10.)]  # , (-100., 100.), (-100, 100.)]
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-
-    for var, zvar, dvar, texvar, clim in zip(vars, zvars, dvars, texvars,
-                                             clims):
-
-        V = getattr(Float, var)[:, idxs].flatten(order='F')
-        z = getattr(Float, zvar)[:, idxs].flatten(order='F')
-        d = getattr(Float, dvar)[:, idxs].flatten(order='F')
-        tgps = getattr(Float, 'UTC_start')[idxs]
-        lon = getattr(Float, 'lon_start')[idxs]
-        lat = getattr(Float, 'lat_start')[idxs]
-        tctd = getattr(Float, 'UTC')[:, idxs].flatten(order='F')
-        nans = np.isnan(d) | np.isnan(tctd)
-        tctd = tctd[~nans]
-        dctd = d[~nans]
-        lonctd = np.interp(tctd, tgps, lon)
-        latctd = np.interp(tctd, tgps, lat)
-
-        plt.figure(figsize=(5, 7))
-        plt.scatter(d, z, s=50, c=V*100., edgecolor='none', cmap=bwr)
-        cbar = plt.colorbar(orientation='horizontal', extend='both')
-        cbar.set_label(texvar+' (cm s$^{-1}$)')
-        plt.clim(*clim)
-
-        plt.xlim(np.nanmin(d), np.nanmax(d))
-        plt.xlabel('Distance (km)')
-        plt.ylabel('Depth (m)')
-        title_str = ("Float {}").format(Float.floatID)
-        plt.title(title_str)
-
-        bathy = sandwell.interp_track(lonctd, latctd, bathy_file)
-        plt.plot(dctd, bathy, 'k', linewidth=3)
-
-        plt.ylim(np.nanmin(bathy), np.nanmax(z))
-
-        plt.grid()
-
-
-# %% Interpolated W
-
-bwr = plt.get_cmap('bwr')
-E76_hpids = np.arange(20, 40) # np.arange(31, 33)
-E77_hpids = np.arange(15, 35) # np.arange(26, 28)
-bathy_file = '../../data/sandwell_bathymetry/topo_17.1.img'
-vars = ['Ww']#, 'U_abs', 'V_abs']
-zvars = ['z']#, 'zef', 'zef']
-dvars = ['dist_ctd']#, 'dist_ef', 'dist_ef']
-texvars = ['$W_w$']#, '$U$', '$V$']
-clims = [(-10., 10.)]#, (-100., 100.), (-100, 100.)]
-
-var_1_vals = np.linspace(-40., 40., 80)
-var_2_vals = np.linspace(-1500, 0, 500)
-Xg, Zg = np.meshgrid(var_1_vals, var_2_vals)
-
-Wgs = []
-ds = []
-zs = []
-
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
-
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-
-    for var, zvar, dvar, texvar, clim in zip(vars, zvars, dvars, texvars,
-                                             clims):
-
-        V = getattr(Float, var)[:, idxs].flatten(order='F')
-        z = getattr(Float, zvar)[:, idxs].flatten(order='F')
-        d = getattr(Float, dvar)[:, idxs].flatten(order='F')
-        zs.append(z.copy())
-
-        tgps = getattr(Float, 'UTC_start')[idxs]
-        lon = getattr(Float, 'lon_start')[idxs]
-        lat = getattr(Float, 'lat_start')[idxs]
-        tctd = getattr(Float, 'UTC')[:, idxs].flatten(order='F')
-        nans = np.isnan(d) | np.isnan(tctd)
-        tctd = tctd[~nans]
-        dctd = d[~nans]
-        lonctd = np.interp(tctd, tgps, lon)
-        latctd = np.interp(tctd, tgps, lat)
-        bathy = sandwell.interp_track(lonctd, latctd, bathy_file)
-
-        d -= dctd[bathy.argmax()]
-        ds.append(d.copy())
-
-        nans = np.isnan(d) | np.isnan(z) | np.isnan(V)
-
-        Wg = griddata((d[~nans], z[~nans]), V[~nans], (Xg, Zg), method='linear')
-        Wgs.append(Wg.copy())
-
-        dctd -= dctd[bathy.argmax()]
-        # Spectral analysis of bathymetry.
-        dx = np.mean(np.diff(dctd))
-        dk = 1./dx
-        ix = np.arange(-40., 40., dx)
-        ibathy = np.interp(ix, dctd, bathy)
-        k, Pbathy = sig.welch(ibathy, fs=dk/1000., detrend='linear')
-
-        plt.figure()
-        mWg = np.ma.masked_where(np.isnan(Wg), Wg)
-        plt.pcolormesh(Xg, Zg, mWg*100., cmap=bwr)
-        plt.plot(dctd, bathy, 'k', linewidth=2)
-        cbar = plt.colorbar(orientation='horizontal', extend='both')
-        cbar.set_label(texvar+' (cm s$^{-1}$)')
-        plt.clim(*clim)
-        plt.scatter(d, z, s=1, edgecolor='none', color='grey')
-
-        plt.ylabel('Depth (m)')
-        title_str = ("Float {}").format(Float.floatID)
-        plt.title(title_str)
-        plt.xlim(np.nanmin(d), np.nanmax(d))
-        plt.ylim(np.nanmin(bathy), np.nanmax(z))
-        plt.grid()
-
-        plt.figure()
-        plt.scatter(d, z, s=50, c=V*100., edgecolor='none', cmap=bwr)
-        cbar = plt.colorbar(orientation='horizontal', extend='both')
-        cbar.set_label(texvar+' (cm s$^{-1}$)')
-        plt.clim(*clim)
-
-        plt.xlim(np.nanmin(d), np.nanmax(d))
-        plt.xlabel('Distance (km)')
-        plt.ylabel('Depth (m)')
-        title_str = ("Float {}").format(Float.floatID)
-        plt.title(title_str)
-
-        plt.plot(dctd, bathy, 'k', linewidth=2)
-
-        plt.ylim(np.nanmin(bathy), np.nanmax(z))
-
-        plt.grid()
-
-        plt.figure(figsize=(5, 7))
-        plt.loglog(k, Pbathy)
-
-
-
-Wg_diff = Wgs[0] - Wgs[1]
-mWg_diff = np.ma.masked_where(np.isnan(Wg_diff), Wg_diff)
-
-plt.figure()
-plt.pcolormesh(Xg, Zg, Wg_diff*100., cmap=bwr)
-plt.plot(dctd, bathy, 'k', linewidth=2)
-cbar = plt.colorbar(orientation='horizontal', extend='both')
-cbar.set_label('$W_w$ difference (cm s$^{-1}$)')
-plt.clim(*clim)
-plt.scatter(ds[0], zs[0], s=1, edgecolor='none', color='grey')
-plt.scatter(ds[0], zs[0], s=1, edgecolor='none', color='grey')
-
-plt.ylabel('Depth (m)')
-plt.xlim(np.nanmin(d), np.nanmax(d))
-plt.ylim(np.nanmin(bathy), np.nanmax(z))
-
-
 # %%
 
 def wave_3(params, x):
@@ -925,27 +569,6 @@ def u_model(params, pfl, zlim, deg):
     return u[~nope] - utils.nan_detrend(pfl.zef[~nope], pfl.U[~nope], deg)
 
 
-#def v_model(params, pfl, zlim, deg):
-#
-#    X, Z, phase_0 = params
-#    zmin, zmax = zlim
-#    nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
-#
-#    t = 60*60*24*(pfl.UTC - np.nanmin(pfl.UTC))
-#    x = 1000.*(pfl.dist_ctd - np.nanmin(pfl.dist_ctd))
-#    k = 2*np.pi/X
-#    l = 0.
-#    m = 2*np.pi/Z
-#    f = gsw.f(pfl.lat_start)
-#
-#    om = gw.omega(N, k, m, l, f)
-#    phi_0 = np.nanmax(pfl.Ww[~nope])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
-#
-#    u = gw.v(x, 0., pfl.z, t, phi_0, k, l, m, om, phase_0=phase_0)
-#
-#    return utils.nan_detrend(z[~nope], pfl.V[~nope], deg) - u[~nope]
-
-
 def b_model(params, pfl, zlim, deg):
 
     X, Z, phase_0 = params
@@ -1028,12 +651,12 @@ def w_model(params, data):
 
     X, Y, Z, phase_0 = params
 
-    time, dist, depth, U, V, W, B, N = data
+    time, dist, depth, U, V, W, B, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
     m = 2*np.pi/Z
-    f = gsw.f(pfl.lat_start)
+
     om = gw.omega(N, k, m, l, f)
     phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
@@ -1046,12 +669,12 @@ def u_model(params, data):
 
     X, Y, Z, phase_0 = params
 
-    time, dist, depth, U, V, W, B, N = data
+    time, dist, depth, U, V, W, B, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
     m = 2*np.pi/Z
-    f = gsw.f(-57.5)
+
     om = gw.omega(N, k, m, l, f)
     phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
@@ -1064,12 +687,12 @@ def v_model(params, data):
 
     X, Y, Z, phase_0 = params
 
-    time, dist, depth, U, V, W, B, N = data
+    time, dist, depth, U, V, W, B, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
     m = 2*np.pi/Z
-    f = gsw.f(-57.5)
+
     om = gw.omega(N, k, m, l, f)
     phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
@@ -1082,12 +705,12 @@ def b_model(params, data):
 
     X, Y, Z, phase_0 = params
 
-    time, dist, depth, U, V, W, B, N = data
+    time, dist, depth, U, V, W, B, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
     m = 2*np.pi/Z
-    f = gsw.f(pfl.lat_start)
+
     om = gw.omega(N, k, m, l, f)
     phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
@@ -1108,15 +731,15 @@ def full_model(params, data):
 # Previously this looked like E76.get_timeseries([31, 32], ) etc. and the below
 # bits of code were uncommented.
 
-time, depth = E76.get_timeseries(31, 'z')
-__, dist = E76.get_timeseries(31, 'dist_ctd')
-timeef, U = E76.get_timeseries(31, 'U')
-__, V = E76.get_timeseries(31, 'V')
-__, W = E76.get_timeseries(31, 'Ww')
-__, B = E76.get_timeseries(31, 'b')
-__, N2 = E76.get_timeseries(31, 'N2_ref')
+time, depth = E76.get_timeseries([31, 32], 'z')
+__, dist = E76.get_timeseries([31, 32], 'dist_ctd')
+timeef, U = E76.get_timeseries([31, 32], 'U')
+__, V = E76.get_timeseries([31, 32], 'V')
+__, W = E76.get_timeseries([31, 32], 'Ww')
+__, B = E76.get_timeseries([31, 32], 'b')
+__, N2 = E76.get_timeseries([31, 32], 'N2_ref')
 
-#t_split = E76.get_profiles(31).UTC_end
+t_split = E76.get_profiles(31).UTC_end
 
 nope = depth > -600.
 
@@ -1127,6 +750,7 @@ W = W[~nope]
 B = B[~nope]
 
 N = np.nanmean(np.sqrt(N2))
+f = gsw.f(-57.5)
 
 Unope = np.isnan(U)
 
@@ -1137,25 +761,25 @@ V = V[~Unope]
 U = np.interp(time, timeef, U)
 V = np.interp(time, timeef, V)
 
-#U[time > t_split] = utils.nan_detrend(depth[time > t_split], U[time > t_split], 2)
-#U[time < t_split] = utils.nan_detrend(depth[time < t_split], U[time < t_split], 2)
-#U[U > 0.3] = 0.
-#
-#V[time > t_split] = utils.nan_detrend(depth[time > t_split], V[time > t_split], 2)
-#V[time < t_split] = utils.nan_detrend(depth[time < t_split], V[time < t_split], 2)
+U[time > t_split] = utils.nan_detrend(depth[time > t_split], U[time > t_split], 2)
+U[time < t_split] = utils.nan_detrend(depth[time < t_split], U[time < t_split], 2)
+U[U > 0.3] = 0.
 
-U = utils.nan_detrend(depth, U, 2)
-V = utils.nan_detrend(depth, V, 2)
+V[time > t_split] = utils.nan_detrend(depth[time > t_split], V[time > t_split], 2)
+V[time < t_split] = utils.nan_detrend(depth[time < t_split], V[time < t_split], 2)
+
+#U = utils.nan_detrend(depth, U, 2)
+#V = utils.nan_detrend(depth, V, 2)
 
 time *= 60.*60.*24
 dist *= 1000.
 time -= np.min(time)
 dist -= np.min(dist)
 
-data = [time, dist, depth, U, V, W, B, N]
+data = [time, dist, depth, U, V, W, B, N, f]
 
 
-L = 4000
+L = 10
 popt = []
 
 for i in xrange(L):
@@ -1178,17 +802,17 @@ axs[1].hist(popt[:,1], bins=np.arange(-40000, 40000, 1000),
 axs[2].hist(popt[:,2], bins=np.arange(-40000, 40000, 1000),
             normed=False, log=False, alpha=0.8);
 
-#
+
 #popt1 = [-2000., -2000., -2000., 0.]
-#
-#fig, axs = plt.subplots(4, 1)
-#axs[0].plot(time, U, time, U + u_model(popt1, data))
-#axs[1].plot(time, V, time, V + v_model(popt1, data))
-#axs[2].plot(time, W, time, W + w_model(popt1, data))
-#axs[3].plot(time, 250.*B, time, 250*B + b_model(popt1, data))
-#
-#fig, axs = plt.subplots(1, 4, sharey=True)
-#axs[0].plot(U, depth, U + u_model(popt1, data), depth)
-#axs[1].plot(V, depth, V + v_model(popt1, data), depth)
-#axs[2].plot(W, depth, W + w_model(popt1, data), depth)
-#axs[3].plot(250.*B, depth, 250*B + b_model(popt1, data), depth)
+
+fig, axs = plt.subplots(4, 1)
+axs[0].plot(time, U, time, U + u_model(popt1, data))
+axs[1].plot(time, V, time, V + v_model(popt1, data))
+axs[2].plot(time, W, time, W + w_model(popt1, data))
+axs[3].plot(time, 250.*B, time, 250*B + b_model(popt1, data))
+
+fig, axs = plt.subplots(1, 4, sharey=True)
+axs[0].plot(U, depth, U + u_model(popt1, data), depth)
+axs[1].plot(V, depth, V + v_model(popt1, data), depth)
+axs[2].plot(W, depth, W + w_model(popt1, data), depth)
+axs[3].plot(250.*B, depth, 250*B + b_model(popt1, data), depth)
