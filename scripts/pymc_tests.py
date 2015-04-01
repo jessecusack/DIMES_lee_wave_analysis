@@ -98,18 +98,18 @@ v_noisy = v + v_noise
 w_noisy = w + w_noise
 b_noisy = b + b_noise
 
-uvwb_noise = np.hstack((u_noisy, v_noisy, w_noisy, b_noisy))
+uvwb_noise = np.hstack((u_noise, v_noise, w_noise, b_noise))
 uvwb_noisy = uvwb + uvwb_noise
 
 # Solve using MCMC sampling.
 def pymc_model(data, uvwb_noisy, noise_amp, N):
 
     sig = noise_amp
-    phi_0 = pymc.Uniform('phi_0', -5., 5., value=2.)
-    k = pymc.Uniform('k', -1., 1., value=0.00314)
-    l = pymc.Uniform('l', -1., 1., value=0.00314)
-    m = pymc.Uniform('m', -1., 1., value=0.00314)
-    phase_0 = pymc.Uniform('phase_0', 0., np.pi*2., value=1.)
+    phi_0 = pymc.Uniform('phi_0', -5., 5., value=4.)
+    k = pymc.Uniform('k', -1., 1., value=-0.114)
+    l = pymc.Uniform('l', -1., 1., value=0.000314)
+    m = pymc.Uniform('m', -1., 1., value=0.0314)
+    phase_0 = pymc.Uniform('phase_0', 0., np.pi*2., value=0.)
 
     @pymc.deterministic()
     def mmodel(phi_0=phi_0, k=k, l=l, m=m, phase_0=phase_0):
@@ -122,8 +122,8 @@ def pymc_model(data, uvwb_noisy, noise_amp, N):
 
 # Run the sampler.
 M = pymc.MCMC(pymc_model([x, y, z, t], uvwb_noisy, noise_amp, N))
-samples = 1000000
-burn = 500000
+samples = 5000000
+burn = 2500000
 thin = 20
 M.sample(samples, burn, thin)
 
@@ -159,4 +159,6 @@ for i in xrange(0, Ns, 20):
 triangle.corner(np.transpose(np.asarray([M.trace('phi_0')[:], M.trace('k')[:],
                                          M.trace('l')[:], M.trace('m')[:],
                                          M.trace('phase_0')[:]])),
-                labels=['$\phi_0$', '$k$', '$l$', '$m$', 'phase'])
+                labels=['$\phi_0$', '$k$', '$l$', '$m$', 'phase'],
+                truths=[phi_0, k, l, m, phase_0],
+                quantiles=[.05, .95])
