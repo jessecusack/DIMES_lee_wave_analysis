@@ -9,6 +9,7 @@ import numpy as np
 import scipy as sp
 import sys
 import os
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 lib_path = os.path.abspath('../modules')
@@ -38,15 +39,29 @@ zlims = {4976: {29: (-1600, -200),
                 26: (-1600, -600),
                 27: (-1200, -200)}}
 
-hpids_76 = np.array([29, 30, 31, 32])
-hpids_77 = np.array([24, 25, 26, 27])
+#hpids_76 = np.array([29, 30, 31, 32])
+#hpids_77 = np.array([24, 25, 26, 27])
+
+hpids_76 = np.array([31])
+hpids_77 = np.array([26])
+
+N = np.sum((hpids_76.size, hpids_77.size))
 
 rho0 = 1025.
 # Detrend degree
 deg = 2
 
-plt.figure()
+fig, ax1 = plt.subplots(1, 1)
+ax1.set_xlabel('Cov$(w, u)$')
+ax1.set_ylabel('$z$ (m)')
 
+fig, ax2 = plt.subplots(1, 1)
+ax2.set_xlabel('$u$ (m s$^{-1}$)')
+ax2.set_ylabel('$v$ (m s$^{-1}$)')
+ax2.set_xlim(-0.3, 0.3)
+ax2.set_ylim(-0.3, 0.3)
+
+i = 0.
 for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
     for hpid in hpids:
 
@@ -89,4 +104,12 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
 #        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
 
-        plt.plot(u*w, z, v*w, z)
+        ax1.plot(u*w, z, v*w, z)
+
+        ax2.quiver(u[:-1], v[:-1], u[1:]-u[:-1], v[1:]-v[:-1],
+                   scale_units='xy', angles='xy', scale=1,
+                   color=mpl.cm.Set1(i/N))
+
+        i += 1
+
+ax2.grid()
