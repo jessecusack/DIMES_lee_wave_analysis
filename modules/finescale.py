@@ -667,8 +667,19 @@ def analyse_float(Float, hpids, params=default_params):
 def thorpe_scales(z, x):
     """ """
 
+#    flip_z = False
+    flip_x = False
+
     # z should be increasing apparently
+    if z[0] > z[-1]:
+        z = np.flipud(z)
+#        flip_z = True
+
     # x should be increasing too... I'm personally not sure about this but ok.
+    if x[0] > x[-1]:
+        x = np.flipud(x)
+        flip_x = True
+
     # Make sure that no overturns involve the first data point, why?
     x[0] = x.min() - 1.
 
@@ -702,6 +713,11 @@ def thorpe_scales(z, x):
 
     # Lastly if the arrays were not increasing at the beginning and were
     # flipped they need to be put back how they were.
+    if flip_x:
+        thorpe_scales = np.flipud(thorpe_scales)
+        thorpe_disp = np.flipud(thorpe_disp)
+        x_sorted = np.flipud(x_sorted)
+        idxs = np.flipud(idxs)
 
     return thorpe_scales, thorpe_disp, x_sorted, idxs
 
