@@ -51,7 +51,7 @@ def dXdt(X, t, z, rho, p, k, V_0, M, alpha_p, alpha_k, p_0, k_0, CA, g):
 
 Float = E76
 
-pfl = Float.get_profiles(32)
+pfl = Float.get_profiles(186)
 
 g = -9.8
 V_0 = Float.__wfi.pmean[0]
@@ -87,7 +87,7 @@ plt.figure()
 plt.plot(X[:, 1], X[:, 0])
 plt.plot(Ws, z)
 
-wsi = np.interp(z, X[:, 0], X[:, 1])
+wsi = np.interp(UTC, t, X[:, 1])
 
 plt.figure()
 plt.plot(Ws - wsi, z)
@@ -102,3 +102,41 @@ xcor = np.correlate(Wsi, X[:, 1], 'full')
 plt.figure()
 plt.plot(tcor, xcor)
 plt.grid()
+
+# %% Impulse test.
+
+z = np.arange(-1500., -1492.)
+rho = 1030.*np.ones_like(z)
+p = z.copy()
+k = -15.*np.ones_like(z)
+k[k.size/2:] = 5.
+
+w_0 = 0.
+z_0 = z[0]
+X_0 = np.array([z_0, w_0])
+
+t_max = 50.
+dt = 1.
+t = np.arange(0., t_max+dt, dt)
+
+args = (z, rho, p, k, V_0, M, alpha_p, alpha_k, p_0, k_0, CA, g)
+
+X = sp.integrate.odeint(dXdt, X_0, t, args)
+
+w_stdy = Float.__wfi.model_func((V_0, CA, alpha_p, p_0, alpha_k, k_0, M),
+                                (k, p, rho), 7*[None])
+
+plt.figure()
+plt.plot(X[:, 1], X[:, 0])
+plt.plot(w_stdy, z)
+plt.xlabel('$w_s$ (m s$^{-1}$)')
+plt.ylabel('$z$ (m)')
+plt.grid()
+plt.figure()
+plt.plot(t, X[:, 1])
+w_stdyi = np.interp(X[:, 0], z, w_stdy)
+plt.plot(t, w_stdyi)
+plt.xlabel('$t$ (s)')
+plt.ylabel('$w_s$ (m s$^{-1}$)')
+plt.grid()
+
