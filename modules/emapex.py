@@ -432,16 +432,15 @@ class EMApexFloat(object):
             x = cumtrapz(U_abs[~nans], ts[~nans], initial=0.)
             y = cumtrapz(V_abs[~nans], ts[~nans], initial=0.)
 
-            for idx in idxs:
-                self.x_ef[:, idx] = utils.nan_interp(self.UTCef[:, idx],
+            for jdx in idxs:
+                self.x_ef[:, jdx] = utils.nan_interp(self.UTCef[:, jdx],
                                                      t[~nans], x)
-                self.y_ef[:, idx] = utils.nan_interp(self.UTCef[:, idx],
+                self.y_ef[:, jdx] = utils.nan_interp(self.UTCef[:, jdx],
                                                      t[~nans], y)
 
             successful_pairs.append(idx)
             successful_pairs.append(idx+1)
-            print("  hpid pair {}, {}.".format(self.hpid[idx],
-                  self.hpid[idx+1]))
+            print("  hpid pair {}, {}.".format(hpids[0], hpids[1]))
 
         self.x_ctd = self.__regrid('ef', 'ctd', self.x_ef)
         self.y_ctd = self.__regrid('ef', 'ctd', self.y_ef)
