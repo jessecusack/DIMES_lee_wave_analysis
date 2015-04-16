@@ -451,6 +451,39 @@ class EMApexFloat(object):
         print("Absolute velocity calculation failed for the following hpids:\n"
               "{}".format(self.hpid[failed_idxs]))
 
+    def calculate_pressure_perturbation(self):
+        """Perturbation pressure divided by density.
+        Assumes hydrostatic balance.
+        See Kunze 2002.
+        See Nash 2005."""
+
+        self.Pprime = self.P.copy()
+
+        for i in xrange(len(self.hpid)):
+
+            nans = np.isnan(self.P[:, i])
+
+            z = self.z[~nans, i]
+            b = self.b[~nans, i]
+
+            # z should be increasing.
+            if z[0] > z[-1]:
+                z = np.flipud(z)
+                b = np.flipud(b)
+
+                bi = cumtrapz(b, z, initial=0.)
+                bii = cumtrapz(bi, z, initial=0.)
+
+                Pprime = bi + (bii[0] - bii[-1])/(-z[0])
+
+                self.Pprime[~nans, i] = np.flipud(Pprime)
+
+            else:
+                bi = cumtrapz(b, z, initial=0.)
+                bii = cumtrapz(bi, z, initial=0.)
+
+                self.Pprime[~nans, i] = bi + (bii[0] - bii[-1])/(-z[0])
+
     def generate_regular_grids(self, zmin=-1400., dz=5.):
 
         print("\nGenerating regular grids")
