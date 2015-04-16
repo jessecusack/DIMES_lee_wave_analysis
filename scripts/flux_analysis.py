@@ -26,6 +26,11 @@ except NameError:
     E76 = emapex.load(4976)
     E77 = emapex.load(4977)
 
+E76.calculate_pressure_perturbation()
+E76.update_profiles()
+E77.calculate_pressure_perturbation()
+E77.update_profiles()
+
 
 # %%
 
@@ -39,17 +44,17 @@ zlims = {4976: {29: (-1600, -200),
                 26: (-1600, -600),
                 27: (-1200, -200)}}
 
-#hpids_76 = np.array([29, 30, 31, 32])
-#hpids_77 = np.array([24, 25, 26, 27])
+hpids_76 = np.array([29, 30, 31, 32])
+hpids_77 = np.array([24, 25, 26, 27])
 
-hpids_76 = np.array([31])
-hpids_77 = np.array([26])
+#hpids_76 = np.array([31])
+#hpids_77 = np.array([26])
 
 N = np.sum((hpids_76.size, hpids_77.size))
 
 rho0 = 1025.
 # Detrend degree
-deg = 2
+deg = 1
 
 fig, ax1 = plt.subplots(1, 1)
 ax1.set_xlabel('Cov$(w, u)$')
@@ -78,9 +83,11 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         v = pfl.V[useef]
         w = pfl.Ww[use]
         b = pfl.b[use]
+        pp = pfl.Pprime[use]
 
         w = np.interp(tef, t, w)
         b = np.interp(tef, t, b)
+        pp = np.interp(tef, t, pp)
 
         u = utils.nan_detrend(z, u, deg)
         v = utils.nan_detrend(z, v, deg)
@@ -91,6 +98,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
         uwbar = rho0*sp.integrate.trapz(w*u, tef)/DT
         vwbar = rho0*sp.integrate.trapz(w*v, tef)/DT
+        pwbar = rho0*sp.integrate.trapz(w*pp, tef)/DT
 
         tau = np.sqrt(uwbar**2 + vwbar**2)
 
@@ -101,6 +109,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         print("Reynolds stress: {:1.2f} N m-2".format(tau))
         print("Components: ({:1.2f}, {:1.2f}) N m-2".format(uwbar, vwbar))
         print("Energy density: {:1.2f} J m-3".format(E))
+        print("Vertical energy flux: {:1.2f} W m-2".format(pwbar))
 
 #        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
 
