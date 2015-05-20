@@ -11,29 +11,6 @@ This module contains functions for investigating internal gravity waves.
 import numpy as np
 
 
-def plane_wave(amplitude, wavevector, position):
-    """Simple equation for a plane wave.
-
-    Parameters
-    ----------
-    amplitude : float
-        The wave amplitude.
-    wavevector : ndarray
-        Shape (1, N) array, e.g. (k, l, m, omega).
-    position : ndarray
-        Shape (N, M) array, e.g. (x, y, z, t).
-
-    Returns
-    -------
-    wave : ndarray
-        Wave amplitude at given positions. Shape (1, M).
-
-    """
-
-    wave = amplitude*np.real(np.exp(1j*np.dot(wavevector, position)))
-    return wave
-
-
 def omega(N, k, m, l=None, f=None):
     """Dispersion relation for an internal gravity wave in a continuously
     stratified fluid.
