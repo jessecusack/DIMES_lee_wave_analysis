@@ -465,19 +465,13 @@ class EMApexFloat(object):
 
             z = self.z[~nans, i]
             b = self.b[~nans, i]
-            t = self.UTC[~nans, i]*86400.
-            w = self.Ww[~nans, i]
-
-            # Take into account nonhydrostatic effects by including accel.
-            dwdt = utils.finite_diff(t, w)
 
             # z should be increasing.
             if z[0] > z[-1]:
                 z = np.flipud(z)
                 b = np.flipud(b)
-                dwdt = np.flipud(dwdt)
 
-                bi = cumtrapz(b + dwdt, z, initial=0.)
+                bi = cumtrapz(b, z, initial=0.)
                 bii = cumtrapz(bi, z, initial=0.)
 
                 Pprime = bi + (bii[0] - bii[-1])/(-z[0])
@@ -485,7 +479,7 @@ class EMApexFloat(object):
                 self.Pprime[~nans, i] = np.flipud(Pprime)
 
             else:
-                bi = cumtrapz(b + dwdt, z, initial=0.)
+                bi = cumtrapz(b, z, initial=0.)
                 bii = cumtrapz(bi, z, initial=0.)
 
                 self.Pprime[~nans, i] = bi + (bii[0] - bii[-1])/(-z[0])
