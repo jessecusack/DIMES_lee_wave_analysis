@@ -73,6 +73,10 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         zmin, zmax = zlims[Float.floatID][hpid]
         pfl = Float.get_profiles(hpid)
 
+        fig, axs = plt.subplots(1, 2)
+        axs[0].plot(pfl.Pprime, pfl.z)
+        axs[1].plot(pfl.Ww, pfl.z)
+
         use = (pfl.z > zmin) & (pfl.z < zmax)
         useef = (pfl.zef > zmin) & (pfl.zef < zmax)
 
@@ -84,13 +88,17 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         w = pfl.Ww[use]
         b = pfl.b[use]
         pp = pfl.Pprime[use]
+        N2 = pfl.N2_ref[use]
 
         w = np.interp(tef, t, w)
         b = np.interp(tef, t, b)
         pp = np.interp(tef, t, pp)
+        N2 = np.interp(tef, t, N2)
+        N2mean = np.mean(N2)
 
         u = utils.nan_detrend(z, u, deg)
         v = utils.nan_detrend(z, v, deg)
+        pp = utils.nan_detrend(z, pp, deg)
 
         DT = np.max(tef) - np.min(tef)
 
@@ -103,12 +111,14 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         tau = np.sqrt(uwbar**2 + vwbar**2)
 
         kinetic = 0.5*rho0*sp.integrate.trapz(u**2 + v**2 + w**2, tef)/DT
-        potential = 0.5*rho0*sp.integrate.trapz(b**2, tef)/DT
+        potential = 0.5*rho0*sp.integrate.trapz(b**2/N2mean, tef)/DT
         E = kinetic + potential
 
         print("Reynolds stress: {:1.2f} N m-2".format(tau))
         print("Components: ({:1.2f}, {:1.2f}) N m-2".format(uwbar, vwbar))
         print("Energy density: {:1.2f} J m-3".format(E))
+        print("Standard deviation of pressure perturbation: "
+              "{:1.2f} m2 s-2".format(np.std(pp)))
         print("Vertical energy flux: {:1.2f} W m-2".format(pwbar))
 
 #        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
