@@ -179,7 +179,7 @@ def Efluxz(w_0, k, m, N, l=0., f=0., rho_0=1025.):
 
 
 def Mfluxz(phi_0, k, l, m, om, N, f=0., rho_0=1025.):
-    """Vertical flux of horizontal momentum."""
+    """Absolute vertical flux of horizontal momentum."""
     u_amp = np.abs(U_0(phi_0, k, l, om, f))
     v_amp = np.abs(V_0(phi_0, k, l, om, f))
     w_amp = np.abs(W_0(phi_0, m, om, N))
