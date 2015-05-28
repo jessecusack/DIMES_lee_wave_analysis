@@ -62,48 +62,52 @@ lon_lat = np.array([llcrnrlon, urcrnrlon+5, llcrnrlat-5, urcrnrlat])
 
 lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
 bathy_grid[bathy_grid > 0] = 0
+bathy_grid *= -1.  # Convert to depth
 
 m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
                llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
                urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
                lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.5, 3.5))
 x, y = m(lon_grid, lat_grid)
-m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('binary_r'))
+m.pcolormesh(x, y, bathy_grid, cmap=plt.get_cmap('ocean_r', 6), rasterized=True)
 
-for Float, colour in zip([E76, E77], ['b', 'g']):
+for Float, colour in zip([E76, E77], ['c', 'm']):
     x, y = m(Float.lon_start, Float.lat_start)
-    m.plot(x, y, colour, linewidth=3, label=Float.floatID)
+    m.plot(x, y, colour, linewidth=2, label=Float.floatID)
 
 plt.legend()
 
 m.fillcontinents()
 m.drawcoastlines()
 
-r = np.abs((urcrnrlon-llcrnrlon)/(urcrnrlat-llcrnrlat))
-
-if r > 1.:
-    Nm = 8
-    Np = max(4, np.round(Nm/r))
-    orientation = 'horizontal'
-elif r < 1.:
-    Np = 8
-    Nm = max(4, np.round(Nm/r))
-    orientation = 'vertical'
-else:
-    Np = 4
-    Nm = 4
-    orientation = 'horizontal'
-
-parallels = np.round(np.linspace(llcrnrlat, urcrnrlat, Np), 1)
+parallels = [-58, -57, -56, -55, -54]
 m.drawparallels(parallels, labels=[1, 0, 0, 0])
-meridians = np.round(np.linspace(llcrnrlon, urcrnrlon, Nm), 1)
+meridians = [-68, -66, -64, -62, -60, -58, -56, -54]
 m.drawmeridians(meridians, labels=[0, 0, 0, 1])
 
-cbar = plt.colorbar(orientation=orientation)
+plt.clim(0., 6000.)
+cbar = plt.colorbar(orientation='vertical', fraction=0.046, pad=0.04,
+                    ticks=np.arange(0., 7000., 1000.))
 cbar.set_label('Depth (m)')
-pf.my_savefig(fig, 'both', 'traj', sdir, fsize='double_col')
+cbar.ax.invert_yaxis()
+
+# Now box around region of interest
+lon0 = -67.5
+lon1 = -65.5
+lat0 = -58.
+lat1 = -57.
+res = 0.01
+lons = np.arange(lon0, lon1+res, res)
+lats = np.arange(lat0, lat1+res, res)
+boxlons = np.hstack((lons, lons[-1]*np.ones_like(lats), lons[::-1],
+                     lons[0]*np.ones_like(lats)))
+boxlats = np.hstack((lats[0]*np.ones_like(lons), lats,
+                     lats[-1]*np.ones_like(lons), lats[::-1]))
+m.plot(*m(boxlons, boxlats), color='white', linewidth=2)
+
+pf.my_savefig(fig, 'both', 'traj', sdir, ftype='pdf', fsize='double_col')
 
 # %% Float quivers RIDGE ONLY
 # ------------------
@@ -142,42 +146,33 @@ for i, Float in enumerate([E76, E77]):
         Ws[j, i] = np.nanmax(Wpfl[zpfl < -100])
 
 llcrnrlon = np.floor(np.nanmin(lons)) - .2
-llcrnrlat = np.floor(np.nanmin(lats)) - .2
+llcrnrlat = np.floor(np.nanmin(lats)) - .0
 urcrnrlon = np.ceil(np.nanmax(lons)) + .2
-urcrnrlat = np.ceil(np.nanmax(lats)) + .2
+urcrnrlat = np.ceil(np.nanmax(lats)) + .0
 
 lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
 
 lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
 bathy_grid[bathy_grid > 0] = 0
+bathy_grid *= -1.
 
 m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
                llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
                urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
                lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
 
-fig = plt.figure(figsize=(10, 10))
+fig = plt.figure(figsize=(3.125, 3.5))
 x, y = m(lon_grid, lat_grid)
-levels = np.arange(-4000, 0, 500)
-CS = m.contour(x, y, bathy_grid, 20, cmap=plt.get_cmap('binary'),
-               levels=levels)
+levels = np.arange(0., 4000., 500.)
+CS = m.contour(x, y, bathy_grid, 20, cmap=plt.get_cmap('binary_r'),
+               levels=levels, rasterized=True)
 plt.clabel(CS, inline=1, fontsize=8, fmt='%1.f')
 m.fillcontinents()
 m.drawcoastlines()
 
-r = np.abs((urcrnrlon-llcrnrlon)/(urcrnrlat-llcrnrlat))
-
-if r > 1.:
-    Nm = 8
-    Np = max(3, np.round(Nm/r))
-
-elif r < 1.:
-    Np = 8
-    Nm = max(3, np.round(Nm/r))
-
-parallels = np.round(np.linspace(llcrnrlat, urcrnrlat, Np), 1)
+parallels = [-58, -57.75, -57.5, -57.25, -57]
 m.drawparallels(parallels, labels=[1, 0, 0, 0])
-meridians = np.round(np.linspace(llcrnrlon, urcrnrlon, Nm), 1)
+meridians = [-68, -67, -66, -65]
 m.drawmeridians(meridians, labels=[0, 0, 0, 1])
 
 marker = ['o', '*']
@@ -185,33 +180,35 @@ label = ['4976', '4977']
 color = ['b', 'g']
 for i, (lon, lat, U, V, W) in enumerate(zip(lons.T, lats.T, Us.T, Vs.T, Ws.T)):
     x, y = m(lon, lat)
-    m.plot(x, y, marker[i], color='y', label=label[i])
-    Q = m.quiver(x, y, U, V, W, scale=6, cmap=plt.get_cmap('jet'))
-    plt.clim(0, 0.3)
+    m.plot(x, y, marker[i], color='black', markersize=1., label=label[i])
+    Q = m.quiver(x, y, U, V, 100.*W, scale=6, cmap=plt.get_cmap('gnuplot'))
+    plt.clim(0, 20)
 #    for _x, _y, hpid in zip(x, y, hpids[:, i]):
 #        plt.annotate("{:1.0f}".format(hpid), xy=(_x, _y),
 #                     xytext=(1.03*_x, 1.03*_y), color=color[i])
 
-plt.legend()
-qk = plt.quiverkey(Q, 0.5, 0.92, 0.5, r'0.5 m s$^{-1}$', labelpos='N')
-cbar = plt.colorbar(orientation='horizontal')
-cbar.set_label('Maximum $W$ (m s$^{-1}$)')
+#plt.legend()
+qk = plt.quiverkey(Q, 0.78, 0.8, 0.5, r'0.5 m s$^{-1}$', labelpos='N')
+cbar = plt.colorbar(orientation='horizontal', extend='max', pad=0.05)
+cbar.set_label('Maximum $w$ (cm s$^{-1}$)')
 
-# This addition uses the hpids from the upstream flow stuff below.
-N = 10
-N0_76 = 15
-N0_77 = 10
-E76_hpids = np.arange(N0_76, N0_76+N)
-E77_hpids = np.arange(N0_77, N0_77+N)
-__, i76 = E76.get_profiles(E76_hpids, ret_idxs=True)
-__, i77 = E76.get_profiles(E77_hpids, ret_idxs=True)
-x, y = m(E76.lon_start[i76], E76.lat_start[i76])
-m.plot(x, y, 'rx')
-x, y = m(E77.lon_start[i77], E77.lat_start[i77])
-m.plot(x, y, 'rx')
+# This addition uses the hpids from the upstream flow stuff below to show where
+# the upstream properties come from.
+#N = 10
+#N0_76 = 15
+#N0_77 = 10
+#E76_hpids = np.arange(N0_76, N0_76+N)
+#E77_hpids = np.arange(N0_77, N0_77+N)
+#__, i76 = E76.get_profiles(E76_hpids, ret_idxs=True)
+#__, i77 = E76.get_profiles(E77_hpids, ret_idxs=True)
+#x, y = m(E76.lon_start[i76], E76.lat_start[i76])
+#m.plot(x, y, 'rx')
+#x, y = m(E77.lon_start[i77], E77.lat_start[i77])
+#m.plot(x, y, 'rx')
 
 plt.tight_layout()
-pf.my_savefig(fig, 'both', 'quiver_traj', sdir, fsize='double_col')
+pf.my_savefig(fig, 'both', 'quiver_traj', sdir, ftype='pdf',
+              fsize='single_col')
 
 # %% Upstream flow properties
 # ------------------------
@@ -293,11 +290,8 @@ print("Mean vertical speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
 # %% Sections in mountain centered coords.
 
 bwr = plt.get_cmap('bwr')
-bwr1 = mcolors.LinearSegmentedColormap.from_list(name='red_white_blue',
-                                                 colors=[(0, 0, 1),
-                                                         (1, 1, 1),
-                                                         (1, 0, 0)],
-                                                 N=9)
+bwr2 = plt.get_cmap('bwr', 9)
+
 E76_hpids = np.arange(22, 42) # np.arange(31, 33)
 E77_hpids = np.arange(17, 37) # np.arange(26, 28)
 vars = ['Ww']#, 'U_abs', 'V_abs']
@@ -314,7 +308,7 @@ Wgs = []
 ds = []
 zs = []
 
-fig = plt.figure(figsize=(7, 5))
+fig = plt.figure(figsize=(3.125, 3.5))
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
@@ -349,17 +343,17 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
         dctd -= dctd[bathy.argmax()]
 
-        thin = 10
+        thin = 20
         plt.scatter(d[::thin], z[::thin], s=50, c=V[::thin]*100.,
-                    edgecolor='none', cmap=bwr1)
+                    edgecolor='none', cmap=bwr2)
 
 
-cbar = plt.colorbar(orientation='horizontal', extend='both')
-cbar.set_label(texvar+' (cm s$^{-1}$)')
+cbar = plt.colorbar(orientation='horizontal', extend='both', pad=0.12)
+cbar.set_label(texvar+' (cm s$^{-1}$)', labelpad=0.02)
 plt.clim(*clim)
 
 plt.xlim(np.nanmin(d), np.nanmax(d))
-plt.xlabel('Distance from ridge (km)')
+plt.xlabel('Distance from ridge top (km)', labelpad=0.06)
 plt.ylabel('$z$ (m)')
 #title_str = ("Float {}").format(Float.floatID)
 #plt.title(title_str)
@@ -370,7 +364,7 @@ plt.ylim(np.nanmin(bathy), np.nanmax(z))
 
 plt.grid()
 
-pf.my_savefig(fig, 'both', 'w_section', sdir, fsize='double_col')
+pf.my_savefig(fig, 'both', 'w_section', sdir, ftype='pdf', fsize='single_col')
 
 
 # %% Wave profiles
