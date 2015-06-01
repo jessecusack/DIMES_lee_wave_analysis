@@ -135,6 +135,7 @@ for Float in [E76, E77]:
     ax1.plot(Float.dist[idxs], 1000.*ieps, color='black')
     ax1.set_ylabel('$P$ (mW m$^{-2}$)')
     ax1.yaxis.set_ticks(np.array([0., 40.]))
+    ax1.xaxis.set_ticks([])
 
     sc = ax0.scatter(X, Z, s=5, c=LOG_EPS, edgecolor='none',
                      cmap=plt.get_cmap('bwr'), vmin=-11., vmax=-7)
@@ -150,6 +151,9 @@ for Float in [E76, E77]:
     ax0.set_xlabel('Distance (km)')
     ax0.set_ylabel('$z$ (m)')
     ax0.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+
+    ax1.set_xlim(*ax0.get_xlim())
+
     pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir, fsize='double_col')
 
     ##
