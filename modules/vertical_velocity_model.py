@@ -229,7 +229,7 @@ def cost(params, fixed, model, wf, data, cf_key):
     model_args : tuple.
         Additional arguments to model, (model(params, *model_args)).
     cf_key : string.
-        Dictionary key to select cost function.
+        Key to select cost function, either 'sqdiff' or 'diff_square'
 
     Returns
     -------
@@ -243,19 +243,13 @@ def cost(params, fixed, model, wf, data, cf_key):
 
     """
 
-    def square_diff(ws, wf):
-        return ws**2 - wf**2
-
-    def diff_square(ws, wf):
-        return (ws - wf)**2
-
-    cfd = {'sqdiff': square_diff,
-           'diffsq': diff_square}
-
-    cost_func = cfd[cf_key]
-
     ws = model(params, data, fixed)
 
-    c = cost_func(ws, wf).flatten()
+    if cf_key == 'sqdiff':
+        c = ws**2 - wf**2
+    elif cf_key == 'diff_square':
+        c = (ws - wf)**2
+    else:
+        raise ValueError('Incorrect cf_key')
 
-    return c
+    return c.flatten()
