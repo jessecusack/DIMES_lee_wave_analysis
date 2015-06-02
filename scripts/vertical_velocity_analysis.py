@@ -15,15 +15,26 @@ import os
 import pickle
 import sys
 
+import triangle
+
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
 import emapex
 import vertical_velocity_model as vvm
+import plotting_functions as pf
 
 
-def assess_w_fit(Float, save_id=''):
+# Figure save path.
+sdir = os.path.join('..', 'figures', 'vertical_velocity_analysis')
+if not os.path.exists(sdir):
+    os.makedirs(sdir)
+# Universal figure font size.
+matplotlib.rc('font', **{'size': 9})
+
+
+def assess_w_fit(Float, save_id='', save_dir=sdir):
     """ """
 
     font = {'family': 'normal',
@@ -41,18 +52,17 @@ def assess_w_fit(Float, save_id=''):
         updown = False
         ud_id = ''
 
-    s = os.sep
-    save_dir = '..'+s+'figures'+s+'vertical_velocity_analysis'
-
     # Histogram of vertical water velocity.
-    Ww = Float.rWw.flatten(order='F')
+    Ww = Float.Ww.flatten(order='F')
+    nans = np.isnan(Ww)
 
     Ww_mean = np.nanmean(Ww)
     Ww_std = np.nanstd(Ww)
 
     plt.figure(figsize=(3, 3))
     bins = np.arange(-0.15, 0.155, 0.005)
-    Ww_hist, bins, patches = plt.hist(Ww, bins=bins, histtype='stepfilled')
+    Ww_hist, bins, patches = plt.hist(Ww[~nans], bins=bins,
+                                      histtype='stepfilled')
     plt.setp(patches, 'facecolor', 'b', 'alpha', 0.75)
     plt.xlim(np.min(bins), np.max(bins))
     plt.xlabel('$W_w$ (m s$^{-1}$)')
@@ -68,10 +78,10 @@ def assess_w_fit(Float, save_id=''):
     hpid1 = hpids[0]
 
     plt.figure(figsize=(6, 3))
-    N = 4
-    time, Ww = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWw')
-    __, Wz = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWz')
-    __, Ws = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'rWs')
+    N = 6
+    time, Ww = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'Ww')
+    __, Wz = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'Wz')
+    __, Ws = Float.get_timeseries(np.arange(hpid1, hpid1+N), 'Ws')
     plt.plot(time, Ww)
     plt.plot(time, Wz)
     plt.plot(time, Ws)
@@ -95,7 +105,7 @@ def assess_w_fit(Float, save_id=''):
                                                      )
 
     z_vals = np.arange(-1500., 0., 10.)
-    __, z, Ww = Float.get_interp_grid(np.arange(1, 600), z_vals, 'z', 'rWw')
+    __, z, Ww = Float.get_interp_grid(np.arange(1, 600), z_vals, 'z', 'Ww')
     z = z.flatten(order='F')
     Ww = Ww.flatten(order='F')
     __, __, d = Float.get_interp_grid(np.arange(1, 600), z_vals, 'z',
@@ -135,8 +145,8 @@ def assess_w_fit(Float, save_id=''):
 #    plt.plot(Nm, 0.25*N0/Nm)
 
     # Parameter estimates and correlations.
-    pnames = ['$V_0$', '$CA$', r'$\alpha_p$', '$p_0$', r'$\alpha_k$', '$k_0$',
-              '$M$']
+    pnames = np.array(['$V_0$', '$CA$', r'$\alpha_p$', '$p_0$', r'$\alpha_k$',
+                       '$k_0$', '$M$'])
     N = len(pnames)
     ticks = np.arange(0.5, N, 1)
 
@@ -195,27 +205,32 @@ def assess_w_fit(Float, save_id=''):
         fname = os.path.join(save_dir, name)
         plt.savefig(fname, format='pdf', bbox_inches='tight')
 
-        pps = pd.DataFrame(wfi.ps, columns=pnames)
-        axs = pd.tools.plotting.scatter_matrix(pps, hist_kwds={'bins': 12})
+        not_fixed = np.array([(p is None) for p in wfi.fixed])
+        ps = wfi.ps[:, not_fixed]
+        p = wfi.p[not_fixed]
+        params0 = wfi.params0[not_fixed]
+        triangle.corner(ps, labels=pnames[not_fixed])
         f = plt.gcf()
         f.set_size_inches(7, 7)
+        axs = f.axes
+        N = np.shape(ps)[1]
+
         formatter = ticker.ScalarFormatter(useOffset=False)
         formatter.set_scientific(True)
         formatter.set_powerlimits((-1, 2))
 
         for i in xrange(N):
             for j in xrange(N):
-
-                axs[i, j].xaxis.set_major_formatter(formatter)
-                axs[i, j].yaxis.set_major_formatter(formatter)
-
+                idx = i*N + j
+                if i == N - 1:
+                    axs[idx].xaxis.set_major_formatter(formatter)
+                if (j == 0) and (i > 0):
+                    axs[idx].yaxis.set_major_formatter(formatter)
                 if i == j:
-                    y = np.array(axs[i, j].get_ylim())
-                    x = np.array([wfi.p[i], wfi.p[i]])
-                    axs[i, j].plot(x, y, 'r-')
-                    x = np.array([wfi.params0[i], wfi.params0[i]])
-                    axs[i, j].plot(x, y, 'g-')
-
+                    axs[idx].vlines(p[i], *axs[idx].get_ylim(), color='r')
+                    axs[idx].vlines(params0[i], *axs[idx].get_ylim(),
+                                    color='g')
+#
         name = save_id + '_param_matrix_scatter.pdf'
         fname = os.path.join(save_dir, name)
         plt.savefig(fname, format='pdf', bbox_inches='tight')
@@ -236,6 +251,7 @@ except NameError:
     E76 = emapex.load(4976, apply_w=False)
     E77 = emapex.load(4977, apply_w=False)
 
+# %% ##########################################################################
 
 # model = '1'
 # cf_key = 'diffsq'
@@ -257,7 +273,7 @@ except NameError:
 # assess_w_fit(E77, str(E77.floatID))
 # print(E77.__wfi.p)
 
-###############################################################################
+# %% ##########################################################################
 
 model = '1'
 cf_key = 'diffsq'
@@ -279,29 +295,28 @@ E77.apply_w_model(wfi)
 assess_w_fit(E77, str(E77.floatID)+'_fix_M')
 print(E77.__wfi.p)
 
-###############################################################################
+# %% ##########################################################################
 
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, 2000., None, 16, 27.179]
-wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
-                 cf_key=cf_key)
+Plims = (60., 1500.)
+hpids = np.arange(50, 151)
+
+wfi = vvm.fitter(E76, hpids, params0, fixed, model=model, Plims=Plims,
+                 profiles='all', cf_key=cf_key)
 E76.apply_w_model(wfi)
 assess_w_fit(E76, str(E76.floatID)+'_fix_p0k0M')
 print(E76.__wfi.p)
 
-model = '1'
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, 2000., None, 16, 27.179]
 wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E77.apply_w_model(wfi)
 assess_w_fit(E77, str(E77.floatID)+'_fix_p0k0M')
 print(E77.__wfi.p)
 
-###############################################################################
+# %% ##########################################################################
 
 model = '1'
 cf_key = 'diffsq'
@@ -323,7 +338,7 @@ E77.apply_w_model(wfi)
 assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
 print(E77.__wfi.p)
 
-###############################################################################
+# %% ##########################################################################
 #
 # model = '1'
 # cf_key = 'diffsq'
@@ -345,7 +360,7 @@ print(E77.__wfi.p)
 # assess_w_fit(E77, str(E77.floatID)+'_fix_p0M')
 # print(E77.__wfi.p)
 #
-###############################################################################
+# %% ##########################################################################
 #
 # model = '1'
 # cf_key = 'diffsq'
@@ -367,7 +382,7 @@ print(E77.__wfi.p)
 # assess_w_fit(E77, str(E77.floatID))
 # print(E77.__wfi.p)
 #
-###############################################################################
+# %% ##########################################################################
 #
 # model = '1'
 # cf_key = 'diffsq'
@@ -388,3 +403,4 @@ print(E77.__wfi.p)
 # E77.apply_w_model(wfi)
 # assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
 # print(E77.__wfi.p)
+
