@@ -305,7 +305,7 @@ def pymc_fitter(Float, hpids, Plims=(60., 1500.)):
 
         return locals()
 
-    M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
+    M = pymc.MCMC(model())
     samples = 100000
     burn = 50000
     thin = 10
@@ -316,7 +316,7 @@ def pymc_fitter(Float, hpids, Plims=(60., 1500.)):
                         M.trace('alpha_p')[:], M.trace('p_0')[:],
                         M.trace('alpha_ppos')[:], M.trace('ppos_0')[:],
                         M.trace('M')[:]])
-    labels = [r'$V_0$', r'$C_D^*$', r'$\alpha_p$', r'p_0', r'$\alpha_k$',
+    labels = [r'$V_0$', r'$C_D^*$', r'$\alpha_p$', r'$p_0$', r'$\alpha_k$',
               r'$k_0$', r'$M$']
     triangle.corner(np.transpose(chain), labels=labels)
 
