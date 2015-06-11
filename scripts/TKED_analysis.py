@@ -8,13 +8,15 @@ Created on Fri Jan 23 16:25:26 2015
 import sys
 import os
 import glob
-
+import scipy as sp
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import scipy.signal as sig
 from scipy.integrate import trapz
+
+import gsw
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
@@ -26,14 +28,16 @@ import plotting_functions as pf
 import sandwell
 import window as wdw
 
+zmin = -1500.
+dz = 1.
 
 try:
     print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
 except NameError:
     E76 = emapex.load(4976)
-    E76.generate_regular_grids(zmin=-1500., dz=1.)
+    E76.generate_regular_grids(zmin=zmin, dz=dz)
     E77 = emapex.load(4977)
-    E77.generate_regular_grids(zmin=-1500., dz=1.)
+    E77.generate_regular_grids(zmin=zmin, dz=dz)
 
 # %% Script params.
 
@@ -49,12 +53,11 @@ matplotlib.rc('font', **{'size': 9})
 
 # %% Experimental functions
 
-def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2):
+def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2, lc=30.):
     """Inputs should be regularly spaced."""
 
     # First we have to design the high pass filter the data. Beaird et. al.
     # 2012 use a forth order butterworth with a cutoff of 30m.
-    lc = 30.  # cut off wavelength (m)
     mc = 1./lc  # cut off wavenumber (m-1)
     normal_cutoff = mc*dz*2.  # Nyquist frequency is half 1/dz.
     b, a = sig.butter(4, normal_cutoff, btype='highpass')
@@ -72,13 +75,13 @@ def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2):
         w_rms[i] = np.std(w_wdw[1])
         N2_mean[i] = np.mean(N2_wdw[1])
 
-    epsilon = c*0.002*w_rms**2
-    kappa = eff*epsilon/0.002**2
+    epsilon = c*np.sqrt(N2_mean)*w_rms**2
+    kappa = eff*epsilon/N2_mean
 
     return epsilon, kappa
 
 
-def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2):
+def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2, lc=30.):
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
@@ -92,21 +95,72 @@ def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2):
     kappa = np.zeros_like(w)
 
     for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row, dz, c, eff)
+        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row,
+                                                           dz, c, eff, lc)
 
     return epsilon, kappa
 
 
+# %% Coefficient estimation using microstructure data
+
+UK2_vmp = sp.io.loadmat('../../storage/DIMES/combined_jc054.mat',
+                        variable_names=['vmp'])['vmp']
+
+z_vmp = gsw.z_from_p(UK2_vmp['press'][0][0], UK2_vmp['startlat'][0][0][0])
+
+fig1 = plt.figure()
+plt.plot(UK2_vmp['startlon'][0][0][0], UK2_vmp['startlat'][0][0][0], 'ko')
+plt.plot(UK2_vmp['startlon'][0][0][0][25:30], UK2_vmp['startlat'][0][0][0][25:30], 'ro')
+plt.plot(E76.lon_start[:100], E76.lat_start[:100])
+plt.plot(E77.lon_start[:100], E77.lat_start[:100])
+
+z = np.arange(zmin, 0., dz)
+
+hpids = np.arange(1, 100)
+
+epsilon_76, kappa_76 = w_scales_float_experimental(E76, hpids, c=0.03)
+epsilon_77, kappa_77 = w_scales_float_experimental(E77, hpids, c=0.04)
+
+fig2 = plt.figure()
+plt.semilogx(UK2_vmp['eps'][0][0][:, 25:30], z_vmp[:, 25:30], color='grey',
+             alpha=0.2)
+plt.semilogx(epsilon_76, z, color='red', alpha=0.2)
+plt.semilogx(epsilon_77, z, color='red', alpha=0.2)
+
+epsilon_vmp = UK2_vmp['eps'][0][0][:, 25:30].flatten()
+z_vmp_flat = z_vmp[:, 25:30].flatten()
+use = ~np.isnan(epsilon_vmp) & (z_vmp_flat > zmin)
+
+bins = np.arange(-12., -5, 0.25)
+fig, axs = plt.subplots(3, 1, sharex='col', sharey=True, figsize=(3, 6))
+axs[0].hist(np.log10(epsilon_vmp[use]), bins=bins, color='blue', alpha=0.8,
+            normed=True, label='VMP')
+axs[1].hist(np.log10(epsilon_76.flatten()), bins=bins, color='red', alpha=0.8,
+            normed=True, label='4976')
+axs[2].hist(np.log10(epsilon_77.flatten()), bins=bins, color='red', alpha=0.8,
+            normed=True, label='4977')
+axs[2].set_xlabel('$\log_{10}(\epsilon)$ W kg$^{-1}$')
+
+axs[1].text(-7, 0.6, '$c = 0.03$')
+axs[2].text(-7, 0.6, '$c = 0.04$')
+
+for ax in axs:
+    ax.legend()
+
+pf.my_savefig(fig, 'vmp', 'comparison', sdir, ftype='pdf', fsize='single_col')
+
 # %% Start script
 # Using large eddy method first.
+# Different coefficient for each float.
+cs = [0.03, 0.04]
 
-for Float in [E76, E77]:
+for Float, c in zip([E76, E77], cs):
 
-    hpids = np.arange(1, 150)
+    hpids = np.arange(1, 100)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
     bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
-    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=0.2)
+    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=c)
 
     ieps = 0.*np.zeros_like(idxs)
 
@@ -126,7 +180,7 @@ for Float in [E76, E77]:
     LOG_KAP = (np.log10(kappa)).flatten()[use]
 
     # Plotting #
-
+    # Epsilon
     fig = plt.figure(figsize=(10, 4))
     gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
     ax0 = plt.subplot(gs[1])
@@ -134,11 +188,11 @@ for Float in [E76, E77]:
 
     ax1.plot(Float.dist[idxs], 1000.*ieps, color='black')
     ax1.set_ylabel('$P$ (mW m$^{-2}$)')
-    ax1.yaxis.set_ticks(np.array([0., 40.]))
+    ax1.yaxis.set_ticks(np.array([0., 10., 20.]))
     ax1.xaxis.set_ticks([])
 
     sc = ax0.scatter(X, Z, s=5, c=LOG_EPS, edgecolor='none',
-                     cmap=plt.get_cmap('bwr'), vmin=-11., vmax=-7)
+                     cmap=plt.get_cmap('YlOrRd'), vmin=-11., vmax=-7)
 
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
@@ -157,9 +211,9 @@ for Float in [E76, E77]:
     pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir, fsize='double_col')
 
     ##
-
+    # Kappa
     fig = plt.figure(figsize=(10, 4))
-    plt.scatter(X, Z, s=5, c=LOG_KAP, edgecolor='none', cmap=plt.get_cmap('bwr'))
+    plt.scatter(X, Z, s=5, c=LOG_KAP, edgecolor='none', cmap=plt.get_cmap('YlOrRd'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$\log_{10}(\kappa_\rho)$ (m$^2$ s$^{-1}$)')
     plt.clim(-5., -3.)
@@ -170,14 +224,16 @@ for Float in [E76, E77]:
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
     pf.my_savefig(fig, Float.floatID, 'kappa_lem', sdir, fsize='double_col')
 
-    __, d_ef = Float.get_timeseries(np.arange(1, 600), 'dist_ef')
-    __, d_ctd = Float.get_timeseries(np.arange(1, 600), 'dist_ctd')
-    __, z = Float.get_timeseries(np.arange(1, 600), 'z')
-    __, zef = Float.get_timeseries(np.arange(1, 600), 'zef')
-    __, u = Float.get_timeseries(np.arange(1, 600), 'U')
-    __, v = Float.get_timeseries(np.arange(1, 600), 'V')
-    __, w = Float.get_timeseries(np.arange(1, 600), 'Ww')
-    __, N2_ref = Float.get_timeseries(np.arange(1, 600), 'N2_ref')
+    # U V W
+
+    __, d_ef = Float.get_timeseries(hpids, 'dist_ef')
+    __, d_ctd = Float.get_timeseries(hpids, 'dist_ctd')
+    __, z = Float.get_timeseries(hpids, 'z')
+    __, zef = Float.get_timeseries(hpids, 'zef')
+    __, u = Float.get_timeseries(hpids, 'U_abs')
+    __, v = Float.get_timeseries(hpids, 'V_abs')
+    __, w = Float.get_timeseries(hpids, 'Ww')
+    __, N2_ref = Float.get_timeseries(hpids, 'N2_ref')
 
     u[np.abs(u) > 1.5] = np.NaN
     v[np.abs(v) > 1.5] = np.NaN
@@ -219,7 +275,7 @@ for Float in [E76, E77]:
     pf.my_savefig(fig, Float.floatID, 'w', sdir, fsize='double_col')
 
     fig = plt.figure(figsize=(10, 4))
-    plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('bwr'))
+    plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('cool'))
     C = plt.colorbar(extend='both')
     C.set_label(r'$N$ (rad s$^{-1}$)')
     plt.clim(0.001, 0.003)
@@ -229,6 +285,9 @@ for Float in [E76, E77]:
     plt.ylabel('$z$ (m)')
     plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
     pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir, fsize='double_col')
+
+# %% Using Thorpe scales
+fs.thorpe_scales()
 
 # %% Using finescale parameterisation
 
