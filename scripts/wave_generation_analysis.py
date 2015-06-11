@@ -8,8 +8,8 @@ Created on Fri Oct 31 16:24:05 2014
 # %% Loads and imports.
 
 import numpy as np
+import scipy as sp
 import matplotlib
-import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from mpl_toolkits import basemap as bm
 import gsw
@@ -77,8 +77,6 @@ for Float, colour in zip([E76, E77], ['c', 'm']):
     x, y = m(Float.lon_start, Float.lat_start)
     m.plot(x, y, colour, linewidth=2, label=Float.floatID)
 
-plt.legend()
-
 m.fillcontinents()
 m.drawcoastlines()
 
@@ -106,6 +104,16 @@ boxlons = np.hstack((lons, lons[-1]*np.ones_like(lats), lons[::-1],
 boxlats = np.hstack((lats[0]*np.ones_like(lons), lats,
                      lats[-1]*np.ones_like(lons), lats[::-1]))
 m.plot(*m(boxlons, boxlats), color='white', linewidth=2)
+
+# Add VMP casts.
+UK2_vmp = sp.io.loadmat('../../storage/DIMES/combined_jc054.mat',
+                        variable_names=['vmp'])['vmp']
+vmp_lon = UK2_vmp['startlon'][0][0][0]
+vmp_lat = UK2_vmp['startlat'][0][0][0]
+m.plot(*m(vmp_lon, vmp_lat), marker='*', color='yellow', linestyle='none',
+       label='UK2', markersize=10)
+
+plt.legend(loc=4)
 
 pf.my_savefig(fig, 'both', 'traj', sdir, ftype='pdf', fsize='double_col')
 
