@@ -534,7 +534,7 @@ data = sp.io.loadmat(data_file, squeeze_me=True, struct_as_record=True)
 ctd = data['allCTD']
 ladcp = data['allLADCP']
 
-use_station = 12
+use_station = 96
 
 idx = use_station - 1
 
@@ -595,7 +595,7 @@ if regrid:
 
 # 3.
 width = 240.
-overlap = 120.
+overlap = 180.
 dudz_bins = wdw.window(P_ladcp, dudz, width, overlap, x_0=P_top)
 dvdz_bins = wdw.window(P_ladcp, dvdz, width, overlap, x_0=P_top)
 etaz_bins = wdw.window(P_ctd, etaz, width, overlap, x_0=P_top)
@@ -604,36 +604,40 @@ N2_ref_bins = wdw.window(P_ctd, N2_ref, width, overlap, x_0=P_top)
 # Bare in mind that these could be different lengths -- a possible problem.
 N_bins = len(dudz_bins)
 
-z_mean = np.empty(N_bins)
+P_mean = np.empty(N_bins)
 R_pol = np.empty(N_bins)
 R_om = np.empty(N_bins)
 epsilon = np.empty(N_bins)
 kappa = np.empty(N_bins)
+
+print_diagnostics = True
 
 for i in xrange(N_bins):
 
     N2_mean = np.mean(N2_ref_bins[i][1])
     N_mean = np.sqrt(N2_mean)
 
-    z_shear = dudz_bins[i][0]
+    P_shear = dudz_bins[i][0]
     nUz = dudz_bins[i][1]/N_mean
     nVz = dvdz_bins[i][1]/N_mean
-    z_strain = netaz = etaz_bins[i][0]
+    P_strain = netaz = etaz_bins[i][0]
     ietaz = etaz_bins[i][1]
 
+    P_mean[i] = (P_shear[-1] + P_shear[0])/2.
+
     # This should always be true...
-    dz_shear = z_shear[1] - z_shear[0]
-    dz_strain = z_strain[1] - z_strain[0]
+    dP_shear = P_shear[1] - P_shear[0]
+    dP_strain = P_strain[1] - P_strain[0]
 
     # Compute the (co)power spectral density.
-    m_shear, PdU, PdV, PdUdV = coperiodogram(nUz, nVz, fs=1./dz_shear,
+    m_shear, PdU, PdV, PdUdV = coperiodogram(nUz, nVz, fs=1./dP_shear,
                                              window='hanning', nfft=None,
                                              detrend='linear',
                                              scaling='density')
     # We only really want the cospectrum for shear so the next two lines are
     # something of a hack where we ignore unwanted output.
 
-    m_strain, Pstrain, __, __ = coperiodogram(ietaz, ietaz, fs=1./dz_strain,
+    m_strain, Pstrain, __, __ = coperiodogram(ietaz, ietaz, fs=1./dP_strain,
                                               window='hanning', nfft=None,
                                               detrend='linear',
                                               scaling='density')
@@ -644,10 +648,10 @@ for i in xrange(N_bins):
     # Shear spectra.
     Pshear = PdU + PdV
 
-    # Also Garrett-Munk.
-    GMstrain = GM79.E_str_z(2*np.pi*m_strain, N_mean)
-    GMvel = GM79.E_vel_z(2*np.pi*m_shear, N_mean)
-    GMshear = GM79.E_she_z(2*np.pi*m_shear, N_mean)/N_mean
+    # Also Garrett-Munk. Factor of 2 pi to convert to cyclical units
+    GMstrain = 2*np.pi*GM79.E_str_z(2*np.pi*m_strain, N_mean)
+    GMvel = 2*np.pi*GM79.E_vel_z(2*np.pi*m_shear, N_mean)
+    GMshear = 2*np.pi*GM79.E_she_z(2*np.pi*m_shear, N_mean)/N_mean
 
     # Now apply the corrections.
     T_shear = spectral_correction(m_shear, use_range=True, use_diff=True,
@@ -692,35 +696,38 @@ for i in xrange(N_bins):
 
     # Now print diagnostics and plots to see if it makes any sense.
 
-#    print("Ishear = {}".format(Ishear))
-#    print("IGMshear = {}".format(IGMshear))
-#    print("N_mean = {}".format(N_mean))
-    print("R_om = {}".format(R_om[i]))
-#    print("L = {}".format(L(gsw.f(lat), N_mean)))
-#    print("h = {}".format(h_gregg(R_om[i])))
+    if print_diagnostics:
 
-    fig, axs = plt.subplots(4, 1, sharex=True)
+    #    print("Ishear = {}".format(Ishear))
+    #    print("IGMshear = {}".format(IGMshear))
+    #    print("N_mean = {}".format(N_mean))
+        print("R_om = {}".format(R_om[i]))
+    #    print("L = {}".format(L(gsw.f(lat), N_mean)))
+    #    print("h = {}".format(h_gregg(R_om[i])))
 
-#    axs[0].loglog(m, PEK, 'k-', label="$E_{KE}$")
-    axs[0].loglog(m_shear, GMvel, 'k--', label="GM $E_{KE}$")
-#    axs[0].set_title("height {:1.0f} m".format(z_mean[i]))
-    axs[1].loglog(m_shear, Pshear, 'k-', label="$V_z$")
-    axs[1].loglog(m_shear, GMshear, 'k--', label="GM $V_z$")
-    axs[2].loglog(m_strain, Pstrain, 'k', label=r"$\xi_z$")
-    axs[2].loglog(m_strain, GMstrain, 'k--', label=r"GM $\xi_z$")
-    axs[3].loglog(m_shear, PCW, 'r-', label="CW")
-    axs[3].loglog(m_shear, PCCW, 'k-', label="CCW")
+        fig, axs = plt.subplots(4, 1, sharex=True)
 
-    axs[-1].set_xlabel('$k_z$ (m$^{-1}$)')
+    #    axs[0].loglog(m, PEK, 'k-', label="$E_{KE}$")
+        axs[0].loglog(m_shear, GMvel, 'k--', label="GM $E_{KE}$")
+    #    axs[0].set_title("height {:1.0f} m".format(z_mean[i]))
+        axs[1].loglog(m_shear, Pshear, 'k-', label="$V_z$")
+        axs[1].loglog(m_shear, GMshear, 'k--', label="GM $V_z$")
+        axs[2].loglog(m_strain, Pstrain, 'k', label=r"$\xi_z$")
+        axs[2].loglog(m_strain, GMstrain, 'k--', label=r"GM $\xi_z$")
+        axs[3].loglog(m_shear, PCW, 'r-', label="CW")
+        axs[3].loglog(m_shear, PCCW, 'k-', label="CCW")
 
-    for ax in axs:
-        ax.vlines(m_c, *ax.get_ylim())
-        ax.vlines(m_0, *ax.get_ylim())
-        ax.grid()
-        ax.legend()
+        axs[-1].set_xlabel('$k_z$ (m$^{-1}$)')
 
+        for ax in axs:
+            ax.vlines(m_c, *ax.get_ylim())
+            ax.vlines(m_0, *ax.get_ylim())
+            ax.grid()
+            ax.legend()
 
-fig, axs = plt.subplots(1, 4, sharey=True)
+z_mean = gsw.z_from_p(P_mean, lat)
+
+fig, axs = plt.subplots(1, 4, sharey=True, figsize=(6.5, 3.5))
 
 axs[0].set_ylabel('$z$ (m)')
 axs[0].plot(np.log10(R_pol), z_mean, 'k-o')
