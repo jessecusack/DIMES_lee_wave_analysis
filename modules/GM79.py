@@ -14,7 +14,7 @@ N_0 = 5.2e-3  # Buoyancy frequency [rad s-1].
 b = 1300.  # e-folding scale of N with depth [m].
 E_0 = 6.3e-5  # Internal wave energy parameter.
 f_30 = 7.3e-5  # Coriolis frequency at 30N [rad s-1].
-epsilon_0 = 6.73e-10  # GM energy dissipation rate.
+epsilon_0 = 8e-10  # GM energy dissipation rate. Polzin 2014
 
 
 def H(j, j_star=3., N_sum=100000):
@@ -70,21 +70,21 @@ def F_she(om, N, j, f=f_30):
 #  R = (2*pi*kz).^2*(b.^2*N0*N*(om.^2+f.^2)./om.^2);
 
 
-def m(om, N, j):
-    """Convert from frequency space to vertical wavenumber space."""
-    return (np.pi/b)*np.sqrt((N**2 - om**2)/(N_0**2 - om**2))*j
-
-
-def k(om, N, j, f=f_30):
-    """Convert from frequency space to horizontal wavenumber space."""
-    return (np.pi/b)*np.sqrt((om**2 - f**2)/(N_0**2 - om**2))*j
-
-
-def Emk(k, m, E_star=E_0, N=N_0, f=f_30, m_star=3*np.pi/b):
-    """The GM spectra in k and m space as defined in Cushman-Roisin."""
-    num = 3*f*N*E_star*m/m_star
-    den = np.pi*(1 + m/m_star)**(2.5) * (N**2 * k**2 + f**2 * m**2)
-    return num/den
+#def m(om, N, j):
+#    """Convert from frequency space to vertical wavenumber space."""
+#    return (np.pi/b)*np.sqrt((N**2 - om**2)/(N_0**2 - om**2))*j
+#
+#
+#def k(om, N, j, f=f_30):
+#    """Convert from frequency space to horizontal wavenumber space."""
+#    return (np.pi/b)*np.sqrt((om**2 - f**2)/(N_0**2 - om**2))*j
+#
+#
+#def Emk(k, m, E_star=E_0, N=N_0, f=f_30, m_star=3*np.pi/b):
+#    """The GM spectra in k and m space as defined in Cushman-Roisin."""
+#    num = 3*f*N*E_star*m/m_star
+#    den = np.pi*(1 + m/m_star)**(2.5) * (N**2 * k**2 + f**2 * m**2)
+#    return num/den
 
 
 def beta_star(N, j_star=3.):

@@ -563,7 +563,8 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         Ishear, Istrain, ICW, ICCW, IEK = I
 
         # Garrett-Munk shear power spectral density normalised.
-        GMshear = GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
+        # The factor of 2 pi is there to convert to cyclical units.
+        GMshear = 2.*np.pi*GM79.E_she_z(2*np.pi*m, N_mean)/N_mean
 
         IGMshear = integrated_ps(m, GMshear, params['m_c'], params['m_0'])
 
@@ -589,8 +590,9 @@ def analyse(z, U, V, dUdz, dVdz, strain, N2_ref, lat, params=default_params):
         # Plotting here generates a crazy number of plots.
         if params['plot_spectra']:
 
-            GMstrain = GM79.E_str_z(2*np.pi*m, N_mean)
-            GMvel = GM79.E_vel_z(2*np.pi*m, N_mean)
+            # The factor of 2 pi is there to convert to cyclical units.
+            GMstrain = 2.*np.pi*GM79.E_str_z(2*np.pi*m, N_mean)
+            GMvel = 2.*np.pi*GM79.E_vel_z(2*np.pi*m, N_mean)
 
             fig, axs = plt.subplots(4, 1, sharex=True)
 
