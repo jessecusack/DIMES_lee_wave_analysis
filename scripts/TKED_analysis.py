@@ -307,14 +307,14 @@ params['apply_corrections'] = True
 params['zmin'] = -1400
 params['zmax'] = -100
 
-E76_hpids = np.arange(1, 350)
-E77_hpids = np.arange(1, 250)
+# hpids is set further up the script.
 
-for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
+for Float in [E76, E77]:
 
     results = fs.analyse_float(Float, hpids, params)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     dists = Float.dist[idxs]
+    bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
 
     z_meang = []
     EKg = []
@@ -339,27 +339,71 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     R_omg = np.flipud(np.transpose(np.asarray(R_omg)))
     epsilong = np.flipud(np.transpose(np.asarray(epsilong)))
     kappag = np.flipud(np.transpose(np.asarray(kappag)))
+
     # Plotting #
+    ieps = 0.*np.zeros_like(idxs)
 
-    ylims = (params['zmin'], params['zmax'])
+    iZ = z_meang[:, 0]
 
-    fig = plt.figure()
-    plt.title('log10 R_pol')
-    plt.pcolormesh(dists, z_meang[:,0], np.log10(R_polg), cmap=plt.get_cmap('bwr'))
-    plt.clim(-1, 1)
-    plt.colorbar()
-    plt.ylim(ylims)
-    plt.xlim(np.min(dists), np.max(dists))
-    pf.my_savefig(fig, Float.floatID, 'R_pol_fs', sdir)
+    for i in xrange(len(idxs)):
+        ieps[i] = 1025.*trapz(epsilong[::-1, i], iZ[::-1])
 
-    fig = plt.figure()
-    plt.title('log10 epsilon')
-    plt.pcolormesh(dists, z_meang[:,0], np.log10(epsilong), cmap=plt.get_cmap('bwr'))
-    plt.clim(-11, -7)
-    plt.colorbar()
-    plt.ylim(ylims)
-    plt.xlim(np.min(dists), np.max(dists))
-    pf.my_savefig(fig, Float.floatID, 'epsilon_fs', sdir)
+
+    Z = z_meang.flatten()
+    X = np.asarray(len(z_meang[:, 0])*[Float.dist[idxs]])
+    LOG_EPS = (np.log10(epsilong)).flatten()
+    LOG_KAP = (np.log10(kappag)).flatten()
+
+    # Plotting #
+    # Epsilon
+    fig = plt.figure(figsize=(10, 4))
+    gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
+    ax0 = plt.subplot(gs[1])
+    ax1 = plt.subplot(gs[0])
+
+    ax1.plot(Float.dist[idxs], 1000.*ieps, color='black')
+    ax1.set_ylabel('$P$ (mW m$^{-2}$)')
+    ax1.yaxis.set_ticks(np.array([0., 10., 20.]))
+    ax1.xaxis.set_ticks([])
+
+    sc = ax0.scatter(X, Z, s=5, c=LOG_EPS, edgecolor='none',
+                     cmap=plt.get_cmap('YlOrRd'), vmin=-11., vmax=-7)
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
+    C = fig.colorbar(sc, cax=cbar_ax, extend='both')
+    C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
+
+#    plt.clim(-11., -7.)
+    ax0.set_xlim(np.min(X), np.max(X))
+    ax0.set_ylim(-5000., 0.)
+    ax0.set_xlabel('Distance (km)')
+    ax0.set_ylabel('$z$ (m)')
+    ax0.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+
+    ax1.set_xlim(*ax0.get_xlim())
+
+    pf.my_savefig(fig, Float.floatID, 'epsilon_fs', sdir, fsize='double_col')
+
+#    ylims = (params['zmin'], params['zmax'])
+#
+#    fig = plt.figure()
+#    plt.title('log10 R_pol')
+#    plt.pcolormesh(dists, z_meang[:,0], np.log10(R_polg), cmap=plt.get_cmap('bwr'))
+#    plt.clim(-1, 1)
+#    plt.colorbar()
+#    plt.ylim(ylims)
+#    plt.xlim(np.min(dists), np.max(dists))
+#    pf.my_savefig(fig, Float.floatID, 'R_pol_fs', sdir)
+#
+#    fig = plt.figure()
+#    plt.title('log10 epsilon')
+#    plt.pcolormesh(dists, z_meang[:,0], np.log10(epsilong), cmap=plt.get_cmap('bwr'))
+#    plt.clim(-11, -7)
+#    plt.colorbar()
+#    plt.ylim(ylims)
+#    plt.xlim(np.min(dists), np.max(dists))
+#    pf.my_savefig(fig, Float.floatID, 'epsilon_fs', sdir)
 
 #    plt.figure()
 #    plt.title('log10 kappa')
