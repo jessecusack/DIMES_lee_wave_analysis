@@ -94,7 +94,7 @@ plt.plot(far.model_pymc(zf, 5000., 15000, 8000, 0.))
 
 def w_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, x, y, z, U, V, W, B, N, f = data
 
@@ -103,7 +103,6 @@ def w_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     w = gw.w(x, y, z, time, phi_0, k, l, m, om, N, phase_0=phase_0)
 
@@ -112,7 +111,7 @@ def w_model(params, data):
 
 def u_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, x, y, z, U, V, W, B, N, f = data
 
@@ -121,7 +120,6 @@ def u_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     u = gw.u(x, y, z, time, phi_0, k, l, m, om, phase_0=phase_0)
 
@@ -130,7 +128,7 @@ def u_model(params, data):
 
 def v_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, x, y, z, U, V, W, B, N, f = data
 
@@ -139,7 +137,6 @@ def v_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     v = gw.v(x, y, z, time, phi_0, k, l, m, om, phase_0=phase_0)
 
@@ -148,7 +145,7 @@ def v_model(params, data):
 
 def b_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, x, y, z, U, V, W, B, N, f = data
 
@@ -157,7 +154,6 @@ def b_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     b = gw.b(x, y, z, time, phi_0, k, l, m, om, N, phase_0=phase_0)
 
@@ -174,8 +170,9 @@ def full_model(params, data):
 # Previously this looked like E76.get_timeseries([31, 32], ) etc. and the below
 # bits of code were uncommented.
 
+# %% PROFILES 31 32 ###########################################################
+
 time, z = E76.get_timeseries([31, 32], 'z')
-__, dist = E76.get_timeseries([31, 32], 'dist_ctd')
 timeef, U = E76.get_timeseries([31, 32], 'U')
 __, V = E76.get_timeseries([31, 32], 'V')
 __, W = E76.get_timeseries([31, 32], 'Ww')
@@ -189,7 +186,6 @@ t_split = E76.get_profiles(31).UTC_end
 nope = z > -600.
 
 time = time[~nope]
-dist = dist[~nope]
 W = W[~nope]
 B = B[~nope]
 x = x[~nope]
@@ -219,9 +215,7 @@ V[time < t_split] = utils.nan_detrend(z[time < t_split], V[time < t_split], 2)
 #V = utils.nan_detrend(depth, V, 2)
 
 time *= 60.*60.*24
-dist *= 1000.
 time -= np.min(time)
-dist -= np.min(dist)
 
 data = [time, x, y, z, U, V, W, B, N, f]
 
@@ -231,15 +225,17 @@ data_stack = np.hstack((U, V, W, 250.*B))
 def model():
 
     # Priors.
-    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
-    X = pymc.Uniform('X', -4e4, 4e4, value=-10000.)
-    Y = pymc.Uniform('Y', -1e5, 1e5, value=-10000.)
-    Z = pymc.Uniform('Z', -2e4, 2e4, value=-10000.)
+#    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
+    sig = 0.02
+    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.3)
+    X = pymc.Uniform('X', -100000., -500., value=-1500.)
+    Y = pymc.Uniform('Y', -100000., -500., value=-1500.)
+    Z = pymc.Uniform('Z', -50000., -500., value=-1000.)
     phase = pymc.Uniform('phase', 0., np.pi*2, value=1.)
 
     @pymc.deterministic()
-    def wave_model(X=X, Y=Y, Z=Z, phase=phase):
-        params = [X, Y, Z, phase]
+    def wave_model(phi_0=phi_0, X=X, Y=Y, Z=Z, phase=phase):
+        params = [phi_0, X, Y, Z, phase]
         return full_model(params, data)
 
     # Likelihood
@@ -248,17 +244,18 @@ def model():
 
     return locals()
 
-M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
-samples = 400000
-burn = 200000
+M = pymc.MCMC(model(), db='pickle', dbname='trace_31_32.p') # , db='pickle', dbname='trace.p'
+samples = 12000000
+burn = 11800000
 thin = 10
 M.sample(samples, burn, thin)
 pymc.Matplot.plot(M, common_scale=False)
 
 triangle.corner(np.transpose(np.asarray([M.trace('X')[:], M.trace('Y')[:],
-                                         M.trace('Z')[:],
+                                         M.trace('Z')[:], M.trace('phi_0')[:],
                                          M.trace('phase')[:]])),
-                labels=['$\lambda_x$', '$\lambda_y$', '$\lambda_z$', 'phase'])
+                labels=['$\lambda_x$', '$\lambda_y$', '$\lambda_z$',
+                        '$\phi_0$', 'phase'])
 
 
 plt.figure()
@@ -267,6 +264,95 @@ plt.plot(data_stack)
 Np = (samples - burn)/thin
 
 for i in xrange(0, Np, 20):
-    params = [M.trace('X')[i], M.trace('Y')[i], M.trace('Z')[i], M.trace('phase')[i]]
+    params = [M.trace('phi_0')[i], M.trace('X')[i], M.trace('Y')[i],
+              M.trace('Z')[i], M.trace('phase')[i]]
     plt.plot(full_model(params, data), 'k', alpha=0.01)
 
+# %% PROFILE 26 ###############################################################
+
+time, z = E77.get_timeseries([26], 'z')
+timeef, U = E77.get_timeseries([26], 'U')
+__, V = E77.get_timeseries([26], 'V')
+__, W = E77.get_timeseries([26], 'Ww')
+__, B = E77.get_timeseries([26], 'b')
+__, N2 = E77.get_timeseries([26], 'N2_ref')
+__, x = E77.get_timeseries([26], 'x_ctd')
+__, y = E77.get_timeseries([26], 'y_ctd')
+
+nope = z > -600.
+
+time = time[~nope]
+W = W[~nope]
+B = B[~nope]
+x = x[~nope]
+y = y[~nope]
+z = z[~nope]
+
+N = np.nanmean(np.sqrt(N2))
+f = gsw.f(-57.5)
+
+Unope = np.isnan(U)
+
+timeef = timeef[~Unope]
+U = U[~Unope]
+V = V[~Unope]
+
+U = np.interp(time, timeef, U)
+V = np.interp(time, timeef, V)
+
+U = utils.nan_detrend(z, U, 2)
+V = utils.nan_detrend(z, V, 2)
+
+time *= 60.*60.*24
+time -= np.min(time)
+
+data = [time, x, y, z, U, V, W, B, N, f]
+
+data_stack = np.hstack((U, V, W, 250.*B))
+
+
+def model():
+
+    # Priors.
+#    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
+    sig = 0.02
+    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.1)
+    X = pymc.Uniform('X', -100000., 100000., value=-15000.)
+    Y = pymc.Uniform('Y', -100000., 100000, value=-15000.)
+    Z = pymc.Uniform('Z', -100000., 100000, value=-25000.)
+    phase = pymc.Uniform('phase', -1000., 1000., value=1.)
+
+    @pymc.deterministic()
+    def wave_model(phi_0=phi_0, X=X, Y=Y, Z=Z, phase=phase):
+        params = [phi_0, X, Y, Z, phase]
+        return full_model(params, data)
+
+    # Likelihood
+    y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack,
+                    observed=True)
+
+    return locals()
+
+M = pymc.MCMC(model(), db='pickle', dbname='trace_26.p')
+samples = 500000
+burn = 300000
+thin = 10
+M.sample(samples, burn, thin)
+pymc.Matplot.plot(M, common_scale=False)
+
+triangle.corner(np.transpose(np.asarray([M.trace('X')[:], M.trace('Y')[:],
+                                         M.trace('Z')[:], M.trace('phi_0')[:],
+                                         M.trace('phase')[:]])),
+                labels=['$\lambda_x$', '$\lambda_y$', '$\lambda_z$',
+                        '$\phi_0$', 'phase'])
+
+
+plt.figure()
+plt.plot(data_stack)
+
+Np = (samples - burn)/thin
+
+for i in xrange(0, Np, 20):
+    params = [M.trace('phi_0')[i], M.trace('X')[i], M.trace('Y')[i],
+              M.trace('Z')[i], M.trace('phase')[i]]
+    plt.plot(full_model(params, data), 'k', alpha=0.01)
