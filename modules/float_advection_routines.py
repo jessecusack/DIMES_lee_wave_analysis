@@ -68,7 +68,7 @@ def drdt(r, t, phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f=0., phase_0=0.):
     return np.array([dxdt, dydt, dzdt])
 
 
-def model_basic(X, Y, Z, phase_0=0., oparams=default_params):
+def model_basic(phi_0, X, Y, Z, phase_0=0., oparams=default_params):
 
     Ufunc = oparams['Ufunc']
     f = oparams['f']
@@ -78,12 +78,10 @@ def model_basic(X, Y, Z, phase_0=0., oparams=default_params):
     Wf_pvals = oparams['Wf_pvals']
 
     # Wave parameters
-    w_0 = oparams['w_0']
     k = 2*np.pi/X
     l = 2*np.pi/Y
     m = 2*np.pi/Z
     om = gw.omega(N, k, m, l, f)
-    phi_0 = w_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     args = (phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f, phase_0)
 
@@ -116,8 +114,8 @@ def model_leastsq(params, z, sub, var_name, oparams=default_params):
     Subtract data given by 'sub' to return residual.
 
     """
-    X, Y, Z, phi_0 = params
-    __, r, u, b = model_basic(X, Y, Z, phi_0, oparams)
+    phi_0, X, Y, Z, phase_0 = params
+    __, r, u, b = model_basic(phi_0, X, Y, Z, phase_0, oparams)
     u[:, 0] -= oparams['Ufunc'](r[:, 2])
 
     # Variable to return.
@@ -128,10 +126,10 @@ def model_leastsq(params, z, sub, var_name, oparams=default_params):
     return ivar - sub
 
 
-def model_pymc(zf, X, Y, Z, phase_0=0., bscale=250., oparams=default_params):
+def model_pymc(zf, phi_0, X, Y, Z, phase_0=0., bscale=250., oparams=default_params):
     """Return a stack of all velocity components and buoyancy."""
 
-    __, r, u, b = model_basic(X, Y, Z, phase_0, oparams)
+    __, r, u, b = model_basic(phi_0, X, Y, Z, phase_0, oparams)
     u[:, 0] -= oparams['Ufunc'](r[:, 2])
 
     um = np.interp(zf, r[:, 2], u[:, 0])
@@ -142,10 +140,10 @@ def model_pymc(zf, X, Y, Z, phase_0=0., bscale=250., oparams=default_params):
     return np.hstack((um, vm, wm, bm))
 
 
-def model_verbose(X, Y, Z, phase_0=0., oparams=default_params):
+def model_verbose(phi_0, X, Y, Z, phase_0=0., oparams=default_params):
     """Return loads and loads of info."""
 
-    t, r, u, b = model_basic(X, Y, Z, phase_0, oparams)
+    t, r, u, b = model_basic(phi_0, X, Y, Z, phase_0, oparams)
 
     Ufunc = oparams['Ufunc']
     f = oparams['f']
@@ -160,10 +158,10 @@ def model_verbose(X, Y, Z, phase_0=0., oparams=default_params):
     l = 2*np.pi/Y
     m = 2*np.pi/Z
     om = gw.omega(N, k, m, l, f)
-    phi_0 = w_0*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
-    u_0 = gw.U_0(phi_0, k, l, om, N, f)
-    v_0 = gw.V_0(phi_0, k, l, om, N, f)
+    u_0 = gw.U_0(phi_0, k, l, om, f)
+    v_0 = gw.V_0(phi_0, k, l, om, f)
+    w_0 = gw.W_0(phi_0, m, om, N)
     b_0 = gw.B_0(phi_0, m, om, N)
 
     if oparams['print']:
