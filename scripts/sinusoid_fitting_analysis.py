@@ -290,7 +290,7 @@ cbar = plt.colorbar(C, extend='both')
 cbar.set_label('$w$ (m s$^{-1}$)')
 [ax.grid() for ax in axs];
 
-pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
+#pf.my_savefig(fig, 'both', 'time-dist', sdir, fsize='double_col')
 
 # %% Modelling float motion
 
@@ -301,39 +301,44 @@ def U_const(z):
 
 params['Ufunc'] = U_const
 
-lx = -14000.
-ly = -14000.
-lz = -14000.
-phase_0 = 1.
+lx = -3000.
+ly = -3000.
+lz = -2000.
+phi_0 = 0.05
+phase_0 = 1.7
 
 params['z_0'] = -1520
 params['N'] = 2.0e-3
 
-X = far.model_verbose(lx, ly, lz, phase_0, params)
+X = far.model_verbose(phi_0, lx, ly, lz, phase_0, params)
 X.u[:, 0] -= X.U
 
 pfl = E77.get_profiles(26)
 
-fig, axs = plt.subplots(1, 5, sharey=True, figsize=(14,6))
-#axs[0].set_ylabel('$z$ (m)')
+fig, axs = plt.subplots(1, 6, sharey=True, figsize=(16,6))
 axs[0].plot(1e2*utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, 'red')
-#axs[0].set_xlabel('$U$ (m s$^{-1}$)')
 plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=60)
 axs[1].plot(1e2*utils.nan_detrend(pfl.zef, pfl.V_abs, 2), pfl.zef, 'red')
-#axs[1].set_xlabel('$V$ (m s$^{-1}$)')
 plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=60)
 axs[2].plot(1e2*pfl.Ww, pfl.z, color='red')
-#axs[2].set_xlabel('$W$ (m s$^{-1}$)')
 plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
 axs[3].plot(1e4*pfl.b, pfl.z, 'red')
-#axs[3].set_xlabel('$b$ (m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
-axs[4].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
-axs[4].set_xlabel('$x$ (m)')
+axs[4].plot(pfl.Pprime, pfl.z, 'red')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+axs[5].plot((pfl.dist_ctd - np.nanmin(pfl.dist_ctd))*1000., pfl.z, 'red')
+plt.setp(axs[5].xaxis.get_majorticklabels(), rotation=60)
 
 #pf.my_savefig(fig, '4977', 'pfl26_UVWB', sdir, fsize='double_col')
-use = X.r[:, 2] < -400.
+use = X.r[:, 2] < -600.
+
+dwdt = 0. # utils.finite_diff(X.t, X.u[:, 2])
+bw = X.b + dwdt
+bi = cumtrapz(bw, X.r[:, 2], initial=0.)
+bii = cumtrapz(bi, X.r[:, 2], initial=0.)
+phii = bi + (bii[0] - bii[-1])/(-X.r[0, 2])
+phi = gw.phi(X.r[:, 0], X.r[:, 1], X.r[:, 2], X.t, X.phi_0, X.k, X.l, X.m,
+             X.om, U=U_const(0.), phase_0=phase_0)
 
 axs[0].set_ylabel('$z$')
 axs[0].plot(1e2*X.u[use, 0], X.r[use, 2])
@@ -348,12 +353,16 @@ plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=60)
 axs[3].plot(1e4*X.b[use], X.r[use, 2])
 axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=60)
-axs[4].plot(X.r[use,0], X.r[use, 2])
-axs[4].set_xlabel('$x$ (m)')
+axs[4].plot(phi[use], X.r[use, 2])
+#axs[4].plot(phii[use], X.r[use, 2])
+axs[4].set_xlabel('$\phi$ (m$^2$ s$^{-2}$)')
 plt.setp(axs[4].xaxis.get_majorticklabels(), rotation=60)
+axs[5].plot(X.r[use,0], X.r[use, 2])
+axs[5].set_xlabel('$x$ (m)')
+plt.setp(axs[5].xaxis.get_majorticklabels(), rotation=60)
 plt.ylim(X.z_0, 0)
 
-pf.my_savefig(fig, 'model_data_pfl26', 'comparison', sdir, fsize='double_col')
+#pf.my_savefig(fig, 'model_data_pfl26', 'comparison', sdir, fsize='double_col')
 
 k = X.k
 l = X.l
@@ -505,7 +514,8 @@ params['N'] = 2e-3
 
 model = far.model_leastsq
 
-popt1, __ = op.leastsq(model, x0=[-2000, -2000, -2000, 0.], args=(zf, wf, 'w', params))
+popt1, __ = op.leastsq(model, x0=[0.05, -2000, -2000, -2000, 0.],
+                       args=(zf, wf, 'w', params))
 plt.figure()
 plt.plot(wf, zf, model(popt1, z=zf, sub=wf, var_name='w') + wf, zf)
 
@@ -525,7 +535,7 @@ plt.plot(model(popt1, z=zf, sub=bf, var_name='b') + bf, zf)
 
 def w_model(params, pfl, zlim, deg):
 
-    X, Z, phase_0 = params
+    phi_0, X, Z, phase_0 = params
     zmin, zmax = zlim
     nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
 
@@ -538,7 +548,6 @@ def w_model(params, pfl, zlim, deg):
     f = gsw.f(pfl.lat_start)
     N = np.mean(np.sqrt(pfl.N2_ref[~nope]))
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.nanmax(pfl.Ww[~nope])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     w = gw.w(x, 0., pfl.z, t, phi_0, k, l, m, om, N, phase_0=phase_0)
 
@@ -547,7 +556,7 @@ def w_model(params, pfl, zlim, deg):
 
 def u_model(params, pfl, zlim, deg):
 
-    X, Z, phase_0 = params
+    phi_0, X, Z, phase_0 = params
     zmin, zmax = zlim
     nope = np.isnan(pfl.zef) | (pfl.zef < zmin) | (pfl.zef > zmax)
 
@@ -561,9 +570,6 @@ def u_model(params, pfl, zlim, deg):
 
     om = gw.omega(N, k, m, l, f)
 
-    nope2 = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
-    phi_0 = np.nanmax(pfl.Ww[~nope2])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
-
     u = gw.u(x, 0., pfl.zef, t, phi_0, k, l, m, om, phase_0=phase_0)
 
     return u[~nope] - utils.nan_detrend(pfl.zef[~nope], pfl.U[~nope], deg)
@@ -571,7 +577,7 @@ def u_model(params, pfl, zlim, deg):
 
 def b_model(params, pfl, zlim, deg):
 
-    X, Z, phase_0 = params
+    phi_0, X, Z, phase_0 = params
     zmin, zmax = zlim
     nope = np.isnan(pfl.z) | (pfl.z < zmin) | (pfl.z > zmax)
 
@@ -584,7 +590,6 @@ def b_model(params, pfl, zlim, deg):
     f = gsw.f(pfl.lat_start)
     N = np.mean(np.sqrt(pfl.N2_ref[~nope]))
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.nanmax(pfl.Ww[~nope])*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     b = gw.b(x, 0., pfl.z, t, phi_0, k, l, m, om, N, phase_0=phase_0)
 
@@ -623,7 +628,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         zlim = zlims[Float.floatID][hpid]
         pfl = Float.get_profiles(hpid)
 
-        popt1, __, info, __, __ = op.leastsq(full_model, x0=[-2000., -2000., 0.],
+        popt1, __, info, __, __ = op.leastsq(full_model, x0=[0.05, -2000., -2000., 0.],
                                              args=(pfl, zlim, deg),
                                              full_output=True)
 
@@ -649,7 +654,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
 def w_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, dist, depth, U, V, W, B, N, f = data
 
@@ -658,7 +663,6 @@ def w_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     w = gw.w(dist, 0., depth, time, phi_0, k, l, m, om, N, phase_0=phase_0)
 
@@ -667,7 +671,7 @@ def w_model(params, data):
 
 def u_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, dist, depth, U, V, W, B, N, f = data
 
@@ -676,7 +680,6 @@ def u_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     u = gw.u(dist, 0., depth, time, phi_0, k, l, m, om, phase_0=phase_0)
 
@@ -685,7 +688,7 @@ def u_model(params, data):
 
 def v_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, dist, depth, U, V, W, B, N, f = data
 
@@ -694,7 +697,6 @@ def v_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     v = gw.v(dist, 0., depth, time, phi_0, k, l, m, om, phase_0=phase_0)
 
@@ -703,7 +705,7 @@ def v_model(params, data):
 
 def b_model(params, data):
 
-    X, Y, Z, phase_0 = params
+    phi_0, X, Y, Z, phase_0 = params
 
     time, dist, depth, U, V, W, B, N, f = data
 
@@ -712,7 +714,6 @@ def b_model(params, data):
     m = 2*np.pi/Z
 
     om = gw.omega(N, k, m, l, f)
-    phi_0 = np.max(W)*(N**2 - f**2)*m/(om*(k**2 + l**2 + m**2))
 
     b = gw.b(dist, 0., depth, time, phi_0, k, l, m, om, N, phase_0=phase_0)
 
@@ -779,14 +780,15 @@ dist -= np.min(dist)
 data = [time, dist, depth, U, V, W, B, N, f]
 
 
-L = 10
+L = 3000
 popt = []
 
 for i in xrange(L):
 
     print(i)
 
-    x0 = np.hstack((8e3*np.random.randn(3), 1 + 0.5*np.random.randn()))
+    x0 = np.hstack((np.abs(0.1*np.random.randn()), 5e3*np.random.randn(3),
+                    1 + 0.5*np.random.randn()))
     popt1, __, info, __, __ = op.leastsq(full_model, x0=x0, args=(data),
                                          full_output=True)
 
@@ -794,13 +796,16 @@ for i in xrange(L):
 
 popt = np.asarray(popt)
 
-fig, axs = plt.subplots(1, 3, figsize=(10, 6))
-axs[0].hist(popt[:,0], bins=np.arange(-40000, 40000, 1000),
-            normed=False, log=False, alpha=0.8);
-axs[1].hist(popt[:,1], bins=np.arange(-40000, 40000, 1000),
-            normed=False, log=False, alpha=0.8);
-axs[2].hist(popt[:,2], bins=np.arange(-40000, 40000, 1000),
-            normed=False, log=False, alpha=0.8);
+fig, axs = plt.subplots(1, 4, figsize=(10, 6))
+axs[0].hist(popt[:, 0], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8)
+axs[1].hist(popt[:, 1], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8)
+axs[2].hist(popt[:, 2], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8)
+axs[3].hist(popt[:, 3], bins=np.arange(-40000, 40000, 1000),
+            normed=False, log=False, alpha=0.8)
+
 
 
 #popt1 = [-2000., -2000., -2000., 0.]
