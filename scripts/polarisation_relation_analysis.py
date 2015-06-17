@@ -12,6 +12,7 @@ import os
 import sys
 import glob
 from scipy.linalg import lstsq
+import scipy.optimize as op
 import gsw
 
 lib_path = os.path.abspath('../modules')
@@ -335,3 +336,32 @@ h0 = 200
 h1 = 1200
 
 print(2*np.pi/(w0/(U0*h0)), 2*np.pi/(w0/(U1*h1)))
+
+# %%
+
+# New approach that constrains the frequency using the wavenumber information.
+
+U = 0.4
+N = 2e-3
+
+xq = np.array([0.,  516.66576652, 882., 1512.23911972,  1994.01441055,  2825.66675334,
+  3584.75880071,  4620.14505228,  5247.30421987,  5964.80873041])
+zq = np.array([-602.50953952,  -788.92712687, -1000., -1246.54503641, -1376.43262381, -1573.86360897,
+ -1352.10223918, -1026.39032746, -807.29489018, -567.31845563,])
+tq = np.array([0., 1081., 2000., 3164.00000763, 4172., 5911.99999237,
+   7500., 9666., 10978., 12479.])
+
+xqd = np.diff(xq)
+zqd = np.diff(zq)
+tqd = np.diff(tq)
+
+def lin_model(params, dx, dz, dt, N, U):
+    k, m = params
+    om0 = np.sqrt(k**2 * N**2 /(k**2 + m**2))
+    y = k*dx + m*dz - (om0 + U*k)*dt
+    return y - np.pi
+
+args = (xqd, zqd, tqd, N, U)
+
+popt, __, info, __, __ = op.leastsq(lin_model, x0=[-0.005, -0.005],
+                                    args=args, full_output=True)
