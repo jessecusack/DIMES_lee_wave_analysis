@@ -160,7 +160,7 @@ for Float, c in zip([E76, E77], cs):
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
     bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
-    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=c)
+    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=c, lc=30.)
 
     ieps = 0.*np.zeros_like(idxs)
 
@@ -287,7 +287,7 @@ for Float, c in zip([E76, E77], cs):
     pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir, fsize='double_col')
 
 # %% Using Thorpe scales
-fs.thorpe_scales()
+#fs.thorpe_scales()
 
 # %% Using finescale parameterisation
 
