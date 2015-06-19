@@ -724,12 +724,11 @@ def thorpe_scales(z, x):
     return thorpe_scales, thorpe_disp, x_sorted, idxs
 
 
-def w_scales(w, z, N2, dz=5., c=0.5, eff=0.2):
+def w_scales(w, z, N2, dz=1., c=0.1, eff=0.2, lc=30.):
     """Inputs should be regularly spaced."""
 
     # First we have to design the high pass filter the data. Beaird et. al.
     # 2012 use a forth order butterworth with a cutoff of 30m.
-    lc = 30.  # cut off wavelength (m)
     mc = 1./lc  # cut off wavenumber (m-1)
     normal_cutoff = mc*dz*2.  # Nyquist frequency is half 1/dz.
     b, a = sig.butter(4, normal_cutoff, btype='highpass')
@@ -753,11 +752,13 @@ def w_scales(w, z, N2, dz=5., c=0.5, eff=0.2):
     return epsilon, kappa
 
 
-def w_scales_float(Float):
+def w_scales_float(Float, hpids, c=0.1, eff=0.2, lc=30.):
 
-    w = Float.r_Ww
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+
+    w = Float.r_Ww[:, idxs]
     z = Float.r_z[:, 0]
-    N2 = Float.r_N2_ref
+    N2 = Float.r_N2_ref[:, idxs]
 
     dz = z[0] - z[1]
 
@@ -765,7 +766,6 @@ def w_scales_float(Float):
     kappa = np.zeros_like(w)
 
     for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-        epsilon[:, i], kappa[:, i] = w_scales(w_row, z, N2_row, dz)
-
+        epsilon[:, i], kappa[:, i] = w_scales(w_row, z, N2_row, dz, c, eff, lc)
 
     return epsilon, kappa

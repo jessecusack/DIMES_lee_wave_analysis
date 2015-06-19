@@ -51,54 +51,54 @@ if not os.path.exists(sdir):
 matplotlib.rc('font', **{'size': 9})
 
 
-# %% Experimental functions
-
-def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2, lc=30.):
-    """Inputs should be regularly spaced."""
-
-    # First we have to design the high pass filter the data. Beaird et. al.
-    # 2012 use a forth order butterworth with a cutoff of 30m.
-    mc = 1./lc  # cut off wavenumber (m-1)
-    normal_cutoff = mc*dz*2.  # Nyquist frequency is half 1/dz.
-    b, a = sig.butter(4, normal_cutoff, btype='highpass')
-
-    # Filter the data.
-    w_filt = sig.lfilter(b, a, w)
-
-    w_wdws = wdw.window(z, w_filt, width=10., overlap=-1.)
-    N2_wdws = wdw.window(z, N2, width=10., overlap=-1.)
-
-    w_rms = np.zeros_like(z)
-    N2_mean = np.zeros_like(z)
-
-    for i, (w_wdw, N2_wdw) in enumerate(zip(w_wdws, N2_wdws)):
-        w_rms[i] = np.std(w_wdw[1])
-        N2_mean[i] = np.mean(N2_wdw[1])
-
-    epsilon = c*np.sqrt(N2_mean)*w_rms**2
-    kappa = eff*epsilon/N2_mean
-
-    return epsilon, kappa
-
-
-def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2, lc=30.):
-
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-
-    w = Float.r_Ww[:, idxs]
-    z = Float.r_z[:, 0]
-    N2 = Float.r_N2_ref[:, idxs]
-
-    dz = z[0] - z[1]
-
-    epsilon = np.zeros_like(w)
-    kappa = np.zeros_like(w)
-
-    for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row,
-                                                           dz, c, eff, lc)
-
-    return epsilon, kappa
+## %% Experimental functions
+#
+#def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2, lc=30.):
+#    """Inputs should be regularly spaced."""
+#
+#    # First we have to design the high pass filter the data. Beaird et. al.
+#    # 2012 use a forth order butterworth with a cutoff of 30m.
+#    mc = 1./lc  # cut off wavenumber (m-1)
+#    normal_cutoff = mc*dz*2.  # Nyquist frequency is half 1/dz.
+#    b, a = sig.butter(4, normal_cutoff, btype='highpass')
+#
+#    # Filter the data.
+#    w_filt = sig.lfilter(b, a, w)
+#
+#    w_wdws = wdw.window(z, w_filt, width=10., overlap=-1.)
+#    N2_wdws = wdw.window(z, N2, width=10., overlap=-1.)
+#
+#    w_rms = np.zeros_like(z)
+#    N2_mean = np.zeros_like(z)
+#
+#    for i, (w_wdw, N2_wdw) in enumerate(zip(w_wdws, N2_wdws)):
+#        w_rms[i] = np.std(w_wdw[1])
+#        N2_mean[i] = np.mean(N2_wdw[1])
+#
+#    epsilon = c*np.sqrt(N2_mean)*w_rms**2
+#    kappa = eff*epsilon/N2_mean
+#
+#    return epsilon, kappa
+#
+#
+#def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2, lc=30.):
+#
+#    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+#
+#    w = Float.r_Ww[:, idxs]
+#    z = Float.r_z[:, 0]
+#    N2 = Float.r_N2_ref[:, idxs]
+#
+#    dz = z[0] - z[1]
+#
+#    epsilon = np.zeros_like(w)
+#    kappa = np.zeros_like(w)
+#
+#    for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
+#        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row,
+#                                                           dz, c, eff, lc)
+#
+#    return epsilon, kappa
 
 
 # %% Coefficient estimation using microstructure data
@@ -118,8 +118,8 @@ z = np.arange(zmin, 0., dz)
 
 hpids = np.arange(1, 100)
 
-epsilon_76, kappa_76 = w_scales_float_experimental(E76, hpids, c=0.03)
-epsilon_77, kappa_77 = w_scales_float_experimental(E77, hpids, c=0.04)
+epsilon_76, kappa_76 = fs.w_scales_float(E76, hpids, c=0.03)
+epsilon_77, kappa_77 = fs.w_scales_float(E77, hpids, c=0.04)
 
 fig2 = plt.figure()
 plt.semilogx(UK2_vmp['eps'][0][0][:, 25:30], z_vmp[:, 25:30], color='grey',
@@ -156,11 +156,11 @@ cs = [0.03, 0.04]
 
 for Float, c in zip([E76, E77], cs):
 
-    hpids = np.arange(1, 100)
+    hpids = np.arange(1, 60)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
     bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
-    epsilon, kappa = w_scales_float_experimental(Float, hpids, c=c, lc=30.)
+    epsilon, kappa = fs.w_scales_float(Float, hpids, c=c, lc=30.)
 
     ieps = 0.*np.zeros_like(idxs)
 
@@ -210,81 +210,81 @@ for Float, c in zip([E76, E77], cs):
 
     pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir, fsize='double_col')
 
-    ##
-    # Kappa
-    fig = plt.figure(figsize=(10, 4))
-    plt.scatter(X, Z, s=5, c=LOG_KAP, edgecolor='none', cmap=plt.get_cmap('YlOrRd'))
-    C = plt.colorbar(extend='both')
-    C.set_label(r'$\log_{10}(\kappa_\rho)$ (m$^2$ s$^{-1}$)')
-    plt.clim(-5., -3.)
-    plt.xlim(np.min(X), np.max(X))
-    plt.ylim(-5000., 0.)
-    plt.xlabel('Distance (km)')
-    plt.ylabel('$z$ (m)')
-    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'kappa_lem', sdir, fsize='double_col')
-
-    # U V W
-
-    __, d_ef = Float.get_timeseries(hpids, 'dist_ef')
-    __, d_ctd = Float.get_timeseries(hpids, 'dist_ctd')
-    __, z = Float.get_timeseries(hpids, 'z')
-    __, zef = Float.get_timeseries(hpids, 'zef')
-    __, u = Float.get_timeseries(hpids, 'U_abs')
-    __, v = Float.get_timeseries(hpids, 'V_abs')
-    __, w = Float.get_timeseries(hpids, 'Ww')
-    __, N2_ref = Float.get_timeseries(hpids, 'N2_ref')
-
-    u[np.abs(u) > 1.5] = np.NaN
-    v[np.abs(v) > 1.5] = np.NaN
-
-    fig = plt.figure(figsize=(10, 4))
-    plt.scatter(d_ef, zef, s=5., c=u, edgecolor='none', cmap=plt.get_cmap('bwr'))
-    C = plt.colorbar(extend='both')
-    C.set_label(r'$u$ (m s$^{-1}$)')
-    plt.clim(-1., 1.)
-    plt.xlim(np.min(X), np.max(X))
-    plt.ylim(-5000., 0.)
-    plt.xlabel('Distance (km)')
-    plt.ylabel('$z$ (m)')
-    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'u_rel', sdir, fsize='double_col')
-
-    fig = plt.figure(figsize=(10, 4))
-    plt.scatter(d_ef, zef, s=5., c=v, edgecolor='none', cmap=plt.get_cmap('bwr'))
-    C = plt.colorbar(extend='both')
-    C.set_label(r'$v$ (m s$^{-1}$)')
-    plt.clim(-1., 1.)
-    plt.xlim(np.min(X), np.max(X))
-    plt.ylim(-5000., 0.)
-    plt.xlabel('Distance (km)')
-    plt.ylabel('$z$ (m)')
-    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'v_rel', sdir, fsize='double_col')
-
-    fig = plt.figure(figsize=(10, 4))
-    plt.scatter(d_ctd, z, s=5., c=w, edgecolor='none', cmap=plt.get_cmap('bwr'))
-    C = plt.colorbar(extend='both')
-    C.set_label(r'$w$ (m s$^{-1}$)')
-    plt.clim(-0.1, 0.1)
-    plt.xlim(np.min(X), np.max(X))
-    plt.ylim(-5000., 0.)
-    plt.xlabel('Distance (km)')
-    plt.ylabel('$z$ (m)')
-    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'w', sdir, fsize='double_col')
-
-    fig = plt.figure(figsize=(10, 4))
-    plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('cool'))
-    C = plt.colorbar(extend='both')
-    C.set_label(r'$N$ (rad s$^{-1}$)')
-    plt.clim(0.001, 0.003)
-    plt.xlim(np.min(X), np.max(X))
-    plt.ylim(-5000., 0.)
-    plt.xlabel('Distance (km)')
-    plt.ylabel('$z$ (m)')
-    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-    pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir, fsize='double_col')
+#    ##
+#    # Kappa
+#    fig = plt.figure(figsize=(10, 4))
+#    plt.scatter(X, Z, s=5, c=LOG_KAP, edgecolor='none', cmap=plt.get_cmap('YlOrRd'))
+#    C = plt.colorbar(extend='both')
+#    C.set_label(r'$\log_{10}(\kappa_\rho)$ (m$^2$ s$^{-1}$)')
+#    plt.clim(-5., -3.)
+#    plt.xlim(np.min(X), np.max(X))
+#    plt.ylim(-5000., 0.)
+#    plt.xlabel('Distance (km)')
+#    plt.ylabel('$z$ (m)')
+#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+#    pf.my_savefig(fig, Float.floatID, 'kappa_lem', sdir, fsize='double_col')
+#
+#    # U V W
+#
+#    __, d_ef = Float.get_timeseries(hpids, 'dist_ef')
+#    __, d_ctd = Float.get_timeseries(hpids, 'dist_ctd')
+#    __, z = Float.get_timeseries(hpids, 'z')
+#    __, zef = Float.get_timeseries(hpids, 'zef')
+#    __, u = Float.get_timeseries(hpids, 'U_abs')
+#    __, v = Float.get_timeseries(hpids, 'V_abs')
+#    __, w = Float.get_timeseries(hpids, 'Ww')
+#    __, N2_ref = Float.get_timeseries(hpids, 'N2_ref')
+#
+#    u[np.abs(u) > 1.5] = np.NaN
+#    v[np.abs(v) > 1.5] = np.NaN
+#
+#    fig = plt.figure(figsize=(10, 4))
+#    plt.scatter(d_ef, zef, s=5., c=u, edgecolor='none', cmap=plt.get_cmap('bwr'))
+#    C = plt.colorbar(extend='both')
+#    C.set_label(r'$u$ (m s$^{-1}$)')
+#    plt.clim(-1., 1.)
+#    plt.xlim(np.min(X), np.max(X))
+#    plt.ylim(-5000., 0.)
+#    plt.xlabel('Distance (km)')
+#    plt.ylabel('$z$ (m)')
+#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+#    pf.my_savefig(fig, Float.floatID, 'u_rel', sdir, fsize='double_col')
+#
+#    fig = plt.figure(figsize=(10, 4))
+#    plt.scatter(d_ef, zef, s=5., c=v, edgecolor='none', cmap=plt.get_cmap('bwr'))
+#    C = plt.colorbar(extend='both')
+#    C.set_label(r'$v$ (m s$^{-1}$)')
+#    plt.clim(-1., 1.)
+#    plt.xlim(np.min(X), np.max(X))
+#    plt.ylim(-5000., 0.)
+#    plt.xlabel('Distance (km)')
+#    plt.ylabel('$z$ (m)')
+#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+#    pf.my_savefig(fig, Float.floatID, 'v_rel', sdir, fsize='double_col')
+#
+#    fig = plt.figure(figsize=(10, 4))
+#    plt.scatter(d_ctd, z, s=5., c=w, edgecolor='none', cmap=plt.get_cmap('bwr'))
+#    C = plt.colorbar(extend='both')
+#    C.set_label(r'$w$ (m s$^{-1}$)')
+#    plt.clim(-0.1, 0.1)
+#    plt.xlim(np.min(X), np.max(X))
+#    plt.ylim(-5000., 0.)
+#    plt.xlabel('Distance (km)')
+#    plt.ylabel('$z$ (m)')
+#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+#    pf.my_savefig(fig, Float.floatID, 'w', sdir, fsize='double_col')
+#
+#    fig = plt.figure(figsize=(10, 4))
+#    plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('cool'))
+#    C = plt.colorbar(extend='both')
+#    C.set_label(r'$N$ (rad s$^{-1}$)')
+#    plt.clim(0.001, 0.003)
+#    plt.xlim(np.min(X), np.max(X))
+#    plt.ylim(-5000., 0.)
+#    plt.xlabel('Distance (km)')
+#    plt.ylabel('$z$ (m)')
+#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+#    pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir, fsize='double_col')
 
 # %% Using Thorpe scales
 #fs.thorpe_scales()
