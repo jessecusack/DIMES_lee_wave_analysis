@@ -61,9 +61,9 @@ def drdt(r, t, phi_0, Ufunc, Wf_pvals, k, l, m, om, N, f=0., phase_0=0.):
 
     U = Ufunc(z)
 
-    dxdt = U + gw.u(x, y, z, t, phi_0, k, l, m, om, f, U, phase_0)
-    dydt = gw.v(x, y, z, t, phi_0, k, l, m, om, f, U, phase_0)
-    dzdt = (Wf_0 + gw.w(x, y, z, t, phi_0, k, l, m, om, N, U, phase_0))/(1 - Wf_g)
+    dxdt = U + gw.u(x, y, z, t, phi_0, k, l, m, om, f=f, U=U, phase_0=phase_0)
+    dydt = gw.v(x, y, z, t, phi_0, k, l, m, om, f=f, U=U, phase_0=phase_0)
+    dzdt = (Wf_0 + gw.w(x, y, z, t, phi_0, k, l, m, om, N, U=U, phase_0=phase_0))/(1 - Wf_g)
 
     return np.array([dxdt, dydt, dzdt])
 
