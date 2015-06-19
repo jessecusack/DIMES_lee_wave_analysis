@@ -41,6 +41,10 @@ try:
 except NameError:
     E76 = emapex.load(4976)
     E77 = emapex.load(4977)
+    E76.calculate_pressure_perturbation()
+    E76.update_profiles()
+    E77.calculate_pressure_perturbation()
+    E77.update_profiles()
 
 # %% Script params.
 
@@ -297,23 +301,23 @@ cbar.set_label('$w$ (m s$^{-1}$)')
 params = far.default_params
 
 def U_const(z):
-    return 0.4
+    return 0.5
 
 params['Ufunc'] = U_const
 
-lx = -3000.
-ly = -3000.
-lz = -2000.
-phi_0 = 0.05
-phase_0 = 1.7
+lx = -2050.
+ly = -1700.
+lz = -1880.
+phi_0 = 0.038
+phase_0 = 3.24
 
-params['z_0'] = -1520
+pfl = E77.get_profiles(26)
+
+params['z_0'] = np.nanmin(pfl.z)
 params['N'] = 2.0e-3
 
 X = far.model_verbose(phi_0, lx, ly, lz, phase_0, params)
 X.u[:, 0] -= X.U
-
-pfl = E77.get_profiles(26)
 
 fig, axs = plt.subplots(1, 6, sharey=True, figsize=(16,6))
 axs[0].plot(1e2*utils.nan_detrend(pfl.zef, pfl.U_abs, 2), pfl.zef, 'red')
