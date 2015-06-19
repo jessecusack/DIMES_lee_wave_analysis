@@ -314,17 +314,19 @@ w_amp = np.array([-0.2, 0.2, 0.2, -0.23, -0.15, 0.15])
 b_amp = np.array([4e-4, 3e-4, 3e-4, 4e-4, 3.5e-4, 2e-4])
 u_amp = np.array([0.2, 0.2, 0.2, 0.15, 0.15, 0.1])
 v_amp = np.array([0.2, 0.1, 0.1, 0.25, 0.2, 0.15])
-N = 1e-3
+N = 2.2e-3
 f = 1.2e-4
 
 om = np.abs(w_amp*N**2/b_amp)
+
+om_alt = np.sqrt(w_amp**2*N**2/(u_amp**2 + v_amp**2 + w_amp**2))
 
 # With rotation.
 r1 = np.abs((1j*u_amp/v_amp*f + om)/(u_amp/v_amp*om - 1j*f))
 # Without rotation.
 r2 = np.abs(v_amp/u_amp)
 
-print("{:1.2e} +/- {:1.2e}".format(np.mean(om), np.std(om)))
+print("omega = {:1.2e} +/- {:1.2e}".format(np.mean(om_alt), np.std(om_alt)))
 print(r1)
 print(r2)
 print(np.mean(r2))
@@ -363,5 +365,5 @@ def lin_model(params, dx, dz, dt, N, U):
 
 args = (xqd, zqd, tqd, N, U)
 
-popt, __, info, __, __ = op.leastsq(lin_model, x0=[-0.005, -0.005],
+popt, __, info, __, __ = op.leastsq(lin_model, x0=[-0.0012, -0.0012],
                                     args=args, full_output=True)
