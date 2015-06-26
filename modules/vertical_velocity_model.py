@@ -266,7 +266,7 @@ def cost(params, fixed, model, wf, data, cf_key='diffsq'):
     return c
 
 
-def pymc_fitter(Float, hpids, Plims=(60., 1500.)):
+def pymc_fitter(Float, hpids, Plims=(60., 1500.), samples=10000):
 
     __, ppos = Float.get_timeseries(hpids, 'ppos')
     __, P = Float.get_timeseries(hpids, 'P')
@@ -306,9 +306,8 @@ def pymc_fitter(Float, hpids, Plims=(60., 1500.)):
         return locals()
 
     M = pymc.MCMC(model())
-    samples = 100000
-    burn = 50000
-    thin = 10
+    burn = samples/2
+    thin = 5
     M.sample(samples, burn, thin)
     pymc.Matplot.plot(M, common_scale=False)
 
