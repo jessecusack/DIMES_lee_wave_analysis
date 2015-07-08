@@ -23,9 +23,9 @@ try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
 except NameError:
     E76 = emapex.load(4976)
-    E76.generate_regular_grids()
+    E76.generate_regular_grids(dz=2.)
     E77 = emapex.load(4977)
-    E77.generate_regular_grids()
+    E77.generate_regular_grids(dz=2.)
 
 # Figure save path.
 sdir = os.path.join('..', 'figures', 'vertical_velocity_analysis')
@@ -37,7 +37,7 @@ matplotlib.rc('font', **{'size': 9})
 
 # %% ##########################################################################
 
-pfl = E77.get_profiles(82)
+pfl = E77.get_profiles(151)
 fig = plt.figure(figsize=(3.2, 5))
 plt.plot(100.*pfl.Ww, pfl.z, label='$W_{water}$', color='black')
 plt.plot(100.*pfl.Wz, pfl.z, label='$W_{float}$', color='grey')
@@ -54,22 +54,22 @@ scaling='density'
 
 # Generate float vertical velocity with random depth error.
 # Fake profile
-dze = 5.
-dt = dze/0.12  # 0.12 is a tpyical descent/ascent speed.
+dze = 2.
+dt = dze/0.13  # 0.12 is a tpyical descent/ascent speed.
 zvals = np.arange(-1400., -100, dze)
 N = 50
 Pe = np.empty((zvals.size/2, N))
 
 # Use an arbitrary profile for the sizes.
-dz = 5.
+dz = 2.
 pfl = E76.get_profiles(155)
-surface = pfl.r_z > -100.
+surface = pfl.r_z > -400.
 z = pfl.r_z[~surface]
 Pw76 = np.empty((z.size/2+1, N))
 Pw77 = np.empty((z.size/2+1, N))
 
 for i in xrange(N):
-    ze = zvals + 0.16*np.random.rand(zvals.size)
+    ze = zvals + 0.15*np.random.rand(zvals.size)
     We = np.diff(ze)/dt
     me, Pe[:, i] = sp.signal.periodogram(We, 1./dze, scaling=scaling)
 
@@ -113,7 +113,16 @@ print('Error estimate: {} m s-1'.format(np.sqrt(pmin*m.max())))
 #pfit = np.polyfit(np.log(m[idxs]), np.log(Pw[idxs]), 1)
 #plt.loglog(m, m**pfit[0]/np.mean(m[idxs]**pfit[0]/Pw[idxs]))
 
-# %% What happens to the power spectra over time.
+# %% Error due to parameter uncertainty
 
-m, PE76 = sp.signal.periodogram(E76.r_Ww.T, 1./dz, scaling=scaling)
-__, PE77 = sp.signal.periodogram(E77.r_Ww.T, 1./dz, scaling=scaling)
+Float = E76
+wfi = Float.__wfi
+data = [getattr(Float, data_name) for data_name in wfi.data_names]
+iz, ix = Float.Ww.shape
+ip = wfi.ps.shape[0]
+w_set = np.empty((iz, ix, ip))
+
+for i, p_set in enumerate(wfi.ps):
+    w_set[:, :, i] = wfi.model_func(p_set, data, wfi.fixed)
+
+plt.plot(np.std(w_set, axis=-1), z, color='black', alpha=0.1)
