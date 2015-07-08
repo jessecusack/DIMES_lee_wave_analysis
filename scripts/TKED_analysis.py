@@ -154,12 +154,17 @@ pf.my_savefig(fig, 'vmp', 'comparison', sdir, ftype='pdf', fsize='single_col')
 # Different coefficient for each float.
 cs = [0.03, 0.04]
 
+fig = plt.figure(figsize=(3.125, 3))
+gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
+ax0 = plt.subplot(gs[1])
+ax1 = plt.subplot(gs[0])
+
 for Float, c in zip([E76, E77], cs):
 
-    hpids = np.arange(1, 60)
+    hpids = np.arange(10, 50)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-    bathy = sandwell.interp_track(Float.lon_start, Float.lat_start, bf)
+
     epsilon, kappa = fs.w_scales_float(Float, hpids, c=c, lc=30.)
 
     ieps = 0.*np.zeros_like(idxs)
@@ -175,116 +180,62 @@ for Float, c in zip([E76, E77], cs):
     use = (Z < -100) & (Z > -1400)
 
     Z = Z[use]
+
     X = (Float.r_dist_ctd[:, idxs]).flatten()[use]
     LOG_EPS = (np.log10(epsilon)).flatten()[use]
     LOG_KAP = (np.log10(kappa)).flatten()[use]
 
     # Plotting #
     # Epsilon
-    fig = plt.figure(figsize=(10, 4))
-    gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
-    ax0 = plt.subplot(gs[1])
-    ax1 = plt.subplot(gs[0])
+    d = getattr(Float, 'dist_ctd')[:, idxs].flatten(order='F')
 
-    ax1.plot(Float.dist[idxs], 1000.*ieps, color='black')
-    ax1.set_ylabel('$P$ (mW m$^{-2}$)')
-    ax1.yaxis.set_ticks(np.array([0., 10., 20.]))
-    ax1.xaxis.set_ticks([])
+    tgps = getattr(Float, 'UTC_start')[idxs]
+    lon = getattr(Float, 'lon_start')[idxs]
+    lat = getattr(Float, 'lat_start')[idxs]
+    tctd = getattr(Float, 'UTC')[:, idxs].flatten(order='F')
+    nans = np.isnan(d) | np.isnan(tctd)
+    tctd = tctd[~nans]
+    dctd = d[~nans]
+    lonctd = np.interp(tctd, tgps, lon)
+    latctd = np.interp(tctd, tgps, lat)
+    bathy = sandwell.interp_track(lonctd, latctd, bf)
 
-    sc = ax0.scatter(X, Z, s=5, c=LOG_EPS, edgecolor='none',
-                     cmap=plt.get_cmap('YlOrRd'), vmin=-11., vmax=-7)
+    dbathymax = dctd[bathy.argmax()]
 
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
-    C = fig.colorbar(sc, cax=cbar_ax, extend='both')
-    C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
+    dctd -= dbathymax
+    X -= dbathymax
+
+    ax1.plot(Float.dist[idxs] - dbathymax, 1000.*ieps)
+
+
+    sc = ax0.scatter(X, Z, s=5, c=LOG_EPS,
+                     edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-11.,
+                     vmax=-7)
+
+ax1.set_ylabel('$P$ (mW m$^{-2}$)')
+ax1.yaxis.set_ticks(np.array([0., 5., 10., 15]))
+ax1.xaxis.set_ticks([])
+
+ax0.fill_between(dctd[::100], bathy[::100],
+                 np.nanmin(bathy), color='black', linewidth=2)
+ax0.set_ylim(np.nanmin(bathy), 0.)
+ax0.yaxis.set_ticks(np.arange(-4000, 1000, 1000))
+
+fig.subplots_adjust(right=0.8)
+cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
+C = fig.colorbar(sc, cax=cbar_ax, extend='both')
+C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
 
 #    plt.clim(-11., -7.)
-    ax0.set_xlim(np.min(X), np.max(X))
-    ax0.set_ylim(-5000., 0.)
-    ax0.set_xlabel('Distance (km)')
-    ax0.set_ylabel('$z$ (m)')
-    ax0.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
+ax0.set_xlim(np.min(X), np.max(X))
 
-    ax1.set_xlim(*ax0.get_xlim())
+ax0.set_xlabel('Distance from ridge top (km)')
+ax0.set_ylabel('$z$ (m)')
 
-    pf.my_savefig(fig, Float.floatID, 'epsilon_lem', sdir, fsize='double_col')
+ax1.set_xlim(*ax0.get_xlim())
 
-#    ##
-#    # Kappa
-#    fig = plt.figure(figsize=(10, 4))
-#    plt.scatter(X, Z, s=5, c=LOG_KAP, edgecolor='none', cmap=plt.get_cmap('YlOrRd'))
-#    C = plt.colorbar(extend='both')
-#    C.set_label(r'$\log_{10}(\kappa_\rho)$ (m$^2$ s$^{-1}$)')
-#    plt.clim(-5., -3.)
-#    plt.xlim(np.min(X), np.max(X))
-#    plt.ylim(-5000., 0.)
-#    plt.xlabel('Distance (km)')
-#    plt.ylabel('$z$ (m)')
-#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-#    pf.my_savefig(fig, Float.floatID, 'kappa_lem', sdir, fsize='double_col')
-#
-#    # U V W
-#
-#    __, d_ef = Float.get_timeseries(hpids, 'dist_ef')
-#    __, d_ctd = Float.get_timeseries(hpids, 'dist_ctd')
-#    __, z = Float.get_timeseries(hpids, 'z')
-#    __, zef = Float.get_timeseries(hpids, 'zef')
-#    __, u = Float.get_timeseries(hpids, 'U_abs')
-#    __, v = Float.get_timeseries(hpids, 'V_abs')
-#    __, w = Float.get_timeseries(hpids, 'Ww')
-#    __, N2_ref = Float.get_timeseries(hpids, 'N2_ref')
-#
-#    u[np.abs(u) > 1.5] = np.NaN
-#    v[np.abs(v) > 1.5] = np.NaN
-#
-#    fig = plt.figure(figsize=(10, 4))
-#    plt.scatter(d_ef, zef, s=5., c=u, edgecolor='none', cmap=plt.get_cmap('bwr'))
-#    C = plt.colorbar(extend='both')
-#    C.set_label(r'$u$ (m s$^{-1}$)')
-#    plt.clim(-1., 1.)
-#    plt.xlim(np.min(X), np.max(X))
-#    plt.ylim(-5000., 0.)
-#    plt.xlabel('Distance (km)')
-#    plt.ylabel('$z$ (m)')
-#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-#    pf.my_savefig(fig, Float.floatID, 'u_rel', sdir, fsize='double_col')
-#
-#    fig = plt.figure(figsize=(10, 4))
-#    plt.scatter(d_ef, zef, s=5., c=v, edgecolor='none', cmap=plt.get_cmap('bwr'))
-#    C = plt.colorbar(extend='both')
-#    C.set_label(r'$v$ (m s$^{-1}$)')
-#    plt.clim(-1., 1.)
-#    plt.xlim(np.min(X), np.max(X))
-#    plt.ylim(-5000., 0.)
-#    plt.xlabel('Distance (km)')
-#    plt.ylabel('$z$ (m)')
-#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-#    pf.my_savefig(fig, Float.floatID, 'v_rel', sdir, fsize='double_col')
-#
-#    fig = plt.figure(figsize=(10, 4))
-#    plt.scatter(d_ctd, z, s=5., c=w, edgecolor='none', cmap=plt.get_cmap('bwr'))
-#    C = plt.colorbar(extend='both')
-#    C.set_label(r'$w$ (m s$^{-1}$)')
-#    plt.clim(-0.1, 0.1)
-#    plt.xlim(np.min(X), np.max(X))
-#    plt.ylim(-5000., 0.)
-#    plt.xlabel('Distance (km)')
-#    plt.ylabel('$z$ (m)')
-#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-#    pf.my_savefig(fig, Float.floatID, 'w', sdir, fsize='double_col')
-#
-#    fig = plt.figure(figsize=(10, 4))
-#    plt.scatter(d_ctd, z, s=5., c=np.sqrt(N2_ref), edgecolor='none', cmap=plt.get_cmap('cool'))
-#    C = plt.colorbar(extend='both')
-#    C.set_label(r'$N$ (rad s$^{-1}$)')
-#    plt.clim(0.001, 0.003)
-#    plt.xlim(np.min(X), np.max(X))
-#    plt.ylim(-5000., 0.)
-#    plt.xlabel('Distance (km)')
-#    plt.ylabel('$z$ (m)')
-#    plt.fill_between(Float.dist, bathy, -5000., color='black', linewidth=2)
-#    pf.my_savefig(fig, Float.floatID, 'N2_ref', sdir, fsize='double_col')
+pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, fsize='single_col')
+
 
 # %% Using Thorpe scales
 #fs.thorpe_scales()
