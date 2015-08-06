@@ -423,6 +423,61 @@ axm[-1, 3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 axm[-1, 4].set_xlabel('$x$ (km)')
 #pf.my_savefig(fig, 'both', 'all_profiles', sdir, fsize='double_col')
 
+
+# %% Alternative highlighted wave profiles
+
+E76_hpids = [31, 32]
+E77_hpids = [26, 27]
+
+pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
+
+fig, axm = plt.subplots(len(pfls), 4, sharey='row', sharex='col',
+                        figsize=(6.5, 10))
+fig.subplots_adjust(hspace=0.05, wspace=0.1)
+rot = 'vertical'
+col = 'black'
+deg = 2
+
+U_var = 'U'
+V_var = 'V'
+
+ylims = {27: (-1200, -200),
+         26: (-1540, -600),
+         31: (-1474, -600),
+         32: (-1580, -400)}
+
+for pfl, axs in zip(pfls, axm):
+
+    axs[0].set_ylabel('$z$ (m)')
+    axs[0].plot(100.*utils.nan_detrend(pfl.zef, getattr(pfl, U_var), deg), pfl.zef, col)
+#    axs[0].plot(100.*getattr(pfl, U_var), pfl.zef, 'grey')
+#    axs[0].plot(100.*utils.nan_polyvalfit(pfl.zef, getattr(pfl, U_var), deg), pfl.zef, 'grey')
+    axs[1].plot(100.*utils.nan_detrend(pfl.zef, getattr(pfl, V_var), deg), pfl.zef, col)
+#    axs[1].plot(100.*getattr(pfl, V_var), pfl.zef, 'grey')
+#    axs[1].plot(100.*utils.nan_polyvalfit(pfl.zef, getattr(pfl, V_var), deg), pfl.zef, 'grey')
+    axs[2].plot(100.*pfl.Ww, pfl.z, col)
+    axs[3].plot(10000.*pfl.b, pfl.z, col)
+    axs[2].annotate("EM {}\nP {}".format(pfl.floatID, pfl.hpid[0]),
+                    (-29, -250))
+
+    for ax in axs:
+        ax.vlines(0., *ax.get_ylim())
+        ax.grid()
+        ax.axhspan(*ylims[pfl.hpid[0]], color='grey', alpha=0.5)
+        ax.set_ylim(-1600., 0.)
+
+for ax in axm[-1, :]:
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=rot)
+
+axm[-1, 0].set_xlabel('$u$ (cm s$^{-1}$)')
+axm[-1, 0].set_xlim(-30, 30)
+axm[-1, 1].set_xlabel('$v$ (cm s$^{-1}$)')
+axm[-1, 1].set_xlim(-30, 30)
+axm[-1, 2].set_xlabel('$w$ (cm s$^{-1}$)')
+axm[-1, 2].set_xlim(-30, 30)
+axm[-1, 3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
+pf.my_savefig(fig, 'both', 'all_profiles', sdir, ftype='pdf', fsize='double_col')
+
 # %% Topography
 # ----------
 
