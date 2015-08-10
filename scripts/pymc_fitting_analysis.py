@@ -41,63 +41,6 @@ if not os.path.exists(sdir):
 # Universal figure font size.
 matplotlib.rc('font', **{'size': 9})
 
-# %% Using the integrated model
-
-
-pfl26 = E77.get_profiles(26)
-
-zmax = -650.
-use = ~np.isnan(pfl26.z) & (pfl26.z < zmax)
-zf = pfl26.z[use]
-wf = pfl26.Ww[use]
-uf = pfl26.U_abs[use]
-vf = pfl26.V_abs[use]
-bf = pfl26.b[use]
-zmin = np.min(zf)
-
-uf = utils.nan_detrend(zf, uf, 2)
-vf = utils.nan_detrend(zf, vf, 2)
-
-data_stack = np.hstack((uf, vf, wf, 250*bf))
-
-plt.figure()
-plt.plot(data_stack)
-
-
-def model():
-
-    # Priors.
-    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
-    X = pymc.Uniform('X', -2e4, 2e4, value=-2e3)
-    Y = pymc.Uniform('Y', -1e5, 1e5, value=-4e3)
-    Z = pymc.Uniform('Z', -2e4, 2e4, value=-2e3)
-    phase = pymc.Uniform('phase', 0., np.pi*2, value=0.)
-
-    @pymc.deterministic()
-    def wave_model(zf=zf, X=X, Y=Y, Z=Z, phase=phase):
-        return far.model_pymc(zf, X, Y, Z, phase)
-
-    # Likelihood
-    y = pymc.Normal('y', mu=wave_model, tau=1./sig**2, value=data_stack, observed=True)
-
-    return locals()
-
-M = pymc.MCMC(model(), db='pickle', dbname='trace.p')
-samples = 100000
-burn = 50000
-thin = 5
-M.sample(samples, burn, thin)
-pymc.Matplot.plot(M, common_scale=False)
-
-plt.figure()
-plt.plot(data_stack)
-plt.plot(far.model_pymc(zf, np.median(M.trace('X')[:]), np.median(M.trace('Y')[:]),
-                      np.median(M.trace('Z')[:])))
-plt.savefig('output.png')
-
-plt.figure()
-plt.plot(data_stack)
-plt.plot(far.model_pymc(zf, 5000., 15000, 8000, 0.))
 
 # %% Fitting to profiles
 
@@ -709,17 +652,18 @@ pf.my_savefig(fig, '4977_27', 'MCMC_profiles', sdir, ftype='png',
 
 # %% Combined plots.
 # Rewrite this for new trace files!
-M1 = pymc.database.pickle.load('trace_31_32.p')
-M2 = pymc.database.pickle.load('trace_26.p')
-M3 = pymc.database.pickle.load('trace_27.p')
+M1 = pymc.database.pickle.load('trace_31.p')
+M2 = pymc.database.pickle.load('trace_32.p')
+M3 = pymc.database.pickle.load('trace_26.p')
+M4 = pymc.database.pickle.load('trace_27.p')
 
 # %% Post-load.
 
-X = np.hstack((M1.trace('X')[:], M2.trace('X')[:], M3.trace('X')[:]))
-Y = np.hstack((M1.trace('Y')[:], M2.trace('Y')[:], M3.trace('Y')[:]))
-Z = np.hstack((M1.trace('Z')[:], M2.trace('Z')[:], M3.trace('Z')[:]))
+X = np.hstack((M1.trace('X')[:], M2.trace('X')[:], M3.trace('X')[:], M4.trace('X')[:]))
+Y = np.hstack((M1.trace('Y')[:], M2.trace('Y')[:], M3.trace('Y')[:], M4.trace('Y')[:]))
+Z = np.hstack((M1.trace('Z')[:], M2.trace('Z')[:], M3.trace('Z')[:], M4.trace('Z')[:]))
 phi_0 = np.hstack((M1.trace('phi_0')[:], M2.trace('phi_0')[:],
-                   M3.trace('phi_0')[:]))
+                   M3.trace('phi_0')[:], M4.trace('phi_0')[:]))
 
 triangle.corner(np.transpose(np.asarray([X, Y, Z, phi_0])),
                 labels=['$\lambda_x$ (m)', '$\lambda_y$ (m)',
@@ -747,10 +691,10 @@ ylims = {27: (-1000, -200),
          31: (-1474, -600),
          32: (-1580, -400)}
 
-Ms = {26: M2,
-      27: M3,
+Ms = {26: M3,
+      27: M4,
       31: M1,
-      32: M1}
+      32: M2}
 
 
 for pfl, axs in zip(pfls, axm):
@@ -769,7 +713,7 @@ for pfl, axs in zip(pfls, axm):
         ax.axhspan(*ylims[pfl.hpid[0]], color='grey', alpha=0.5)
         ax.set_ylim(-1600., 0.)
 
-    Ns = len(M.trace('X')[:])
+    Ns = len(M1.trace('X')[:])
     M = Ms[pfl.hpid[0]]
 
     time = pfl.UTC
