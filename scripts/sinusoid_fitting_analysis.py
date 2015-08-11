@@ -314,51 +314,6 @@ for j, ts in enumerate(np.arange(0, X.t.max(), 500.)): #
 
 
 # %%
-
-
-# %%
-################### HEAVY MODEL FITTING #######################################
-
-# Velocity of the float.
-
-
-pfl = E76.get_profiles(32)
-zmax = -400.
-use = ~np.isnan(pfl.z) & (pfl.z < zmax)
-zf = pfl.z[use]
-wf = pfl.Ww[use]
-uf = pfl.U_abs[use]
-vf = pfl.V_abs[use]
-bf = pfl.b[use]
-zmin = np.min(zf)
-
-uf = utils.nan_detrend(zf, uf, 2)
-vf = utils.nan_detrend(zf, vf, 2)
-
-
-params = far.default_params
-params['z_0'] = -1600
-params['N'] = 2e-3
-
-model = far.model_leastsq
-
-popt1, __ = op.leastsq(model, x0=[0.05, -2000, -2000, -2000, 0.],
-                       args=(zf, wf, 'w', params))
-plt.figure()
-plt.plot(wf, zf, model(popt1, z=zf, sub=wf, var_name='w') + wf, zf)
-
-popt2, __ = op.leastsq(model, x0=popt1, args=(zf, uf, 'u', params))
-plt.figure()
-plt.plot(uf, zf, model(popt2, z=zf, sub=uf, var_name='u') + uf, zf)
-plt.plot(model(popt1, z=zf, sub=uf, var_name='u') + uf, zf)
-
-popt3, __ = op.leastsq(model, x0=popt1, args=(zf, bf, 'b', params))
-plt.figure()
-plt.plot(bf, zf, model(popt3, z=zf, sub=bf, var_name='b') + bf, zf)
-plt.plot(model(popt1, z=zf, sub=bf, var_name='b') + bf, zf)
-
-
-# %%
 # Model fitting using EM-APEX positions
 
 def u_model(params, pfl, zlim, deg):
@@ -571,7 +526,7 @@ def full_model(params, data):
 # bits of code were uncommented.
 
 Float = E76
-hpids = [31, 32]
+hpids = [26]
 detrend = 1
 zlims = (-1600, -600)
 
