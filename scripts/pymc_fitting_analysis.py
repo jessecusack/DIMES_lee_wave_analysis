@@ -669,6 +669,11 @@ triangle.corner(np.transpose(np.asarray([X, Y, Z, phi_0])),
                 labels=['$\lambda_x$ (m)', '$\lambda_y$ (m)',
                         '$\lambda_z$ (m)', '$\phi_0$ (m$^2$ s$^{-2}$)'])
 
+fig = plt.gcf()
+fig.set_size_inches(6.5, 6.5)
+pf.my_savefig(fig, 'both', 'fit_histograms', sdir, ftype='pdf',
+              fsize='double_col')
+
 # %%
 
 E76_hpids = [31, 32]
@@ -772,3 +777,5 @@ axm[-1, 2].set_xlabel('$w$ (cm s$^{-1}$)')
 axm[-1, 2].set_xlim(-30, 30)
 axm[-1, 3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 
+pf.my_savefig(fig, 'both', 'profiles_fit', sdir, ftype='pdf',
+              fsize='double_col')
