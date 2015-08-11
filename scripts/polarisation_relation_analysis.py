@@ -8,12 +8,12 @@ Created on Fri Oct 31 16:25:10 2014
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import os
 import sys
 import glob
 from scipy.linalg import lstsq
 import scipy.optimize as op
-import gsw
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
@@ -77,55 +77,6 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     for ax in axs:
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
-# %% CRAZY MEAN MINUS plot for pfl 26
-
-#N = 10
-#N0_76 = 15
-#N0_77 = 10
-#E76_hpids = np.arange(N0_76, N0_76+N)
-#E77_hpids = np.arange(N0_77, N0_77+N)
-#
-#dz = 1.
-#z = np.arange(-1500, 0, dz)
-#rho = []
-#
-#pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
-#
-#for pfl in pfls:
-#    rho.append(pfl.interp(z, 'z', 'rho_1'))
-#
-#rho = np.transpose(np.asarray(rho))
-#mrho = np.mean(rho, axis=-1)
-
-#axs[0].plot(mrho, z, 'red')
-#axs[1].plot(mrho, z, 'red')
-
-pfl = E77.get_profiles(26)
-#srhop = utils.nan_interp(pfl.z, z, mrho)
-#b = -gsw.grav(pfl.lat_start, pfl.P)*(pfl.rho_1 - srhop)/1031.
-
-zmax = -650
-use = pfl.z < zmax
-useef = pfl.zef < zmax
-
-fig, axs = plt.subplots(1, 4, sharey=True)
-axs[0].set_ylabel('$z$ (m)')
-#axs[0].plot(pfl.b, pfl.z, 'grey')
-#axs[0].plot(b, pfl.z, 'red')
-axs[0].plot(utils.nan_detrend(pfl.zef[useef], pfl.U_abs[useef]), pfl.zef[useef], 'red')
-axs[0].set_xlabel('$U$ (m s$^{-1}$)')
-plt.setp(axs[0].xaxis.get_majorticklabels(), rotation=45)
-axs[1].plot(utils.nan_detrend(pfl.zef[useef], pfl.V_abs[useef]), pfl.zef[useef], 'red')
-axs[1].set_xlabel('$V$ (m s$^{-1}$)')
-plt.setp(axs[1].xaxis.get_majorticklabels(), rotation=45)
-axs[2].plot(pfl.Ww[use], pfl.z[use], color='red')
-axs[2].set_xlabel('$W$ (m s$^{-1}$)')
-plt.setp(axs[2].xaxis.get_majorticklabels(), rotation=45)
-axs[3].plot(pfl.b[use], pfl.z[use], color='red')
-axs[3].set_xlabel('$b$ (m s$^{-2}$)')
-plt.setp(axs[3].xaxis.get_majorticklabels(), rotation=45)
-
-#pf.my_savefig(fig, '4977', 'UVWB', sdir, fsize='double_col')
 
 # %%
 
@@ -176,6 +127,10 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     print("x = {}".format(x[pidxs] - x[pidxs][0]))
     print("z = {}".format(z[pidxs]))
     print("t = {}".format(t[pidxs] - t[pidxs][0]))
+    print("u = ")
+    print("v = ")
+    print("w = ")
+    print("b = ")
 
 #    a = np.transpose(np.vstack((x[pidxs], z[pidxs], t[pidxs])))
 #    b = np.pi*TF
@@ -185,7 +140,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 #          "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
 #                                       np.pi*2/x[2]/60.))
 
-# %%
+# %% NOTE: THIS METHOD IS OBSOLETE AND PROVEN NOT TO WORK
 # Estimate position (x, z, t) of wave peaks from combination of profiles 31 and
 # 32 from float 4976.
 xq = np.array([0.,  516.66576652, 882., 1512.23911972,  1994.01441055,  2825.66675334,
@@ -308,36 +263,81 @@ print(X_std)
 print(np.percentile(X_dist, [5, 25, 50, 75, 95], axis=0))
 # %%
 
+# These are the measured amplitudes after detrending a 2nd order polynomial.
+# Always bottom up.
+
+#                    u,    v,    w, b
+amps_31 = np.array([[0.17, 0.11, 0.17, 4e-4],
+                    [-0.12, -0.08, -0.025, -4e-4],
+                    [0.2, 0.045, 0.07, -3.6e-4]])
+amps_32 = np.array([[0.1, 0.18, 0.19, 2e-4],
+                    [-0.06, -0.2, -0.2, -5e-4],
+                    [-0.05, 0.22, 0.1, 5e-4],
+                    [-0.17, 0., -0.2, -6e-4]])
+amps_26 = np.array([[-0.095, -0.075, 0.16, 4.5e-4],
+                    [0.2, 0.16, -0.1, -4e-4],
+                    [-0.1, -0.04, 0.17, 3e-4],
+                    [0.11, 0.17, -0.21, -6e-4]])
+amps_27 = np.array([[-0.13, 0., -0.08, -3e-4],
+                    [0.1, 0., 0.12, 2.7e-4],
+                    [-0.03, 0., -0.07, 2.3e-4]])
+
+amps = np.vstack((amps_31, amps_32, amps_26, amps_27))
 
 #                 G1    B1   G2   B1     B2     G1
-w_amp = np.array([-0.2, 0.2, 0.2, -0.23, -0.15, 0.15])
-b_amp = np.array([4e-4, 3e-4, 3e-4, 4e-4, 3.5e-4, 2e-4])
-u_amp = np.array([0.2, 0.2, 0.2, 0.15, 0.15, 0.1])
-v_amp = np.array([0.2, 0.1, 0.1, 0.25, 0.2, 0.15])
+#w_amp = np.array([-0.2, 0.2, 0.2, -0.23, -0.15, 0.15])
+#b_amp = np.array([4e-4, 3e-4, 3e-4, 4e-4, 3.5e-4, 2e-4])
+#u_amp = np.array([0.2, 0.2, 0.2, 0.15, 0.15, 0.1])
+#v_amp = np.array([0.2, 0.1, 0.1, 0.25, 0.2, 0.15])
+
+u_amp = amps[:, 0]
+v_amp = amps[:, 1]
+w_amp = amps[:, 2]
+b_amp = amps[:, 3]
+
 N = 2.2e-3
 f = 1.2e-4
 
 om = np.abs(w_amp*N**2/b_amp)
 
-om_alt = np.sqrt(w_amp**2*N**2/(u_amp**2 + v_amp**2 + w_amp**2))
+alpha2 = w_amp**2/(u_amp**2 + v_amp**2)
+alpha = np.sqrt(alpha2)
+om_alt = np.sqrt(alpha2*N**2/(1 + alpha2))
 
 # With rotation.
-r1 = np.abs((1j*u_amp/v_amp*f + om)/(u_amp/v_amp*om - 1j*f))
+#r1 = np.abs((1j*u_amp/v_amp*f + om)/(u_amp/v_amp*om - 1j*f))
 # Without rotation.
-r2 = np.abs(v_amp/u_amp)
+#r2 = np.abs(v_amp/u_amp)
 
 print("omega = {:1.2e} +/- {:1.2e}".format(np.mean(om_alt), np.std(om_alt)))
-print(r1)
-print(r2)
-print(np.mean(r2))
+print("omega (buoyancy) = {:1.2e} +/- {:1.2e}".format(np.mean(om), np.std(om)))
+print("alpha = {:1.1f} +/- {:1.1f}".format(np.mean(alpha), np.std(alpha)))
 
-w0 = 0.2
-U0 = 0.2
-U1 = 0.5
-h0 = 200
-h1 = 1200
+fig = plt.figure(figsize=(3.125, 3))
 
-print(2*np.pi/(w0/(U0*h0)), 2*np.pi/(w0/(U1*h1)))
+gs = gridspec.GridSpec(1, 2, width_ratios=[2,1])
+
+axs = [plt.subplot(gs[0]), plt.subplot(gs[1])]
+
+axs[1].yaxis.tick_right()
+axs[1].yaxis.set_ticks_position('both')
+axs[1].yaxis.set_label_position('right')
+
+labels=[r'$\frac{\alpha^2}{1 + \alpha^2}N^2$', r'$|\frac{w_0}{b_0}|N^2$']
+axs[0].boxplot([om_alt/N, om/N], labels=labels);
+axs[0].set_ylabel('$\omega/N$ (-)')
+axs[0].hlines(f/N, *axs[0].get_xlim())
+axs[0].annotate('$f$', xy=(0.5, f/N))
+axs[0].hlines(1., *axs[0].get_xlim())
+axs[0].annotate('$N$', xy=(0.5, 1))
+axs[1].boxplot(alpha, labels=[r'$\frac{w_0^2}{u_0^2 + v_0^2}$']);
+axs[1].set_ylabel(r'$\alpha$ (-)')
+
+for ax in axs:
+    ax.set_yscale('log')
+
+pf.my_savefig(fig, 'both', 'omega_alpha_box', sdir, ftype='pdf', fsize='single_col')
+
 
 # %%
 
