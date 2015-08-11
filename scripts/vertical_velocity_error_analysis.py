@@ -116,17 +116,28 @@ print('Error estimate: {} m s-1'.format(np.sqrt(pmin*m.max())))
 # %% Investigation using the lomb-scargle method without interpolation and
 # then with interpolation.
 
+
+def spectrum_func(params, om):
+    c, S = params
+    return c*om**(-5./3.) + S*om**2
+
+
+def cost(params, data, om):
+    return np.log10(data/spectrum_func(params, om))
+
+
 # Choose float and range of hpids.
-hpids = np.arange(10, 70)
-Float = E76
-pfls = Float.get_profiles(hpids)
+hpids = np.arange(50, 150)
 
 # Chop ends where model is invalid.
 zmax = -30.
-zmin = -1400.
-
+zmin = -1440.
+tmax = 10000.
+tmin = 20.
+# Interpolation points.
+Ni = 2**11
 # Choose frequencies to estimate power.
-tdmax = 9000.
+tdmax = 10000.
 tdmin = 20.
 dzmax = 1200.
 dzmin = 4.
@@ -134,40 +145,79 @@ N = 100
 om = np.logspace(np.log10(np.pi*2/tdmax), np.log10(np.pi*2/tdmin), N)
 m = np.logspace(np.log10(np.pi*2/dzmax), np.log10(np.pi*2/dzmin), N)
 
-om_pgrams = np.empty((om.size, pfls.size))
-m_pgrams = np.empty((m.size, pfls.size))
 
-for i, pfl in enumerate(pfls):
-    nans = np.isnan(pfl.Ww)
-    w = pfl.Ww[~nans]
-    t = pfl.UTC[~nans]*24*60*60
-    z = pfl.z[~nans]
+fig1, ax1 = plt.subplots(1, 1, figsize=(3.125, 3))
+#fig2, ax2 = plt.subplots(1, 1, figsize=(3.125, 3))
 
-    invalid = (z > zmax) & (z < zmin)
-    w = w[~invalid]
-    t = t[~invalid]
-    z = z[~invalid]
+for j, Float in enumerate([E76, E77]):
 
-    om_pgrams[:, i] = sp.signal.lombscargle(t, w, om)/om
-    m_pgrams[:, i] = sp.signal.lombscargle(t, w, m)/m
+    pfls = Float.get_profiles(hpids)
 
-f = om/(np.pi*2)
-m = m/(np.pi*2)
+    om_pgrams = np.empty((om.size, pfls.size))
+    m_pgrams = np.empty((m.size, pfls.size))
 
-fig1, ax1 = plt.subplots(1, 1)
-ax1.loglog(1./f, om_pgrams, color='blue', alpha=0.1)
-ax1.loglog(1./f, np.mean(om_pgrams, axis=-1), color='black',
-         linewidth=3.)
-ax1.set_xlabel('$\omega$ (rad s$^{-1})$')
+    for i, pfl in enumerate(pfls):
+        nans = np.isnan(pfl.Ww)
+        w = pfl.Ww[~nans]
+        t = pfl.UTC[~nans]*24*60*60
+        z = pfl.z[~nans]
 
-fig2, ax2 = plt.subplots(1, 1)
-plt.loglog(1./m, m_pgrams, color='blue', alpha=0.1)
-plt.loglog(1./m, np.mean(m_pgrams, axis=-1), color='black',
-         linewidth=3.)
-plt.xlabel('$m$ (rad m$^{-1}$)')
+        invalid = (z > zmax) | (z < zmin)
+        w = w[~invalid]
+        t = t[~invalid]
+        z = z[~invalid]
+
+        om_pgrams[:, i] = sp.signal.lombscargle(t, w, om)/om
+        m_pgrams[:, i] = sp.signal.lombscargle(t, w, m)/m
+
+    f = om/(np.pi*2)
+    m = m/(np.pi*2)
+
+    ax1.loglog(1./f, om_pgrams, color='grey', alpha=0.05)
+    ax1.loglog(1./f, np.median(om_pgrams, axis=-1), color='black',
+               linewidth=3.)
 
 
-######## Using Interpolation #########
+
+#    ax2.loglog(1./m, m_pgrams, color='grey', alpha=0.05)
+#    ax2.loglog(1./m, np.median(m_pgrams, axis=-1), color='black',
+#               linewidth=3.)
+
+
+    use = 1./f < 300.
+    data = np.median(om_pgrams, axis=-1)
+    params0 = np.array([4e-6, 0.07])
+    fit, __ = sp.optimize.leastsq(cost, params0, args=(data[use], om[use]))
+
+    print("c = {:1.2e}".format(fit[0]))
+    print("S = {:1.2e}".format(fit[1]))
+    print("w variance = {:1.0e} cm/s".format(100.*np.sqrt(fit[1]*om.min())))
+
+    # Only label one line
+    if j == 0:
+        ax1.loglog(1./f[use], spectrum_func(fit, om[use]), color='red',
+                   label=r'$c \omega^{-\frac{5}{3}} + S\omega^2$')
+    else:
+        ax1.loglog(1./f[use], spectrum_func(fit, om[use]), color='red')
+
+    def tick_func(ticks):
+        return ["{:.0f}".format(tick) for tick in ticks]
+
+ax1.set_xticklabels(tick_func(ax1.get_xticks()))
+#ax2.set_xticklabels(tick_func(ax2.get_xticks()))
+
+ax1.set_ylabel(r'$w$ power spectra (m$^2$ s$^{-1}$ rad$^{-1}$)')
+ax1.set_xlabel('$T$ (s)')
+ax1.grid()
+ax1.legend(loc=0)
+
+#ax2.set_xlabel('$\lambda$ (m)')
+#ax2.grid()
+
+pf.my_savefig(fig1, 'both', 'w_spectrum', sdir, ftype='pdf',
+              fsize='single_col')
+
+# %% ####### Using Interpolation #########
 
 # Choose float and range of hpids.
 #hpids = np.arange(50, 150)
@@ -175,18 +225,8 @@ plt.xlabel('$m$ (rad m$^{-1}$)')
 #pfls = Float.get_profiles(hpids)
 scaling = 'density'
 
-# Chop ends where model is invalid.
-zmax = -30.
-zmin = -1400.
-tmax = 9000.
-tmin = 200.
-tdmin = 20.
-dzmin = 4.
-
-# Interpolation points.
-N = 2**11
-ti, dt = np.linspace(tmin, tmax, N, retstep=True)
-zi, dz = np.linspace(zmin, zmax, N, retstep=True)
+ti, dt = np.linspace(tmin, tmax, Ni, retstep=True)
+zi, dz = np.linspace(zmin, zmax, Ni, retstep=True)
 
 om_pgrams = np.empty((ti.size/2 + 1, pfls.size))
 m_pgrams = np.empty((zi.size/2 + 1, pfls.size))
@@ -197,7 +237,15 @@ for i, pfl in enumerate(pfls):
     t = pfl.UTC[~nans]*24*60*60
     z = pfl.z[~nans]
 
-    invalid = (z > zmax) & (z < zmin)
+    t1 = t
+
+    # If profile is descenting then z will not be monotonically increasing and
+    # the interpolation will fail.
+    if np.mean(np.diff(z)) < 0.:
+        w = np.flipud(w)
+        z = np.flipud(z)
+
+    invalid = (z > zmax) | (z < zmin)
     w = w[~invalid]
     t = t[~invalid]
     z = z[~invalid]
@@ -218,23 +266,14 @@ m_pgrams[0, :] = 0.
 
 # Convert to radian units.
 ax1.loglog(1./f, om_pgrams, color='red', alpha=0.1)
-ax1.loglog(1./f, np.mean(om_pgrams, axis=-1), color='black',
+ax1.loglog(1./f, np.median(om_pgrams, axis=-1), color='black',
          linewidth=3.)
-ax1.set_xlabel('$T$ (s)')
-ax1.grid()
+
 
 ax2.loglog(1./m, m_pgrams, color='red', alpha=0.1)
-ax2.loglog(1./m, np.mean(m_pgrams, axis=-1), color='black',
+ax2.loglog(1./m, np.median(m_pgrams, axis=-1), color='black',
            linewidth=3.)
-ax2.set_xlabel('$\lambda$ (m)')
-ax2.grid()
 
-
-def tick_func(ticks):
-    return ["{:.0f}".format(tick) for tick in ticks]
-
-ax1.set_xticklabels(tick_func(ax1.get_xticks()))
-ax2.set_xticklabels(tick_func(ax2.get_xticks()))
 
 #ax1t = ax1.twiny()
 #ax1t.set_xticks(np.log10(ax1.get_xticks()))
