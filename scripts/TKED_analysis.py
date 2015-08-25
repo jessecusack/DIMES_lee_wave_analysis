@@ -51,7 +51,7 @@ if not os.path.exists(sdir):
 matplotlib.rc('font', **{'size': 9})
 
 
-## %% Experimental functions
+# %% Experimental functions
 #
 #def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2, lc=30.):
 #    """Inputs should be regularly spaced."""
@@ -234,7 +234,7 @@ ax0.set_ylabel('$z$ (m)')
 
 ax1.set_xlim(*ax0.get_xlim())
 
-pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, fsize='single_col')
+pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype='pdf', fsize='single_col')
 
 
 # %% Using Thorpe scales
