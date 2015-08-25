@@ -213,23 +213,34 @@ ax1.legend(loc=0)
 
 #ax2.set_xlabel('$\lambda$ (m)')
 #ax2.grid()
+#
+#pf.my_savefig(fig1, 'both', 'w_spectrum', sdir, ftype='pdf',
+#              fsize='single_col')
 
-pf.my_savefig(fig1, 'both', 'w_spectrum', sdir, ftype='pdf',
-              fsize='single_col')
-
-# %% ####### Using Interpolation #########
+######## Using Interpolation #########
 
 # Choose float and range of hpids.
 #hpids = np.arange(50, 150)
 #Float = E76
 #pfls = Float.get_profiles(hpids)
 scaling = 'density'
+method = 'welch'
+nperseg = 512
 
 ti, dt = np.linspace(tmin, tmax, Ni, retstep=True)
 zi, dz = np.linspace(zmin, zmax, Ni, retstep=True)
 
-om_pgrams = np.empty((ti.size/2 + 1, pfls.size))
-m_pgrams = np.empty((zi.size/2 + 1, pfls.size))
+if method == 'welch':
+    spec_func = sp.signal.welch
+    nom = nperseg/2 + 1
+    nm = nperseg/2 + 1
+elif method == 'periodogram':
+    sepc_func = sp.signal.periodogram
+    nom = ti.size/2 + 1
+    nm = zi.size/2 + 1
+
+om_pgrams = np.empty((nom, pfls.size))
+m_pgrams = np.empty((nm, pfls.size))
 
 for i, pfl in enumerate(pfls):
     nans = np.isnan(pfl.Ww)
@@ -253,8 +264,10 @@ for i, pfl in enumerate(pfls):
     wit = np.interp(ti, t - t[0], w)
     wiz = np.interp(zi, z, w)
 
-    f, om_pgrams[:, i] = sp.signal.periodogram(wit, fs=1./dt, scaling=scaling)
-    m, m_pgrams[:, i] = sp.signal.periodogram(wiz, fs=1./dz, scaling=scaling)
+    f, om_pgrams[:, i] = spec_func(wit, fs=1./dt, nperseg=nperseg,
+                                   scaling=scaling)
+    m, m_pgrams[:, i] = spec_func(wiz, fs=1./dz, nperseg=nperseg,
+                                  scaling=scaling)
 
 # Chop interpolation noise.
 fuse = f < 1./tdmin
@@ -270,9 +283,9 @@ ax1.loglog(1./f, np.median(om_pgrams, axis=-1), color='black',
          linewidth=3.)
 
 
-ax2.loglog(1./m, m_pgrams, color='red', alpha=0.1)
-ax2.loglog(1./m, np.median(m_pgrams, axis=-1), color='black',
-           linewidth=3.)
+#ax2.loglog(1./m, m_pgrams, color='red', alpha=0.1)
+#ax2.loglog(1./m, np.median(m_pgrams, axis=-1), color='black',
+#           linewidth=3.)
 
 
 #ax1t = ax1.twiny()
