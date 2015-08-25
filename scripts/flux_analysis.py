@@ -233,4 +233,4 @@ axs[0].plot(ds[1], Uuwbar[1, :] + Vvwbar[1, :], label='4977')
 axs[0].set_ylabel("$U<u'w'>$ (W m$^{-2}$)")
 axs[0].legend(loc=0)
 
-pf.my_savefig(fig, 'both', 'fluxes', sdir, ftype='png', fsize='single_col')
+pf.my_savefig(fig, 'both', 'fluxes', sdir, ftype='pdf', fsize='single_col')
