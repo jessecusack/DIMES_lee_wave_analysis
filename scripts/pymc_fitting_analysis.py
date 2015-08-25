@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import os
 
 import gsw
@@ -20,7 +21,6 @@ if lib_path not in sys.path:
 
 import pymc
 import emapex
-import float_advection_routines as far
 import utils
 import gravity_waves as gw
 import plotting_functions as pf
@@ -44,6 +44,8 @@ matplotlib.rc('font', **{'size': 9})
 
 # %% Fitting to profiles
 
+wscale = 1.5
+bscale = 250.
 
 def w_model(params, data):
 
@@ -59,7 +61,7 @@ def w_model(params, data):
 
     w = gw.w(x, y, z, time, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
 
-    return w
+    return wscale*w
 
 
 def u_model(params, data):
@@ -110,7 +112,7 @@ def b_model(params, data):
 
     b = gw.b(x, y, z, time, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
 
-    return 250.*b
+    return bscale*b
 
 
 def full_model(params, data):
@@ -166,7 +168,7 @@ time -= np.min(time)
 
 data = [time, x, y, z, Umean, Vmean, N, f]
 
-data_stack = np.hstack((U, V, W, 250.*B))
+data_stack = np.hstack((U, V, wscale*W, bscale*B))
 
 
 def model():
@@ -174,10 +176,10 @@ def model():
     # Priors.
 #    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
     sig = 0.02
-    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.03)
-    X = pymc.Uniform('X', -100000., -500., value=-1900.)
-    Y = pymc.Uniform('Y', -100000., -500., value=-1900.)
-    Z = pymc.Uniform('Z', -50000., -500., value=-1700.)
+    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.05)
+    X = pymc.Uniform('X', -100000., -500., value=-2000.)
+    Y = pymc.Uniform('Y', -100000., -500., value=-2500.)
+    Z = pymc.Uniform('Z', -50000., -500., value=-2500.)
     phase = pymc.Uniform('phase', 0., np.pi*2, value=2.)
 
     @pymc.deterministic()
@@ -191,7 +193,7 @@ def model():
 
     return locals()
 
-M = pymc.MCMC(model(), db='pickle', dbname='trace_31.p')
+M = pymc.MCMC(model(), db='pickle', dbname='/noc/users/jc3e13/storage/processed/trace_31_C.p')
 samples = 10000000
 burn = 9800000
 thin = 10
@@ -232,8 +234,8 @@ axs[1].plot(100.*V, z, color='black')
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 axs[2].plot(100.*W, z, color='black')
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
-axs[3].plot(1000.*B, z, color='black')
-axs[3].set_xlabel('$b$ ($10^{-3}$ m s$^{-2}$)')
+axs[3].plot(10000.*B, z, color='black')
+axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 
 pf.my_savefig(fig, '4976_31', 'profiles', sdir, ftype='png',
               fsize='double_col')
@@ -245,8 +247,8 @@ for i in xrange(0, Ns, 40):
               M.trace('Z')[i], M.trace('phase')[i]]
     axs[0].plot(100.*u_model(params, data), z, color='red', alpha=0.03)
     axs[1].plot(100.*v_model(params, data), z, color='red', alpha=0.03)
-    axs[2].plot(100.*w_model(params, data), z, color='red', alpha=0.03)
-    axs[3].plot(1000.*b_model(params, data)/250., z, color='red', alpha=0.03)
+    axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
+    axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red', alpha=0.03)
 
 for ax in axs:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=60)
@@ -298,7 +300,7 @@ time -= np.min(time)
 
 data = [time, x, y, z, Umean, Vmean, N, f]
 
-data_stack = np.hstack((U, V, W, 250.*B))
+data_stack = np.hstack((U, V, wscale*W, bscale*B))
 
 
 def model():
@@ -306,10 +308,10 @@ def model():
     # Priors.
 #    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
     sig = 0.02
-    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.03)
-    X = pymc.Uniform('X', -100000., -500., value=-1900.)
-    Y = pymc.Uniform('Y', -100000., -500., value=-1900.)
-    Z = pymc.Uniform('Z', -50000., -500., value=-1700.)
+    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.05)
+    X = pymc.Uniform('X', -100000., -500., value=-2000.)
+    Y = pymc.Uniform('Y', -100000., -500., value=-2500.)
+    Z = pymc.Uniform('Z', -50000., -500., value=-2500.)
     phase = pymc.Uniform('phase', 0., np.pi*2, value=2.)
 
     @pymc.deterministic()
@@ -323,7 +325,7 @@ def model():
 
     return locals()
 
-M = pymc.MCMC(model(), db='pickle', dbname='trace_32.p')
+M = pymc.MCMC(model(), db='pickle', dbname='/noc/users/jc3e13/storage/processed/trace_32_C.p')
 samples = 10000000
 burn = 9800000
 thin = 10
@@ -364,8 +366,8 @@ axs[1].plot(100.*V, z, color='black')
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 axs[2].plot(100.*W, z, color='black')
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
-axs[3].plot(1000.*B, z, color='black')
-axs[3].set_xlabel('$b$ ($10^{-3}$ m s$^{-2}$)')
+axs[3].plot(10000.*B, z, color='black')
+axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 
 pf.my_savefig(fig, '4976_32', 'profiles', sdir, ftype='png',
               fsize='double_col')
@@ -377,8 +379,8 @@ for i in xrange(0, Ns, 40):
               M.trace('Z')[i], M.trace('phase')[i]]
     axs[0].plot(100.*u_model(params, data), z, color='red', alpha=0.03)
     axs[1].plot(100.*v_model(params, data), z, color='red', alpha=0.03)
-    axs[2].plot(100.*w_model(params, data), z, color='red', alpha=0.03)
-    axs[3].plot(1000.*b_model(params, data)/250., z, color='red', alpha=0.03)
+    axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
+    axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red', alpha=0.03)
 
 for ax in axs:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=60)
@@ -429,7 +431,7 @@ time -= np.min(time)
 
 data = [time, x, y, z, Umean, Vmean, N, f]
 
-data_stack = np.hstack((U, V, W, 250.*B))
+data_stack = np.hstack((U, V, wscale*W, bscale*B))
 
 
 def model():
@@ -437,9 +439,9 @@ def model():
     # Priors.
 #    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
     sig = 0.02
-    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.1)
-    X = pymc.Uniform('X', -100000., 100000., value=-3000.)
-    Y = pymc.Uniform('Y', -100000., 100000, value=-3000.)
+    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.05)
+    X = pymc.Uniform('X', -100000., 100000., value=-2000.)
+    Y = pymc.Uniform('Y', -100000., 100000, value=-2500.)
     Z = pymc.Uniform('Z', -100000., 100000, value=-2500.)
     phase = pymc.Uniform('phase', -1000., 1000., value=1.)
 
@@ -454,7 +456,7 @@ def model():
 
     return locals()
 
-M = pymc.MCMC(model(), db='pickle', dbname='trace_26.p')
+M = pymc.MCMC(model(), db='pickle', dbname='/noc/users/jc3e13/storage/processed/trace_26_C.p')
 samples = 10000000
 burn = 9800000
 thin = 10
@@ -496,8 +498,8 @@ axs[1].plot(100.*V, z, color='black')
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 axs[2].plot(100.*W, z, color='black')
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
-axs[3].plot(1000.*B, z, color='black')
-axs[3].set_xlabel('$b$ ($10^{-3}$ m s$^{-2}$)')
+axs[3].plot(10000.*B, z, color='black')
+axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 
 pf.my_savefig(fig, '4977_26', 'profiles', sdir, ftype='png',
               fsize='double_col')
@@ -509,8 +511,8 @@ for i in xrange(0, Ns, 40):
               M.trace('Z')[i], M.trace('phase')[i]]
     axs[0].plot(100.*u_model(params, data), z, color='red', alpha=0.03)
     axs[1].plot(100.*v_model(params, data), z, color='red', alpha=0.03)
-    axs[2].plot(100.*w_model(params, data), z, color='red', alpha=0.03)
-    axs[3].plot(1000.*b_model(params, data)/250., z, color='red', alpha=0.03)
+    axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
+    axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red', alpha=0.03)
 
 for ax in axs:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=60)
@@ -530,7 +532,7 @@ __, N2 = E77.get_timeseries([27], 'N2_ref')
 __, x = E77.get_timeseries([27], 'x_ctd')
 __, y = E77.get_timeseries([27], 'y_ctd')
 
-nope = (z > -150.) & (z < -1000.)
+nope = (z > -150.) | (z < -1100.)
 
 time = time[~nope]
 W = W[~nope]
@@ -562,7 +564,7 @@ time -= np.min(time)
 
 data = [time, x, y, z, Umean, Vmean, N, f]
 
-data_stack = np.hstack((U, V, W, 250.*B))
+data_stack = np.hstack((U, V, wscale*W, bscale*B))
 
 
 def model():
@@ -570,7 +572,7 @@ def model():
     # Priors.
 #    sig = pymc.Uniform('sig', 0.0, 5., value=0.01)
     sig = 0.02
-    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.1)
+    phi_0 = pymc.Uniform('phi_0', 0, 10, value=0.05)
     X = pymc.Uniform('X', -100000., 100000., value=-3000.)
     Y = pymc.Uniform('Y', -100000., 100000, value=-3000.)
     Z = pymc.Uniform('Z', -100000., 100000, value=2500.)
@@ -587,7 +589,7 @@ def model():
 
     return locals()
 
-M = pymc.MCMC(model(), db='pickle', dbname='trace_32.p')
+M = pymc.MCMC(model(), db='pickle', dbname='/noc/users/jc3e13/storage/processed/trace_27_D.p')
 samples = 10000000
 burn = 9800000
 thin = 10
@@ -628,8 +630,8 @@ axs[1].plot(100.*V, z, color='black')
 axs[1].set_xlabel('$v$ (cm s$^{-1}$)')
 axs[2].plot(100.*W, z, color='black')
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
-axs[3].plot(1000.*B, z, color='black')
-axs[3].set_xlabel('$b$ ($10^{-3}$ m s$^{-2}$)')
+axs[3].plot(10000.*B, z, color='black')
+axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 
 pf.my_savefig(fig, '4977_27', 'profiles', sdir, ftype='png',
               fsize='double_col')
@@ -641,8 +643,8 @@ for i in xrange(0, Ns, 40):
               M.trace('Z')[i], M.trace('phase')[i]]
     axs[0].plot(100.*u_model(params, data), z, color='red', alpha=0.03)
     axs[1].plot(100.*v_model(params, data), z, color='red', alpha=0.03)
-    axs[2].plot(100.*w_model(params, data), z, color='red', alpha=0.03)
-    axs[3].plot(1000.*b_model(params, data)/250., z, color='red', alpha=0.03)
+    axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
+    axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red', alpha=0.03)
 
 for ax in axs:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=60)
@@ -652,18 +654,18 @@ pf.my_savefig(fig, '4977_27', 'MCMC_profiles', sdir, ftype='png',
 
 # %% Combined plots.
 # Rewrite this for new trace files!
-M1 = pymc.database.pickle.load('trace_31.p')
-M2 = pymc.database.pickle.load('trace_32.p')
-M3 = pymc.database.pickle.load('trace_26.p')
-M4 = pymc.database.pickle.load('trace_27.p')
+M1 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_31_C.p')
+M2 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_32_C.p')
+M3 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_26_C.p')
+M4 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_27_C.p')
 
 # %% Post-load.
 
-X = np.hstack((M1.trace('X')[:], M2.trace('X')[:], M3.trace('X')[:], M4.trace('X')[:]))
-Y = np.hstack((M1.trace('Y')[:], M2.trace('Y')[:], M3.trace('Y')[:], M4.trace('Y')[:]))
-Z = np.hstack((M1.trace('Z')[:], M2.trace('Z')[:], M3.trace('Z')[:], M4.trace('Z')[:]))
+X = np.hstack((M1.trace('X')[:], M2.trace('X')[:], M3.trace('X')[:], M4.trace('X')))
+Y = np.hstack((M1.trace('Y')[:], M2.trace('Y')[:], M3.trace('Y')[:], M4.trace('Y')))
+Z = np.hstack((M1.trace('Z')[:], M2.trace('Z')[:], M3.trace('Z')[:], M4.trace('Z')))
 phi_0 = np.hstack((M1.trace('phi_0')[:], M2.trace('phi_0')[:],
-                   M3.trace('phi_0')[:], M4.trace('phi_0')[:]))
+                   M3.trace('phi_0')[:], M4.trace('phi_0')))
 
 triangle.corner(np.transpose(np.asarray([X, Y, Z, phi_0])),
                 labels=['$\lambda_x$ (m)', '$\lambda_y$ (m)',
@@ -673,6 +675,51 @@ fig = plt.gcf()
 fig.set_size_inches(6.5, 6.5)
 pf.my_savefig(fig, 'both', 'fit_histograms', sdir, ftype='pdf',
               fsize='double_col')
+
+# %%
+
+Ms = [M1, M2, M3, M4]
+
+fig = plt.figure(figsize=(6.5, 3))
+
+gs = gridspec.GridSpec(1, 2, width_ratios=[3,1])
+gs.update(wspace=0.3)
+axs = [plt.subplot(gs[0]), plt.subplot(gs[1])]
+axs[1].yaxis.tick_right()
+axs[1].yaxis.set_ticks_position('both')
+axs[1].yaxis.set_label_position('right')
+
+colors = ['blue', 'green', 'red', 'purple']
+
+for i, M in enumerate(Ms):
+    colprops={'color':colors[i]}
+    data = [np.pi*2./M.trace('X')[:], np.pi*2./M.trace('Y')[:],
+            np.pi*2./M.trace('Z')[:]]
+    axs[0].boxplot(data, boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False,
+                   labels=['$k$', '$l$', '$m$'])
+    axs[1].boxplot(M.trace('phi_0')[:], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False, labels=['$\phi_0$'])
+
+ax0t = axs[0].twinx()
+ax0t.yaxis.tick_right()
+ax0t.yaxis.set_label_position('right')
+ax0t.set_ylabel('wavelength (m)')
+ax0t.set_ylim(axs[0].get_ylim())
+yticklabels = np.array([1000, 1500, 2000, 3000, 5000, 10000])
+yticks = -np.pi*2./yticklabels
+ax0t.set_yticks(yticks)
+ax0t.set_yticklabels(yticklabels)
+ax0t.grid()
+
+axs[0].set_ylabel('wavenumber (rad m$^{-1}$)')
+axs[1].set_ylabel('pressure perturbation (m$^2$ s$^{-2}$)')
+
+pf.my_savefig(fig, 'both', 'wavenumber_boxplots', sdir, ftype='pdf',
+              fsize='double_col')
+
 
 # %%
 
@@ -763,8 +810,8 @@ for pfl, axs in zip(pfls, axm):
                   M.trace('Z')[i], M.trace('phase')[i]]
         axs[0].plot(100.*u_model(params, data), z, color='red', alpha=0.03)
         axs[1].plot(100.*v_model(params, data), z, color='red', alpha=0.03)
-        axs[2].plot(100.*w_model(params, data), z, color='red', alpha=0.03)
-        axs[3].plot(10000.*b_model(params, data)/250., z, color='red', alpha=0.03)
+        axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
+        axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red', alpha=0.03)
 
 for ax in axm[-1, :]:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=rot)
