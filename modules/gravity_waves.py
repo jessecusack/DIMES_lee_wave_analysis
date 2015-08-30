@@ -167,6 +167,11 @@ def phip(k, m, l=0.):
     return np.arcsin(np.sqrt(m**2/(k**2 + l**2 + m**2)))
 
 
+def alpha(k, m, l=0.):
+    """Ratio of vertical to horizontal wavenumber."""
+    return np.sqrt((k**2 + l**2)/m**2)
+
+
 def Edens(w_0, k, m, l=0., rho_0=1025.):
     """Energy density."""
     phi = phip(k, m, l=l)
@@ -183,4 +188,4 @@ def Mfluxz(phi_0, k, l, m, om, N, f=0., rho_0=1025.):
     u_amp = np.abs(U_0(phi_0, k, l, om, f))
     v_amp = np.abs(V_0(phi_0, k, l, om, f))
     w_amp = np.abs(W_0(phi_0, m, om, N))
-    return rho_0*np.array([u_amp*w_amp, v_amp*w_amp])/2.
+    return rho_0*np.sqrt(((u_amp*w_amp)**2 + (v_amp*w_amp)**2))
