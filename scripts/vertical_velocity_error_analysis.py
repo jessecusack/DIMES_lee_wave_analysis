@@ -36,6 +36,34 @@ matplotlib.rc('font', **{'size': 9})
 
 
 # %% ##########################################################################
+# Vertical velocity histograms
+t1, w1 = E76.get_timeseries(np.arange(1, 600), 'Ww')
+t2, w2 = E77.get_timeseries(np.arange(1, 600), 'Ww')
+__, z1 = E76.get_timeseries(np.arange(1, 600), 'z')
+__, z2 = E77.get_timeseries(np.arange(1, 600), 'z')
+
+w_combined = 100.*np.hstack((w1[z1 < -50.], w2[z2 < -50.]))
+meanw = np.mean(w_combined)
+stdw = np.std(w_combined)
+dist = sp.stats.norm(loc=meanw, scale=stdw)
+
+print("Mean vertical velocity: {} +/- {}".format(meanw, stdw))
+
+bins = np.arange(-8., 8.1, 0.1)
+
+fig, ax = plt.subplots(1, 1, figsize=(3.125, 3))
+n, __, patches = ax.hist(w_combined, bins=bins, normed=True, histtype='step',
+                         color='black')
+#ax.plot(bins, dist.pdf(bins), linestyle=':', color='black')
+ax.set_xlabel('$w$ (cm s$^{-1}$)')
+ax.set_xlim(np.min(bins), np.max(bins))
+ax.annotate(r"Mean = {:1.1f} $\pm$ {:1.0f} cm s$^{{-1}}$".format(meanw, stdw),
+            (-7., 0.4))
+ax.set_yticks([])
+
+pf.my_savefig(fig, 'both', 'w_hist', sdir, ftype='pdf', fsize='single_col')
+
+# %% ##########################################################################
 
 pfl = E77.get_profiles(151)
 fig = plt.figure(figsize=(3.2, 5))
