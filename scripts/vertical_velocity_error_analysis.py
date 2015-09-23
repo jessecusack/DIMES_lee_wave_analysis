@@ -331,14 +331,25 @@ ax1.loglog(1./f, np.median(om_pgrams, axis=-1), color='black',
 
 # %% Error due to parameter uncertainty
 
-Float = E76
-wfi = Float.__wfi
-data = [getattr(Float, data_name) for data_name in wfi.data_names]
-iz, ix = Float.Ww.shape
-ip = wfi.ps.shape[0]
-w_set = np.empty((iz, ix, ip))
 
-for i, p_set in enumerate(wfi.ps):
-    w_set[:, :, i] = wfi.model_func(p_set, data, wfi.fixed)
+for Float in [E76, E77]:
 
-plt.plot(np.std(w_set, axis=-1), z, color='black', alpha=0.1)
+    wfi = Float.__wfi
+    z = Float.z
+    data = [getattr(Float, data_name) for data_name in wfi.data_names]
+    iz, ix = Float.Ww.shape
+    ip = wfi.ps.shape[0]
+    w_set = np.empty((iz, ix, ip))
+
+    print("Float {}".format(Float.floatID))
+    for i in xrange(len(wfi.p)):
+        pfit = wfi.p[i]
+        pstd = np.std(wfi.ps[:, i])
+        print("P{}: {} +/- {}".format(i, pfit, pstd))
+    print("\n")
+
+    for i, p_set in enumerate(wfi.ps):
+        w_set[:, :, i] = wfi.model_func(p_set, data, wfi.fixed)
+
+    plt.figure()
+    plt.plot(np.std(w_set, axis=-1), z, color='black', alpha=0.1)
