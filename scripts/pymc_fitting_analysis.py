@@ -44,9 +44,6 @@ matplotlib.rc('font', **{'size': 9})
 
 # %% Fitting to profiles
 
-wscale = 1.5
-bscale = 250.
-
 def w_model(params, data):
 
     phi_0, X, Y, Z, phase_0 = params
@@ -61,7 +58,7 @@ def w_model(params, data):
 
     w = gw.w(x, y, z, time, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
 
-    return wscale*w
+    return w
 
 
 def u_model(params, data):
@@ -112,7 +109,7 @@ def b_model(params, data):
 
     b = gw.b(x, y, z, time, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
 
-    return bscale*b
+    return b
 
 
 def full_model(params, data):
@@ -124,10 +121,11 @@ def full_model(params, data):
 
 # %% Combined plots.
 # Rewrite this for new trace files!
-M1 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_31_C.p')
-M2 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_32_C.p')
-M3 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_26_C.p')
-M4 = pymc.database.pickle.load('/noc/users/jc3e13/storage/processed/trace_27_C.p')
+data_dir = '/noc/users/jc3e13/storage/processed/'
+M1 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4976_31_X-5000_Y5000_Z-5000.p'))
+M2 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4976_32_X5000_Y5000_Z-5000.p'))
+M3 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4977_26_X-5000_Y-5000_Z-5000.p'))
+M4 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4977_27_X5000_Y-5000_Z-5000.p'))
 
 # %% Post-load.
 
@@ -152,40 +150,89 @@ Ms = [M1, M2, M3, M4]
 
 fig = plt.figure(figsize=(6.5, 3))
 
-gs = gridspec.GridSpec(1, 2, width_ratios=[3,1])
-gs.update(wspace=0.3)
-axs = [plt.subplot(gs[0]), plt.subplot(gs[1])]
-axs[1].yaxis.tick_right()
-axs[1].yaxis.set_ticks_position('both')
-axs[1].yaxis.set_label_position('right')
+gs = gridspec.GridSpec(1, 4, width_ratios=[3, 1, 1, 1])
+gs.update(wspace=0.9)
+axs = [plt.subplot(gs[0]), plt.subplot(gs[1]), plt.subplot(gs[2]),
+       plt.subplot(gs[3])]
+for ax in axs[1:]:
+    ax.yaxis.tick_right()
+    ax.yaxis.set_ticks_position('both')
+    ax.yaxis.set_label_position('right')
 
 colors = ['blue', 'green', 'red', 'purple']
 
+N = 2.2e-3
+f = gsw.f(-57.5)
+
 for i, M in enumerate(Ms):
-    colprops={'color':colors[i]}
-    data = [np.pi*2./M.trace('X')[:], np.pi*2./M.trace('Y')[:],
-            np.pi*2./M.trace('Z')[:]]
+
+    phi_0 = M.trace('phi_0')[:]
+    k = np.pi*2./M.trace('X')[:]
+    l = np.pi*2./M.trace('Y')[:]
+    m = np.pi*2./M.trace('Z')[:]
+
+    om = gw.omega(N, k, m, l, f)
+    w_0 = gw.W_0(phi_0, m, om, N)
+    Efluxz = gw.Efluxz(w_0, k, m, N, l, f)
+    Mfluxz = -1.*np.sign(Efluxz)*gw.Mfluxz(phi_0, k, l, m, om, N)
+
+    colprops={'color': colors[i]}
+    data = [k, l, m]
     axs[0].boxplot(data, boxprops=colprops,
                    whiskerprops=colprops, capprops=colprops,
                    medianprops=colprops, showfliers=False,
                    labels=['$k$', '$l$', '$m$'])
-    axs[1].boxplot(M.trace('phi_0')[:], boxprops=colprops,
+    axs[1].boxplot(om/N, boxprops=colprops,
                    whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False, labels=['$\phi_0$'])
+                   medianprops=colprops, showfliers=False,
+                   labels=['$\omega/N$'])
+    axs[2].boxplot(Efluxz, boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False,
+                   labels=['$F_E^{(z)}$'])
+    axs[3].boxplot(Mfluxz, boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False,
+                   labels=['$F_M^{(z)}$'])
+
+axs[0].hlines(0., *axs[0].get_xlim())
 
 ax0t = axs[0].twinx()
 ax0t.yaxis.tick_right()
 ax0t.yaxis.set_label_position('right')
 ax0t.set_ylabel('wavelength (m)')
 ax0t.set_ylim(axs[0].get_ylim())
-yticklabels = np.array([1000, 1500, 2000, 3000, 5000, 10000])
-yticks = -np.pi*2./yticklabels
+yticklabels_1 = np.array([500, 750, 1000, 1500, 5000])
+yticklabels = np.hstack((yticklabels_1, np.flipud(yticklabels_1)))
+yticks = np.pi*2./yticklabels
+yticks[:yticks.size/2] *= -1.
 ax0t.set_yticks(yticks)
 ax0t.set_yticklabels(yticklabels)
 ax0t.grid()
 
+# Frequency log scale
+axs[1].set_yscale('log')
+axs[1].set_ylim(0.01, 10.)
+axs[1].hlines(np.abs(f)/N, *axs[1].get_xlim())
+axs[1].annotate('$f$', xy=(0.5, np.abs(f)/N))
+axs[1].hlines(1., *axs[1].get_xlim())
+axs[1].annotate('$N$', xy=(0.5, 1))
+
 axs[0].set_ylabel('wavenumber (rad m$^{-1}$)')
-axs[1].set_ylabel('pressure perturbation (m$^2$ s$^{-2}$)')
+
+# The legend
+labels = ['E 4976 P 31', 'E 4976 P 32', 'E 4977 P 26', 'E 4977 P 27']
+yloc = [0.013, 0.011, 0.005, 0.003]
+for i in xrange(4):
+    colprops={'color': colors[i]}
+    axs[0].text(0.55, yloc[i], labels[i], fontdict=colprops)
+
+axs[1].set_ylabel('Frequency (-)')
+axs[1].grid(axis='y')
+axs[2].set_ylabel('Vertical energy flux (W m$^{-2}$)')
+axs[2].grid(axis='y')
+axs[3].set_ylabel('Vertical momentum flux (N m$^{-2}$)')
+axs[3].grid(axis='y')
 
 pf.my_savefig(fig, 'both', 'wavenumber_boxplots', sdir, ftype='pdf',
               fsize='double_col')
@@ -199,7 +246,7 @@ E77_hpids = [26, 27]
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
 fig, axm = plt.subplots(len(pfls), 4, sharey='row', sharex='col',
-                        figsize=(6.5, 10))
+                        figsize=(6.5, 7))
 fig.subplots_adjust(hspace=0.05, wspace=0.1)
 rot = 'vertical'
 col = 'black'
@@ -280,8 +327,8 @@ for pfl, axs in zip(pfls, axm):
                   M.trace('Z')[i], M.trace('phase')[i]]
         axs[0].plot(100.*u_model(params, data), z, color='red', alpha=0.03)
         axs[1].plot(100.*v_model(params, data), z, color='red', alpha=0.03)
-        axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
-        axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red', alpha=0.03)
+        axs[2].plot(100.*w_model(params, data), z, color='red', alpha=0.03)
+        axs[3].plot(10000.*b_model(params, data), z, color='red', alpha=0.03)
 
 for ax in axm[-1, :]:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=rot)
