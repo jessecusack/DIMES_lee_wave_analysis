@@ -168,6 +168,8 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         Uuwbar[i, j] = -U*uwbar[i, j]
         Vvwbar[i, j] = -V*vwbar[i, j]
 
+        Efluxz = Uuwbar[i, j] + Vvwbar[i, j]
+
         tau[i, j] = np.sqrt(uwbar[i, j]**2 + vwbar[i, j]**2)
 
         kinetic = 0.5*rho0*sp.integrate.trapz(u**2 + v**2 + w**2, tef)/DT
@@ -181,7 +183,8 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
               "{:1.2f} m2 s-2".format(np.std(pp)))
         print("Vertical energy flux: {:1.2f} W m-2".format(pwbar[i, j]))
         print("Vertical energy from from (Uuw, Vvw): ({:1.2f}, {:1.2f})"
-              "W m-2 ".format(Uuwbar[i, j], Vvwbar[i, j]))
+              ", total {:1.2f} W m-2 ".format(Uuwbar[i, j], Vvwbar[i, j],
+                                              Efluxz))
 
 #        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
 
