@@ -8,8 +8,15 @@ Created on Tue Apr 08 14:33:17 2014
 import numpy as np
 import scipy.optimize as op
 import pymc
-from utils import Bunch
 import triangle
+import os
+import sys
+
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+    
+from utils import Bunch
 
 
 def fitter(Float, hpids, params0, fixed, model='1', Plims=(60., 1500.),

@@ -10,19 +10,16 @@ Advection routines.
 
 import numpy as np
 from scipy.integrate import odeint
-import sys
+import sys as _sys
+import os as _os
 
-lib_path = '/noc/users/jc3e13/emapex/python'
-pymc3_path = '/noc/users/jc3e13/envs/my_root/lib/python2.7/site-packages/pymc-3.0-py2.7.egg'
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
+import gsw
 
-# We want pymc 2.3
-if pymc3_path in sys.path:
-    sys.path.remove(pymc3_path)
+lib_path = _os.path.abspath('../../ocean-tools')
+if lib_path not in _sys.path:
+    _sys.path.append(lib_path)
 
 import gravity_waves as gw
-import gsw
 import utils
 
 

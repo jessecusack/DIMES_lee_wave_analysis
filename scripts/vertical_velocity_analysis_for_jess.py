@@ -21,7 +21,7 @@ import gsw  # Thermodynamic equation of state for seawater.
 import triangle  # A cool plotting function.
 import pymc  # MCMC toolbox.
 
-lib_path = os.path.abspath('../modules')
+lib_path = os.path.abspath('../../ocean-tools')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 

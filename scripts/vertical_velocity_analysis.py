@@ -23,7 +23,6 @@ if lib_path not in sys.path:
 
 import emapex
 import vertical_velocity_model as vvm
-import plotting_functions as pf
 
 
 # Figure save path.

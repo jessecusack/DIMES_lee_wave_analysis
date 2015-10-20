@@ -6,11 +6,9 @@ Created on Fri Oct 31 16:20:33 2014
 """
 
 import datetime
-import gsw
 import os
 import sys
 import glob
-
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -21,10 +19,16 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import scipy.optimize as op
 from scipy.integrate import cumtrapz
 
+import gsw
+
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+    
 import sandwell
 import utils
 import emapex

@@ -17,6 +17,10 @@ lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 import sandwell
 import emapex
 import plotting_functions as pf

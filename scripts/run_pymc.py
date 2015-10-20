@@ -14,12 +14,16 @@ import os
 
 import gsw
 import triangle
+import pymc
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
-import pymc
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 import emapex
 import utils
 import gravity_waves as gw

@@ -8,6 +8,7 @@ Created on Tue Mar 24 11:00:28 2015
 import numpy as np
 #from scipy import optimize as op
 import matplotlib.pyplot as plt
+
 import pymc
 import triangle
 

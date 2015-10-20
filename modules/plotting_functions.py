@@ -8,12 +8,18 @@ Created on Tue Apr 08 12:17:53 2014
 import matplotlib.pyplot as plt
 import numpy as np
 import mpl_toolkits.basemap as bm
-import sandwell
-import utils
 import scipy.signal as sig
 from glob import glob
 import scipy.io as io
 import os
+import sys
+
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
+import sandwell
+import utils
 
 
 def dist_section(Float, hpids, var, plot_func=plt.contourf):

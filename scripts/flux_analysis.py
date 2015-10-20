@@ -11,10 +11,13 @@ import sys
 import os
 import glob
 import matplotlib
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 lib_path = os.path.abspath('../modules')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
+lib_path = os.path.abspath('../../ocean-tools')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 

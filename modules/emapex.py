@@ -9,20 +9,31 @@ data.
 """
 
 import numpy as np
-import scipy.io as io
+import scipy.io as _io
 from scipy.interpolate import griddata
 from scipy.integrate import trapz, cumtrapz
+import pickle as _pickle
+import copy as _copy
+import glob as _glob
+import os as _os
+import sys as _sys
+
 import gsw
+
+lib_path = _os.path.abspath('../../ocean-tools')
+if lib_path not in _sys.path:
+    _sys.path.append(lib_path)
+    
 import utils
-import pickle
-import copy
-import glob
-import os
+
+__all__ = ['Profile', 'EMApexFloat', 'mean_profile', 'up_down_indices',
+           'find_file', 'load']
 
 
 class Profile(object):
-    """Provide to this class its parent float and half profile number and it
-    will extract its data.
+    """
+    Provide to this class its parent float and half profile number and it will 
+    extract its data.
     """
     def __init__(self, parent_float, hpid):
 
@@ -37,7 +48,8 @@ class Profile(object):
 #        print("Profile {} has been created.".format(hpid))
 
     def interp(self, var_2_vals, var_2_name, var_1_name):
-        """Linear 1-D interpolation of variables stored by a Profile.
+        """
+        Linear 1-D interpolation of variables stored by a Profile.
 
         Parameters
         ----------
@@ -71,8 +83,6 @@ class Profile(object):
         sorting has to be done so that interpolation points are monotonically
         increasing.
 
-        TODO: interp was recently changed in SciPy 0.14 and this sorting may
-        no longer be necessary.
 
         Examples
         --------
@@ -197,7 +207,7 @@ class EMApexFloat(object):
         )
 
         # Loaded data is a dictionary.
-        data = io.loadmat(filepath, squeeze_me=True)
+        data = _io.loadmat(filepath, squeeze_me=True)
 
         isFloat = data.pop('flid') == floatID
         del data['ar']
@@ -521,10 +531,10 @@ class EMApexFloat(object):
         try:
             with open(fit_info, 'rb') as f:
                 print("Unpickling fit info.")
-                setattr(self, '__wfi', pickle.load(f))
+                setattr(self, '__wfi', _pickle.load(f))
         except TypeError:
             print('Copying fit info.')
-            setattr(self, '__wfi', copy.copy(fit_info))
+            setattr(self, '__wfi', _copy.copy(fit_info))
 
         wfi = getattr(self, '__wfi')
 
@@ -570,7 +580,7 @@ class EMApexFloat(object):
 
         with open(N2_ref_file) as f:
 
-            N2_ref = pickle.load(f)
+            N2_ref = _pickle.load(f)
             setattr(self, 'N2_ref', N2_ref)
             print("  Added: N2_ref.")
             setattr(self, 'strain_z', (self.N2 - N2_ref)/N2_ref)
@@ -588,7 +598,7 @@ class EMApexFloat(object):
 
         with open(srho_file) as f:
 
-            srho_1 = pickle.load(f)
+            srho_1 = _pickle.load(f)
 
         setattr(self, 'srho_1', srho_1)
         print("  Added: srho_1.")
@@ -920,14 +930,14 @@ def up_down_indices(hpid_array, up_or_down='up'):
 
 def what_floats_are_in_here(fname):
     """Finds all unique float ID numbers from a given allprofs##.mat file."""
-    fs = io.loadmat(fname, squeeze_me=True, variable_names='flid')['flid']
+    fs = _io.loadmat(fname, squeeze_me=True, variable_names='flid')['flid']
     return np.unique(fs[~np.isnan(fs)])
 
 
 def find_file(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX'):
     """Locate the file that contains data for the given ID number."""
 
-    file_paths = glob.glob(os.path.join(data_dir, 'allprofs*.mat'))
+    file_paths = _glob.glob(_os.path.join(data_dir, 'allprofs*.mat'))
 
     for file_path in file_paths:
         floatIDs = what_floats_are_in_here(file_path)
@@ -951,14 +961,14 @@ def load(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX',
 
     if apply_w:
         data_file = "{:g}_fix_p0k0M_fit_info.p".format(floatID)
-        Float.apply_w_model(os.path.join(pp_dir, data_file))
+        Float.apply_w_model(_os.path.join(pp_dir, data_file))
 
     if apply_strain:
         data_file = "{:g}_N2_ref_300dbar.p".format(floatID)
-        Float.apply_strain(os.path.join(pp_dir, data_file))
+        Float.apply_strain(_os.path.join(pp_dir, data_file))
 
     if apply_iso:
         data_file = "srho_{:g}_100mbin.p".format(floatID)
-        Float.apply_isopycnal_displacement(os.path.join(pp_dir, data_file))
+        Float.apply_isopycnal_displacement(_os.path.join(pp_dir, data_file))
 
     return Float

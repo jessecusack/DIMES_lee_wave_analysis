@@ -8,22 +8,21 @@ Created on Thu Jul 24 11:00:03 2014
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import scipy.optimize as op
-import gsw
 import os
 import sys
 from scipy.interpolate import griddata
-from scipy.integrate import cumtrapz
-import scipy.signal as sig
 import mpl_toolkits.basemap as bm
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 import emapex
 import sandwell
-import plotting_functions as pf
 
 
 try:
