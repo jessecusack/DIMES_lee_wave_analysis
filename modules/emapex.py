@@ -23,7 +23,7 @@ import gsw
 lib_path = _os.path.abspath('../../ocean-tools')
 if lib_path not in _sys.path:
     _sys.path.append(lib_path)
-    
+
 import utils
 
 __all__ = ['Profile', 'EMApexFloat', 'mean_profile', 'up_down_indices',
@@ -32,7 +32,7 @@ __all__ = ['Profile', 'EMApexFloat', 'mean_profile', 'up_down_indices',
 
 class Profile(object):
     """
-    Provide to this class its parent float and half profile number and it will 
+    Provide to this class its parent float and half profile number and it will
     extract its data.
     """
     def __init__(self, parent_float, hpid):
@@ -934,9 +934,9 @@ def what_floats_are_in_here(fname):
     return np.unique(fs[~np.isnan(fs)])
 
 
-def find_file(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX'):
+def find_file(floatID, data_dir='~/storage/DIMES/EM-APEX'):
     """Locate the file that contains data for the given ID number."""
-
+    data_dir = _os.path.expanduser(data_dir)
     file_paths = _glob.glob(_os.path.join(data_dir, 'allprofs*.mat'))
 
     for file_path in file_paths:
@@ -947,16 +947,16 @@ def find_file(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX'):
     raise ValueError("Float not found in database, check ID.")
 
 
-def load(floatID, data_dir='/noc/users/jc3e13/storage/DIMES/EM-APEX',
-         pp_dir='/noc/users/jc3e13/storage/processed', apply_w=True,
+def load(floatID, data_dir='~/storage/DIMES/EM-APEX',
+         pp_dir='~/storage/processed', apply_w=True,
          apply_strain=True, apply_iso=True):
     """Given an ID number this function will attempt to load data. Use the
     optional boolean arguments to turn off additional processing if not
     required as this is performed by default. The hardcoded additional
     processing paths may fail for some floats."""
-
+    data_dir = _os.path.expanduser(data_dir)
+    pp_dir = _os.path.expanduser(pp_dir)
     float_path = find_file(floatID, data_dir)
-
     Float = EMApexFloat(float_path, floatID)
 
     if apply_w:
