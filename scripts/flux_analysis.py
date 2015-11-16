@@ -41,7 +41,9 @@ E77.update_profiles()
 # %% Script params.
 
 # Bathymetry file path.
-bf = os.path.abspath(glob.glob('/noc/users/jc3e13/storage/smith_sandwell/topo_*.img')[0])
+bp = os.path.join(os.path.expanduser('~'), 'storage', 'smith_sandwell',
+                  'topo_*.img')
+bf = os.path.abspath(glob.glob(bp)[0])
 # Figure save path.
 sdir = '../figures/flux analysis'
 if not os.path.exists(sdir):
@@ -240,3 +242,22 @@ axs[0].set_ylabel("$U<u'w'>$ (W m$^{-2}$)")
 axs[0].legend(loc=0)
 
 pf.my_savefig(fig, 'both', 'fluxes', sdir, ftype='pdf', fsize='single_col')
+
+# Just the horizontal component of the momentum flux.
+
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(3.125, 4))
+
+axs[0].plot(ds[0], uwbar[0, :], 'b', label='4976')
+axs[0].plot(ds[1], uwbar[1, :], 'g', label='4977')
+axs[0].set_ylabel("$<u'w'>$ (N m$^{-2}$)")
+axs[0].legend(loc=0)
+
+axs[1].set_xlabel('Distance from ridge top (km)', labelpad=0.06)
+axs[1].set_ylabel('$z$ (m)')
+axs[1].fill_between(d, bathy, np.nanmin(bathy), color='black',
+                    linewidth=2)
+axs[1].set_ylim(np.nanmin(bathy), np.nanmax(bathy))
+axs[1].set_xlim(np.nanmin(d), np.nanmax(d))
+
+pf.my_savefig(fig, 'both', 'M_flux_only', sdir, ftype='png',
+              fsize='single_col')
