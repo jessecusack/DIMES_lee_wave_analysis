@@ -15,14 +15,14 @@ import os
 import pickle
 import sys
 
-import triangle
+import corner
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
 import emapex
-import vertical_velocity_model as vvm
+import vertical_velocity_fitter as vvf
 
 
 # Figure save path.
@@ -42,9 +42,9 @@ def assess_w_fit(Float, save_id='', save_dir=sdir):
     matplotlib.rc('font', **font)
 
     wfi = Float.__wfi
-    hpids = wfi.hpids
+    hpids = wfi['hpids']
     floatID = Float.floatID
-    if wfi.profiles == 'updown':
+    if wfi['profiles'] == 'updown':
         updown = True
         ud_id = '_updown'
     else:
@@ -152,7 +152,8 @@ def assess_w_fit(Float, save_id='', save_dir=sdir):
     if updown:
         for n, ud in enumerate(['up', 'down']):
             plt.figure(figsize=(3, 3))
-            plt.pcolormesh(np.flipud(wfi.pcorr[n]), cmap=plt.get_cmap('PiYG'))
+            plt.pcolormesh(np.flipud(wfi['pcorr'][n]),
+                           cmap=plt.get_cmap('PiYG'))
             cbar = plt.colorbar()
             cbar.set_label('Correlation')
             plt.clim(-1, 1)
@@ -164,7 +165,7 @@ def assess_w_fit(Float, save_id='', save_dir=sdir):
             fname = os.path.join(save_dir, name)
             plt.savefig(fname, format='pdf', bbox_inches='tight')
 
-            pps = pd.DataFrame(wfi.ps[n], columns=pnames)
+            pps = pd.DataFrame(wfi['ps'][n], columns=pnames)
             axs = pd.tools.plotting.scatter_matrix(pps, hist_kwds={'bins': 12})
             f = plt.gcf()
             f.set_size_inches(7, 7)
@@ -180,9 +181,9 @@ def assess_w_fit(Float, save_id='', save_dir=sdir):
 
                     if i == j:
                         y = np.array(axs[i, j].get_ylim())
-                        x = np.array([wfi.p[n][i], wfi.p[n][i]])
+                        x = np.array([wfi['p'][n][i], wfi['p'][n][i]])
                         axs[i, j].plot(x, y, 'r-')
-                        x = np.array([wfi.params0[i], wfi.params0[i]])
+                        x = np.array([wfi['params0'][i], wfi['params0'][i]])
                         axs[i, j].plot(x, y, 'g-')
 
             name = save_id + '_' + ud + '_param_matrix_scatter.pdf'
@@ -192,7 +193,7 @@ def assess_w_fit(Float, save_id='', save_dir=sdir):
     else:
 
         plt.figure(figsize=(3, 3))
-        plt.pcolormesh(np.flipud(wfi.pcorr), cmap=plt.get_cmap('PiYG'))
+        plt.pcolormesh(np.flipud(wfi['pcorr']), cmap=plt.get_cmap('PiYG'))
         cbar = plt.colorbar()
         cbar.set_label('Correlation')
         plt.clim(-1, 1)
@@ -204,11 +205,11 @@ def assess_w_fit(Float, save_id='', save_dir=sdir):
         fname = os.path.join(save_dir, name)
         plt.savefig(fname, format='pdf', bbox_inches='tight')
 
-        not_fixed = np.array([(p is None) for p in wfi.fixed])
-        ps = wfi.ps[:, not_fixed]
-        p = wfi.p[not_fixed]
-        params0 = wfi.params0[not_fixed]
-        triangle.corner(ps, labels=pnames[not_fixed])
+        not_fixed = np.array([(p is None) for p in wfi['fixed']])
+        ps = wfi['ps'][:, not_fixed]
+        p = wfi['p'][not_fixed]
+        params0 = wfi['params0'][not_fixed]
+        corner.corner(ps, labels=pnames[not_fixed])
         f = plt.gcf()
         f.set_size_inches(7, 7)
         axs = f.axes
@@ -278,42 +279,41 @@ model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, None, None, 27.179]
-wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
+wfi = vvf.fitter(E76, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E76.apply_w_model(wfi)
 assess_w_fit(E76, str(E76.floatID)+'_fix_M')
-print(E76.__wfi.p)
+print(E76.__wfi['p'])
 
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, None, None, 27.179]
-wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
+wfi = vvf.fitter(E77, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E77.apply_w_model(wfi)
 assess_w_fit(E77, str(E77.floatID)+'_fix_M')
-print(E77.__wfi.p)
+print(E77.__wfi['p'])
 
 # %% ##########################################################################
 
-model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, 2000., None, 16, 27.179]
 Plims = (60., 1500.)
 hpids = np.arange(50, 151)
 
-wfi = vvm.fitter(E76, hpids, params0, fixed, model=model, Plims=Plims,
-                 profiles='all', cf_key=cf_key)
+wfi = vvf.fitter(E76, hpids, params0, fixed, Plims=Plims, profiles='all',
+                 cf_key=cf_key)
 E76.apply_w_model(wfi)
 assess_w_fit(E76, str(E76.floatID)+'_fix_p0k0M')
-print(E76.__wfi.p)
+print(E76.__wfi['p'])
 
-wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
+wfi = vvf.fitter(E77, hpids, params0, fixed, Plims=Plims, profiles='all',
                  cf_key=cf_key)
 E77.apply_w_model(wfi)
 assess_w_fit(E77, str(E77.floatID)+'_fix_p0k0M')
-print(E77.__wfi.p)
+print(E77.__wfi['p'])
 
 # %% ##########################################################################
 
@@ -321,21 +321,21 @@ model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, None, 27.179]
-wfi = vvm.fitter(E76, params0, fixed, model=model, profiles='all',
+wfi = vvf.fitter(E76, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E76.apply_w_model(wfi)
 assess_w_fit(E76, str(E76.floatID)+'_fix_alphakM')
-print(E76.__wfi.p)
+print(E76.__wfi['p'])
 
 model = '1'
 cf_key = 'diffsq'
 params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
 fixed = [None, None, None, None, 1.156e-6, None, 27.179]
-wfi = vvm.fitter(E77, params0, fixed, model=model, profiles='all',
+wfi = vvf.fitter(E77, params0, fixed, model=model, profiles='all',
                  cf_key=cf_key)
 E77.apply_w_model(wfi)
 assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
-print(E77.__wfi.p)
+print(E77.__wfi['p'])
 
 # %% ##########################################################################
 #

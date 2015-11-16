@@ -20,6 +20,10 @@ import sys as _sys
 
 import gsw
 
+lib_path = _os.path.abspath('../modules')
+if lib_path not in _sys.path:
+    _sys.path.append(lib_path)
+
 lib_path = _os.path.abspath('../../ocean-tools')
 if lib_path not in _sys.path:
     _sys.path.append(lib_path)
@@ -538,29 +542,33 @@ class EMApexFloat(object):
 
         wfi = getattr(self, '__wfi')
 
-        if wfi.profiles == 'all':
+        import vertical_velocity_model as vvm
+        w_model = vvm.still_water_model_1
 
-            data = [getattr(self, data_name) for data_name in wfi.data_names]
+        if wfi['profiles'] == 'all':
 
-            self.Ws = wfi.model_func(wfi.p, data, wfi.fixed)
+            data = [getattr(self, data_name) for data_name in
+                    wfi['data_names']]
+
+            self.Ws = w_model(wfi['p'], data, wfi['fixed'])
             print("  Added: Ws.")
             self.Ww = self.Wz - self.Ws
             print("  Added: Ww.")
 
-        elif wfi.profiles == 'updown':
+        elif wfi['profiles'] == 'updown':
 
             self.Ws = np.nan*np.ones_like(self.Wz)
 
             up = up_down_indices(self.hpid, 'up')
             data = [getattr(self, data_name)[:, up] for
-                    data_name in wfi.data_names]
-            self.Ws[:, up] = wfi.model_func(wfi.p[0], data, wfi.fixed)
+                    data_name in wfi['data_names']]
+            self.Ws[:, up] = w_model(wfi['p'][0], data, wfi['fixed'])
             print("  Added: Ws. (ascents)")
 
             down = up_down_indices(self.hpid, 'down')
             data = [getattr(self, data_name)[:, down] for
-                    data_name in wfi.data_names]
-            self.Ws[:, down] = wfi.model_func(wfi.p[1], data, wfi.fixed)
+                    data_name in wfi['data_names']]
+            self.Ws[:, down] = w_model(wfi['p'][1], data, wfi['fixed'])
             print("  Added: Ws. (descents)")
 
             self.Ww = self.Wz - self.Ws
