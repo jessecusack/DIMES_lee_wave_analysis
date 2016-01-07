@@ -12,6 +12,7 @@ import scipy as sp
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits import basemap as bm
+from matplotlib.collections import LineCollection
 import gsw
 import os
 import sys
@@ -45,7 +46,7 @@ sdir = '../figures/wave_generation_analysis'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 9})
+matplotlib.rc('font', **{'size': 8})
 
 ################
 # START SCRIPT #
@@ -66,7 +67,7 @@ lon_lat = np.array([llcrnrlon, urcrnrlon+5, llcrnrlat-5, urcrnrlat])
 
 lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
 bathy_grid[bathy_grid > 0] = 0
-bathy_grid *= -1.  # Convert to depth
+bathy_grid *= -1  # Convert to depth
 
 m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
                llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
@@ -233,53 +234,55 @@ E77_hpids = np.arange(N0_77, N0_77+N)
 
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
-fig, axs = plt.subplots(1, 7, sharey=True)
-fig.set_size_inches(16, 5)
+fig, axs = plt.subplots(1, 3, sharey='row', figsize=(3.125, 3))
 
 axs[0].set_ylabel('$z$ (m)')
 
 z_mean = np.arange(-1450, 0, 5)
-T_mean = emapex.mean_profile(pfls, 'T', z_return=z_mean)
-S_mean = emapex.mean_profile(pfls, 'S', z_return=z_mean)
-rho_1_mean = emapex.mean_profile(pfls, 'rho_1', z_return=z_mean)
+#T_mean = emapex.mean_profile(pfls, 'T', z_return=z_mean)
+#S_mean = emapex.mean_profile(pfls, 'S', z_return=z_mean)
+#rho_1_mean = emapex.mean_profile(pfls, 'rho_1', z_return=z_mean)
 N2_ref_mean = emapex.mean_profile(pfls, 'N2_ref', z_return=z_mean)
 U_abs_mean = emapex.mean_profile(pfls, 'U_abs', z_return=z_mean)
 V_abs_mean = emapex.mean_profile(pfls, 'V_abs', z_return=z_mean)
-Ww_mean = emapex.mean_profile(pfls, 'Ww', z_return=z_mean)
+#Ww_mean = emapex.mean_profile(pfls, 'Ww', z_return=z_mean)
 
-for pfl in pfls:
+#for pfl in pfls:
+#
+#    axs[0].plot(pfl.T, pfl.z, color='k', alpha=0.3)
+#    axs[1].plot(pfl.S, pfl.z, color='k', alpha=0.3)
+#    axs[2].plot(pfl.rho_1-1000., pfl.z, color='k', alpha=0.3)
+#    axs[3].plot(np.sqrt(pfl.N2_ref)*1000., pfl.z, color='k', alpha=0.3)
+#    axs[4].plot(pfl.U_abs*100., pfl.zef, color='k', alpha=0.3)
+#    axs[5].plot(pfl.V_abs*100., pfl.zef, color='k', alpha=0.3)
+#    axs[6].plot(pfl.Ww*100., pfl.z, color='k', alpha=0.3)
 
-    axs[0].plot(pfl.T, pfl.z, color='k', alpha=0.3)
-    axs[1].plot(pfl.S, pfl.z, color='k', alpha=0.3)
-    axs[2].plot(pfl.rho_1-1000., pfl.z, color='k', alpha=0.3)
-    axs[3].plot(np.sqrt(pfl.N2_ref)*1000., pfl.z, color='k', alpha=0.3)
-    axs[4].plot(pfl.U_abs*100., pfl.zef, color='k', alpha=0.3)
-    axs[5].plot(pfl.V_abs*100., pfl.zef, color='k', alpha=0.3)
-    axs[6].plot(pfl.Ww*100., pfl.z, color='k', alpha=0.3)
+lw = 1.5
+#axs[0].plot(T_mean, z_mean, color='k', linewidth=lw)
+#axs[1].plot(S_mean, z_mean, color='k', linewidth=lw)
+#axs[2].plot(rho_1_mean-1000., z_mean, color='k', linewidth=lw)
+axs[0].plot(np.sqrt(N2_ref_mean)*1000., z_mean, color='k', linewidth=lw)
+axs[0].set_xlabel('$N$ (10$^{-3}$ rad s$^{-1}$)')
+axs[1].plot(U_abs_mean*100., z_mean, color='k', linewidth=lw)
+axs[1].set_xlabel('$u$ (cm s$^{-1}$)')
+axs[2].plot(V_abs_mean*100., z_mean, color='k', linewidth=lw)
+axs[2].set_xlabel('$v$ (cm s$^{-1}$)')
+#axs[6].plot(Ww_mean*100., z_mean, color='k', linewidth=lw)
 
-axs[0].plot(T_mean, z_mean, color='r')
-axs[1].plot(S_mean, z_mean, color='r')
-axs[2].plot(rho_1_mean-1000., z_mean, color='r')
-axs[3].plot(np.sqrt(N2_ref_mean)*1000., z_mean, color='r')
-axs[4].plot(U_abs_mean*100., z_mean, color='r')
-axs[5].plot(V_abs_mean*100., z_mean, color='r')
-axs[6].plot(Ww_mean*100., z_mean, color='r')
+#xlabels = ['$T$ ($^\circ$C)', '$S$ (-)', '$\sigma_1$ (kg m$^{-3}$)',
+#           '$N$ (10$^{-3}$ rad s$^{-1}$)', '$u$ (cm s$^{-1}$)',
+#           '$v$ (cm s$^{-1}$)', '$w$ (cm s$^{-1}$)']
 
-xlabels = ['$T$ ($^\circ$C)', '$S$ (-)', '$\sigma_1$ (kg m$^{-3}$)',
-           '$N$ (10$^{-3}$ rad s$^{-1}$)', '$u$ (cm s$^{-1}$)',
-           '$v$ (cm s$^{-1}$)', '$w$ (cm s$^{-1}$)']
-
-for ax, xlabel in zip(axs, xlabels):
+for ax in axs:
     ax.set_xticks(ax.get_xticks()[::2])
-    ax.set_xlabel(xlabel)
+#    ax.set_xlabel(xlabel)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation='vertical')
-# TODO: Plot mean profiles too!
 
 # Why is this necessary...? I don't know but it has to be done.
 axs[0].ticklabel_format(useOffset=False)
 plt.tight_layout()
 
-pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='double_col')
+pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='single_col', ftype='pdf')
 
 # The average flow properties below
 z_max = -300.
@@ -355,8 +358,16 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
         dctd -= dctd[bathy.argmax()]
 
-        thin = 20
-        plt.scatter(d[::thin], z[::thin], s=50, c=V[::thin]*100.,
+        points = np.array([d, z]).transpose().reshape(-1, 1, 2)
+        segs = np.concatenate([points[:-1], points[1:]], axis=1)
+        lc = LineCollection(segs, cmap=bwr2, norm=plt.Normalize(-10, 10),
+                            linewidths=4)
+        lc.set_array(100.*V)
+        plt.gca().add_collection(lc)
+
+        # Still have to keep this bit to allow colour bar to be created later.
+        thin = 100
+        plt.scatter(d[::thin], z[::thin], s=0, c=V[::thin]*100.,
                     edgecolor='none', cmap=bwr2)
 
 
