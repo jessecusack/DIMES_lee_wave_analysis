@@ -285,7 +285,7 @@ plt.tight_layout()
 pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='single_col', ftype='pdf')
 
 # The average flow properties below
-z_max = -300.
+z_max = -100.
 N_mean = np.nanmean(np.hstack([np.sqrt(pfl.N2_ref)[pfl.z < z_max]
                                for pfl in pfls]))
 U_mean = np.nanmean(np.hstack([pfl.U_abs[pfl.zef < z_max] for pfl in pfls]))
@@ -300,7 +300,9 @@ print("Mean meridional speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
       V_mean))
 print("Mean vertical speed below {:1.0f} m is {:1.2f} m s-1.".format(z_max,
       W_mean))
-
+# Estimate shear
+p = np.polyfit(z_mean, U_abs_mean, deg=1)
+print("Shear from linear fit: {:1.2f} cm s-1 km-1".format(1e5*p[0]))
 
 # %% Sections in mountain centered coords.
 
