@@ -25,9 +25,9 @@ if lib_path not in sys.path:
 lib_path = os.path.abspath('../../ocean-tools')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
-    
+
 import emapex
-import finescale as fs
+import TKED_parameterisations as fs
 import plotting_functions as pf
 import sandwell
 import window as wdw
@@ -52,7 +52,7 @@ sdir = '../figures/TKED_estimation'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 9})
+matplotlib.rc('font', **{'size': 8})
 
 
 # %% Experimental functions

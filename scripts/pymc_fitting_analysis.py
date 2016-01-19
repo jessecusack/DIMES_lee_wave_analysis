@@ -23,7 +23,7 @@ if lib_path not in sys.path:
 lib_path = os.path.abspath('../../ocean-tools')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
-    
+
 import emapex
 import utils
 import gravity_waves as gw
@@ -125,7 +125,7 @@ def full_model(params, data):
 
 # %% Combined plots.
 # Rewrite this for new trace files!
-data_dir = '/noc/users/jc3e13/storage/processed/'
+data_dir = '/noc/users/jc3e13/storage/processed/MCMC_detrend_1'
 M1 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4976_31_X-5000_Y5000_Z-5000.p'))
 M2 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4976_32_X5000_Y5000_Z-5000.p'))
 M3 = pymc.database.pickle.load(os.path.join(data_dir, 'trace_4977_26_X-5000_Y-5000_Z-5000.p'))

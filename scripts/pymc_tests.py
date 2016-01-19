@@ -16,9 +16,9 @@ np.random.seed(12345)
 
 # True parameters.
 phi_0 = 0.5
-lx = -3000.
+lx = -2000.
 ly = -3000.
-lz = -3000.
+lz = -2000.
 phase_0 = 1.
 N = 2e-3
 U = 0.5
