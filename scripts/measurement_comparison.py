@@ -93,6 +93,8 @@ kinetic = 0.5*rho0*sp.integrate.trapz(u[use]**2 + v[use]**2 + w[use]**2, t[use])
 potential = 0.5*rho0*sp.integrate.trapz(b[use]**2/N**2, t[use])/dT
 E = kinetic + potential
 
+ER = pwbar/Efluxz
+
 print("Reynolds stress:\n"
       " Measured components: ({:1.2f}, {:1.2f}) N m-2\n"
       " Measured magnitude: {:1.2f} N m-2\n"
@@ -102,7 +104,8 @@ print("Energy density:\n"
       " Actual {:1.2f} J m-3\n".format(E, Edens))
 print("Vertical energy flux:\n"
       " Measured {:1.2f} W m-2\n"
-      " Actual {:1.2f} W m-2\n".format(pwbar, Efluxz))
+      " Actual {:1.2f} W m-2\n"
+      " Ratio {:1.2f}".format(pwbar, Efluxz, ER))
 
 
 fig, axs = plt.subplots(1, 6, sharey=True, figsize=(16, 6))
