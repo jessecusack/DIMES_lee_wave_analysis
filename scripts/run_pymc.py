@@ -45,6 +45,7 @@ parser.add_argument('--zrange', nargs=2, type=float,
                     help='min max height range for fit')
 parser.add_argument('--xyz', nargs=3, type=float, help='initial conditions for'
                     ' fit X, Y, Z')
+parser.add_argument('--detrend', type=int, help='detrend polynomial order')
 args = parser.parse_args()
 
 # Model
@@ -163,8 +164,8 @@ V = np.interp(time, timeef, V)
 Umean = np.mean(U)
 Vmean = np.mean(V)
 
-U = utils.nan_detrend(z, U, 2)
-V = utils.nan_detrend(z, V, 2)
+U = utils.nan_detrend(z, U, args.detrend)
+V = utils.nan_detrend(z, V, args.detrend)
 
 time *= 60.*60.*24
 time -= np.min(time)
@@ -180,11 +181,11 @@ def model():
 
     # Priors.
     sig = 0.02
-    phi_0 = pymc.Uniform('phi_0', 0, 100, value=0.1)
+    phi_0 = pymc.Uniform('phi_0', 0, 0.2, value=0.05)
     X = pymc.Uniform('X', -1000000., 1000000., value=X0)
     Y = pymc.Uniform('Y', -100000., 1000000., value=Y0)
     Z = pymc.Uniform('Z', -50000., 50000., value=Z0)
-    phase = pymc.Uniform('phase', 0., np.pi*4, value=2.)
+    phase = pymc.Uniform('phase', -np.pi*4, np.pi*4, value=0.)
 
     @pymc.deterministic()
     def wave_model(phi_0=phi_0, X=X, Y=Y, Z=Z, phase=phase):
