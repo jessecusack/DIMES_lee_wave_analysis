@@ -25,6 +25,7 @@ import sandwell
 import emapex
 import utils
 import plotting_functions as pf
+import coloured_noise as cn
 
 
 try:

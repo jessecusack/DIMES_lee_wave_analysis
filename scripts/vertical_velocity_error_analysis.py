@@ -16,23 +16,28 @@ lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
     sys.path.append(lib_path)
 
+lib_path = os.path.abspath('../../ocean-tools')
+if lib_path not in sys.path:
+    sys.path.append(lib_path)
+
 import emapex
 import plotting_functions as pf
+import coloured_noise as cn
 
 try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
 except NameError:
     E76 = emapex.load(4976)
-    E76.generate_regular_grids(dz=2.)
+    E76.generate_regular_grids(dz=1.)
     E77 = emapex.load(4977)
-    E77.generate_regular_grids(dz=2.)
+    E77.generate_regular_grids(dz=1.)
 
 # Figure save path.
 sdir = os.path.join('..', 'figures', 'vertical_velocity_analysis')
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 9})
+matplotlib.rc('font', **{'size': 8})
 
 
 # %% ##########################################################################
@@ -42,7 +47,8 @@ t2, w2 = E77.get_timeseries(np.arange(1, 600), 'Ww')
 __, z1 = E76.get_timeseries(np.arange(1, 600), 'z')
 __, z2 = E77.get_timeseries(np.arange(1, 600), 'z')
 
-w_combined = 100.*np.hstack((w1[z1 < -50.], w2[z2 < -50.]))
+zmin = -100.  # Remove top number of m.
+w_combined = 100.*np.hstack((w1[z1 < zmin], w2[z2 < zmin]))
 meanw = np.mean(w_combined)
 stdw = np.std(w_combined)
 dist = sp.stats.norm(loc=meanw, scale=stdw)
@@ -82,16 +88,16 @@ scaling='density'
 
 # Generate float vertical velocity with random depth error.
 # Fake profile
-dze = 2.
+dze = 1.
 dt = dze/0.13  # 0.12 is a tpyical descent/ascent speed.
 zvals = np.arange(-1400., -100, dze)
 N = 50
 Pe = np.empty((zvals.size/2, N))
 
 # Use an arbitrary profile for the sizes.
-dz = 2.
+dz = 1.
 pfl = E76.get_profiles(155)
-surface = pfl.r_z > -400.
+surface = pfl.r_z > -100.
 z = pfl.r_z[~surface]
 Pw76 = np.empty((z.size/2+1, N))
 Pw77 = np.empty((z.size/2+1, N))
@@ -353,3 +359,33 @@ for Float in [E76, E77]:
 
     plt.figure()
     plt.plot(np.std(w_set, axis=-1), z, color='black', alpha=0.1)
+
+# %% Recreating w profiles with red noise
+
+dz = 2.5
+N = 600
+beta = -2.  # w variance spectrum in wavenumber has slope close to -2
+
+z = np.arange(0., N*dz, dz)
+w = 0.01*cn.noise(N, dz, beta, std=0.5)
+
+m, Pw = sp.signal.periodogram(w, 1./dz)
+Pw[0] = 0.
+
+Pyfit = lambda x, a, b: a*x + b
+popt, __ = sp.optimize.curve_fit(Pyfit, np.log10(m[1:]), np.log10(Pw[1:]),
+                                 p0=[1., 1.])
+a, b = popt
+
+fig, axs = plt.subplots(1, 2)
+axs[0].loglog(m, Pw, 'k', label=None)
+axs[0].loglog(m[1:], m[1:]**a*10**b, 'r',
+              label="Fit exponent: {:1.0f}".format(popt[0]))
+axs[1].plot(w, z, 'k')
+
+axs[0].set_xlabel('Wavenumber')
+axs[0].set_ylabel('Variance')
+axs[1].set_xlabel('Velocity')
+axs[1].set_ylabel('Depth')
+
+axs[0].legend(loc=0)
