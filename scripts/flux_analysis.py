@@ -12,6 +12,7 @@ import os
 import glob
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
@@ -50,10 +51,10 @@ sdir = '../figures/flux analysis'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 9})
+matplotlib.rc('font', **{'size': 8})
 
 # %%
-
+np.random.seed(1029301)
 # The portions of the profiles that contain the wave. Found by eye.
 zlims = {4976: {25: (-1600, -100),
                 26: (-1600, -100),
@@ -61,7 +62,7 @@ zlims = {4976: {25: (-1600, -100),
                 28: (-1600, -100),
                 29: (-1600, -200),  # 1
                 30: (-1000, -200),  # 2
-                31: (-1600, -600),  # 3
+                31: (-1600, -400),  # 3
                 32: (-1600, -400),  # 4
                 33: (-1600, -100),
                 34: (-1600, -100),
@@ -80,11 +81,9 @@ zlims = {4976: {25: (-1600, -100),
                 30: (-1600, -100),
                 31: (-1600, -100)}}
 
-hpids_76 = np.array([25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36])
-hpids_77 = np.array([20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+hpids_76 = np.array([28, 29, 30, 31, 32, 33, 34, 35])
+hpids_77 = np.array([23, 24, 25, 26, 27, 28, 29, 30])
 
-#hpids_76 = np.array([31])
-#hpids_77 = np.array([26])
 
 N = np.sum((hpids_76.size, hpids_77.size))
 
@@ -111,6 +110,15 @@ Vvwbar = np.zeros((2, N/2))
 tau = np.zeros((2, N/2))
 E = np.zeros((2, N/2))
 
+Nreps = 200
+
+uwbar_errs = np.zeros((2, N/2, Nreps))
+vwbar_errs = np.zeros((2, N/2, Nreps))
+pwbar_errs = np.zeros((2, N/2, Nreps))
+tau_errs = np.zeros((2, N/2, Nreps))
+E_errs = np.zeros((2, N/2, Nreps))
+
+
 i = 0
 for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
     j = 0
@@ -119,20 +127,8 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         zmin, zmax = zlims[Float.floatID][hpid]
         pfl = Float.get_profiles(hpid)
 
-#        fig, axs = plt.subplots(1, 2)
-#        axs[0].plot(pfl.Pprime, pfl.z)
-#        axs[1].plot(pfl.Ww, pfl.z)
-
         use = (pfl.z > zmin) & (pfl.z < zmax)
         useef = (pfl.zef > zmin) & (pfl.zef < zmax)
-
-#        fig = plt.figure()
-#        plt.plot(pfl.U_abs[useef], pfl.zef[useef], 'b-', pfl.U_abs[~useef],
-#                 pfl.zef[~useef], 'b--')
-#        plt.plot(pfl.V_abs[useef], pfl.zef[useef], 'g-', pfl.V_abs[~useef],
-#                 pfl.zef[~useef], 'g--')
-#        plt.plot(pfl.Ww[use], pfl.z[use], 'r-', pfl.Ww[~use], pfl.z[~use],
-#                 'r--')
 
         t = pfl.UTC[use]
         tef = pfl.UTCef[useef]
@@ -155,13 +151,25 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
         u = utils.nan_detrend(z, u, deg)
         v = utils.nan_detrend(z, v, deg)
-        pp = utils.nan_detrend(z, pp, deg)
+        pp = utils.nan_detrend(z, pp, 0)
 
-#        plt.figure()
-#        plt.plot(u, z, v, z, w, z)
-#        plt.xlim(-0.4, 0.4)
-#        plt.ylim(-1500., 0.)
-#        plt.title("Float {}. hpid {}.".format(pfl.floatID, pfl.hpid[0]))
+        Ndata = tef.size
+
+        if False:
+
+            fig, axs = plt.subplots(1, 5, sharey='row')
+            axs[0].plot(u, z, label='u')
+            axs[0].set_xlabel('u')
+            axs[1].plot(v, z, label='v')
+            axs[1].set_xlabel('v')
+            axs[2].plot(w, z, label='w')
+            axs[2].set_xlabel('w')
+            axs[3].plot(b, z, label='b')
+            axs[3].set_xlabel('b')
+            axs[4].plot(pp, z, label='pp')
+            axs[4].set_xlabel('pp')
+            axs[0].set_ylim(-1500., 0.)
+            plt.title("Float {}. hpid {}.".format(pfl.floatID, pfl.hpid[0]))
 
         DT = np.max(tef) - np.min(tef)
 
@@ -182,12 +190,57 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         potential = 0.5*rho0*sp.integrate.trapz(b**2/N2mean, tef)/DT
         E[i, j] = kinetic + potential
 
-        print("Reynolds stress: {:1.2f} N m-2".format(tau[i, j]))
-        print("Components: ({:1.2f}, {:1.2f}) N m-2".format(uwbar[i, j], vwbar[i, j]))
-        print("Energy density: {:1.2f} J m-3".format(E[i, j]))
+        uwbar_e = np.zeros(Nreps)
+        vwbar_e = np.zeros(Nreps)
+        pwbar_e = np.zeros(Nreps)
+        tau_e = np.zeros(Nreps)
+        E_e = np.zeros(Nreps)
+        # ERROR ESTIMATES
+        for ii in xrange(Nreps):
+
+            noise1 = cn.noise(Ndata, DT*60.*60.*24./Ndata, -2)
+            noise1 *= 0.03/np.std(noise1)
+            noise2 = cn.noise(Ndata, DT*60.*60.*24./Ndata, -2)
+            noise2 *= 0.03/np.std(noise2)
+            noise3 = cn.noise(Ndata, DT*60.*60.*24./Ndata, -2)
+            noise3 *= 0.02/np.std(noise3)
+            u_e = u + noise1
+            v_e = v + noise2
+            w_e = w + noise3
+
+            uwbar_e[ii] = rho0*sp.integrate.trapz(w_e*u_e, tef)/DT
+            vwbar_e[ii] = rho0*sp.integrate.trapz(w_e*v_e, tef)/DT
+            pwbar_e[ii] = rho0*sp.integrate.trapz(w_e*pp, tef)/DT
+
+            tau_e[ii] = np.sqrt(uwbar_e[ii]**2 + vwbar_e[ii]**2)
+
+            kinetic_e = 0.5*rho0*sp.integrate.trapz(u_e**2 + v_e**2 + w_e**2, tef)/DT
+            E_e[ii] = kinetic_e + potential
+
+        uwbar_errs[i, j, :] = uwbar_e
+        vwbar_errs[i, j, :] = vwbar_e
+        pwbar_errs[i, j, :] = pwbar_e
+        tau_errs[i, j, :] = tau_e
+        E_errs[i, j, :] = E_e
+
+        uwbar_mean = np.mean(uwbar_errs, axis=-1)
+        vwbar_mean = np.mean(vwbar_errs, axis=-1)
+        pwbar_mean = np.mean(pwbar_errs, axis=-1)
+        tau_mean = np.mean(tau_errs, axis=-1)
+        E_mean = np.mean(E_errs, axis=-1)
+
+        uwbar_std = np.std(uwbar_errs, axis=-1)
+        vwbar_std = np.std(vwbar_errs, axis=-1)
+        pwbar_std = np.std(pwbar_errs, axis=-1)
+        tau_std = np.std(tau_errs, axis=-1)
+        E_std = 2*np.std(E_errs, axis=-1) #  2x because error in b, and equipartition of energy
+
+        print("Reynolds stress: {:1.2f} +/- {:1.2f} N m-2".format(tau[i, j], tau_std[i, j]))
+        print("Components: ({:1.2f}, {:1.2f}) +/- ({:1.2f}, {:1.2f}) N m-2".format(uwbar[i, j], vwbar[i, j], uwbar_std[i, j], vwbar_std[i, j]))
+        print("Energy density: {:1.2f} +/- {:1.2f} J m-3".format(E[i, j], E_std[i, j]))
         print("Standard deviation of pressure perturbation: "
               "{:1.2f} m2 s-2".format(np.std(pp)))
-        print("Vertical energy flux: {:1.2f} W m-2".format(pwbar[i, j]))
+        print("Vertical energy flux: {:1.2f} +/- {:1.2f} W m-2".format(pwbar[i, j], pwbar_std[i, j]))
         print("Vertical energy from from (Uuw, Vvw): ({:1.2f}, {:1.2f})"
               ", total {:1.2f} W m-2 ".format(Uuwbar[i, j], Vvwbar[i, j],
                                               Efluxz))
@@ -203,7 +256,56 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         j += 1
     i += 1
 
-fig, axs = plt.subplots(3, 1, sharex=True, figsize=(3.125, 5))
+
+
+# %%
+
+fig, axs = plt.subplots(1, 3, figsize=(3.125, 3))
+
+#for ax in axs[1:]:
+#    ax.yaxis.tick_right()
+#    ax.yaxis.set_ticks_position('both')
+#    ax.yaxis.set_label_position('right')
+
+colors = ['blue', 'green', 'red', 'purple']
+
+for i in xrange(N):
+
+    colprops={'color': colors[i]}
+
+    axs[0].boxplot(E_errs[i], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False,
+                   labels=['Energy density'])
+    axs[1].boxplot(pwbar_errs[i], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False,
+                   labels=['Energy flux'])
+    axs[2].boxplot(tau_errs[i], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False,
+                   labels=['Momentum flux'])
+
+# The legend
+labels = ['E 4976 P 31', 'E 4976 P 32', 'E 4977 P 26', 'E 4977 P 27']
+yloc = [29., 28., 27., 26.]
+for i in xrange(4):
+    colprops={'color': colors[i]}
+    axs[0].text(0.55, yloc[i], labels[i], fontdict=colprops)
+
+axs[0].set_ylabel('E (J m$^{-3}$)')
+axs[0].grid(axis='y')
+axs[1].set_ylabel('$F_E{(z)}$ (W m$^{-2}$)')
+axs[1].grid(axis='y')
+axs[2].set_ylabel('$F_M{(z)}$ (N m$^{-2}$)')
+axs[2].grid(axis='y')
+
+pf.my_savefig(fig, 'both', 'observed_flux_boxplots', sdir, ftype='pdf',
+              fsize='single_col')
+
+# %% More figures
+
+fig, axs = plt.subplots(4, 1, sharex=True, figsize=(3.125, 5))
 
 ds = []
 
@@ -220,45 +322,76 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
     d -= d[bathy.argmax()]
     ds.append(d.copy())
 
-axs[2].set_xlabel('Distance from ridge top (km)', labelpad=0.06)
-axs[2].set_ylabel('$z$ (m)')
 
-axs[2].fill_between(d, bathy, np.nanmin(bathy), color='black',
-                    linewidth=2)
-axs[2].set_ylim(np.nanmin(bathy), np.nanmax(bathy))
-axs[2].set_xlim(np.nanmin(d), np.nanmax(d))
-
-axs[1].plot(ds[0], uwbar[0, :], 'b:')
-axs[1].plot(ds[0], vwbar[0, :], 'b--')
-axs[1].plot(ds[0], tau[0, :], 'b-')
-axs[1].plot(ds[1], uwbar[1, :], 'g:')
-axs[1].plot(ds[1], vwbar[1, :], 'g--')
-axs[1].plot(ds[1], tau[1, :], 'g-')
-
-axs[1].set_ylabel("$<u'w'>$ (N m$^{-2}$)")
-
-axs[0].plot(ds[0], Uuwbar[0, :] + Vvwbar[0, :], label='4976')
-axs[0].plot(ds[1], Uuwbar[1, :] + Vvwbar[1, :], label='4977')
-axs[0].set_ylabel("$U<u'w'>$ (W m$^{-2}$)")
+axs[0].plot(ds[0], E[0, :], label='4976')
+colprops={'color': 'b'}
+axs[0].boxplot(E_errs[0, :, :].T, positions=ds[0], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False)
+axs[0].plot(ds[1], E[1, :], label='4977')
+colprops={'color': 'g'}
+axs[0].boxplot(E_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False)
+axs[0].set_ylabel("$E$ (J m$^{-3}$)")
 axs[0].legend(loc=0)
+
+axs[1].plot(ds[0], pwbar[0, :])
+colprops={'color': 'b'}
+axs[1].boxplot(pwbar_errs[0, :, :].T, positions=ds[0], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False)
+axs[1].plot(ds[1], pwbar[1, :])
+colprops={'color': 'g'}
+axs[1].boxplot(pwbar_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False)
+axs[1].set_ylabel("$<p'w'>$ (W m$^{-2}$)")
+
+#axs[2].plot(ds[0], uwbar[0, :], 'b:')
+#axs[2].plot(ds[0], vwbar[0, :], 'b--')
+axs[2].plot(ds[0], tau[0, :], 'b-')
+colprops={'color': 'b'}
+axs[2].boxplot(tau_errs[0, :, :].T, positions=ds[0], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False)
+#axs[2].plot(ds[1], uwbar[1, :], 'g:')
+#axs[2].plot(ds[1], vwbar[1, :], 'g--')
+axs[2].plot(ds[1], tau[1, :], 'g-')
+colprops={'color': 'g'}
+axs[2].boxplot(tau_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
+                   whiskerprops=colprops, capprops=colprops,
+                   medianprops=colprops, showfliers=False)
+
+axs[2].set_ylabel(r"$\tau$ (N m$^{-2}$)")
+
+axs[3].set_xlabel('Distance from ridge top (km)', labelpad=0.06)
+axs[3].set_ylabel('$z$ (m)')
+
+axs[3].fill_between(d, bathy, np.nanmin(bathy), color='black',
+                    linewidth=2)
+axs[3].set_ylim(np.nanmin(bathy), np.nanmax(bathy))
+axs[3].set_xlim(np.nanmin(d), np.nanmax(d))
+axs[3].set_xticks([-10., 0., 10., 20.])
+axs[3].set_xticklabels([-10., 0., 10., 20.])
 
 pf.my_savefig(fig, 'both', 'fluxes', sdir, ftype='pdf', fsize='single_col')
 
-# Just the horizontal component of the momentum flux.
-
-fig, axs = plt.subplots(2, 1, sharex=True, figsize=(3.125, 4))
-
-axs[0].plot(ds[0], uwbar[0, :], 'b', label='4976')
-axs[0].plot(ds[1], uwbar[1, :], 'g', label='4977')
-axs[0].set_ylabel("$<u'w'>$ (N m$^{-2}$)")
-axs[0].legend(loc=0)
-
-axs[1].set_xlabel('Distance from ridge top (km)', labelpad=0.06)
-axs[1].set_ylabel('$z$ (m)')
-axs[1].fill_between(d, bathy, np.nanmin(bathy), color='black',
-                    linewidth=2)
-axs[1].set_ylim(np.nanmin(bathy), np.nanmax(bathy))
-axs[1].set_xlim(np.nanmin(d), np.nanmax(d))
-
-pf.my_savefig(fig, 'both', 'M_flux_only', sdir, ftype='png',
-              fsize='single_col')
+## Just the horizontal component of the momentum flux.
+#
+#fig, axs = plt.subplots(2, 1, sharex=True, figsize=(3.125, 4))
+#
+#axs[0].plot(ds[0], uwbar[0, :], 'b', label='4976')
+#axs[0].plot(ds[1], uwbar[1, :], 'g', label='4977')
+#axs[0].set_ylabel("$<u'w'>$ (N m$^{-2}$)")
+#axs[0].legend(loc=0)
+#
+#axs[1].set_xlabel('Distance from ridge top (km)', labelpad=0.06)
+#axs[1].set_ylabel('$z$ (m)')
+#axs[1].fill_between(d, bathy, np.nanmin(bathy), color='black',
+#                    linewidth=2)
+#axs[1].set_ylim(np.nanmin(bathy), np.nanmax(bathy))
+#axs[1].set_xlim(np.nanmin(d), np.nanmax(d))
+#
+#pf.my_savefig(fig, 'both', 'M_flux_only', sdir, ftype='png',
+#              fsize='single_col')
