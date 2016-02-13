@@ -71,7 +71,7 @@ pf.my_savefig(fig, 'both', 'w_hist', sdir, ftype='pdf', fsize='single_col')
 
 # %% ##########################################################################
 
-pfl = E77.get_profiles(151)
+pfl = E77.get_profiles(131)
 fig = plt.figure(figsize=(3.2, 5))
 plt.plot(100.*pfl.Ww, pfl.z, label='$W_{water}$', color='black')
 plt.plot(100.*pfl.Wz, pfl.z, label='$W_{float}$', color='grey')
@@ -95,9 +95,10 @@ N = 50
 Pe = np.empty((zvals.size/2, N))
 
 # Use an arbitrary profile for the sizes.
+zmax = -100.
 dz = 1.
 pfl = E76.get_profiles(155)
-surface = pfl.r_z > -100.
+surface = pfl.r_z > zmax
 z = pfl.r_z[~surface]
 Pw76 = np.empty((z.size/2+1, N))
 Pw77 = np.empty((z.size/2+1, N))
@@ -108,12 +109,12 @@ for i in xrange(N):
     me, Pe[:, i] = sp.signal.periodogram(We, 1./dze, scaling=scaling)
 
     # Pick a random profile.
-    pfl76 = E76.get_profiles(10+i)
-    pfl77 = E77.get_profiles(10+i)
+    pfl76 = E76.get_profiles(260+i)
+    pfl77 = E77.get_profiles(260+i)
 
-    # Chop out the top 100 m.
-    Ww76 = pfl76.r_Ww[~surface]
-    Ww77 = pfl77.r_Ww[~surface]
+    # Chop out the top.
+    Ww76 = pfl76.r_Ww[pfl76.r_z < zmax]
+    Ww77 = pfl77.r_Ww[pfl77.r_z < zmax]
 
     m, Pw76[:, i] = sp.signal.periodogram(Ww76, 1./dz, scaling=scaling)
     __, Pw77[:, i] = sp.signal.periodogram(Ww77, 1./dz, scaling=scaling)
