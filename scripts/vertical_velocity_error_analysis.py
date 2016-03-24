@@ -109,8 +109,8 @@ for i in xrange(N):
     me, Pe[:, i] = sp.signal.periodogram(We, 1./dze, scaling=scaling)
 
     # Pick a random profile.
-    pfl76 = E76.get_profiles(260+i)
-    pfl77 = E77.get_profiles(260+i)
+    pfl76 = E76.get_profiles(160+i)
+    pfl77 = E77.get_profiles(160+i)
 
     # Chop out the top.
     Ww76 = pfl76.r_Ww[pfl76.r_z < zmax]
@@ -123,9 +123,14 @@ mean_Pe = np.mean(Pe, axis=1)
 mean_Pw76 = np.mean(Pw76, axis=1)
 mean_Pw77 = np.mean(Pw77, axis=1)
 
+# Sampling every 2.5 m gives 1./5. as highest resolved wavenumber
+mmax = 1./5.
+use = m < mmax
+use[0] = False
+
 # Remove the 0 wavenumber (infinite wavelength)
-m, mean_Pw76, mean_Pw77, me, mean_Pe = m[1:], mean_Pw76[1:], mean_Pw77[1:], \
-    me[1:], mean_Pe[1:]
+m, mean_Pw76, mean_Pw77, me, mean_Pe = m[use], mean_Pw76[use], mean_Pw77[use],\
+    me[use], mean_Pe[use]
 
 plt.figure()
 plt.loglog(m, mean_Pw76)
