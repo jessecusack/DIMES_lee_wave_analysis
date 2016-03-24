@@ -244,6 +244,10 @@ class EMApexFloat(object):
 
         print("All numerical data appears to have been loaded successfully.\n")
 
+        print("Creating time variable dUTC with units of seconds.")
+        self.dUTC = (self.UTC - self.UTC_start)*86400
+        self.dUTCef = (self.UTCef - self.UTC_start)*86400
+
         print("Interpolated GPS positions to starts and ends of profiles.")
         # GPS interpolation to the start and end time of each half profile.
         idxs = ~np.isnan(self.lon_gps) & ~np.isnan(self.lat_gps)
