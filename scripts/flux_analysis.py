@@ -155,6 +155,11 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
         Ndata = tef.size
 
+        # Correct for sign error in pp for downward profiles with large aspect
+        # ratio. w is proxy for aspect.
+        if (np.max(np.abs(w)) > 0.05) and (hpid % 2 != 0.):
+            pp *= -1.
+
         if False:
 
             fig, axs = plt.subplots(1, 5, sharey='row')
@@ -324,44 +329,44 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
 
 axs[0].plot(ds[0], E[0, :], label='4976')
-colprops={'color': 'b'}
+colprops = {'color': 'b'}
 axs[0].boxplot(E_errs[0, :, :].T, positions=ds[0], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False)
+               whiskerprops=colprops, capprops=colprops,
+               medianprops=colprops, showfliers=False)
 axs[0].plot(ds[1], E[1, :], label='4977')
-colprops={'color': 'g'}
+colprops = {'color': 'g'}
 axs[0].boxplot(E_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
+               whiskerprops=colprops, capprops=colprops,
                    medianprops=colprops, showfliers=False)
 axs[0].set_ylabel("$E$ (J m$^{-3}$)")
 axs[0].legend(loc=0)
 
 axs[1].plot(ds[0], pwbar[0, :])
-colprops={'color': 'b'}
+colprops = {'color': 'b'}
 axs[1].boxplot(pwbar_errs[0, :, :].T, positions=ds[0], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False)
+               whiskerprops=colprops, capprops=colprops,
+               medianprops=colprops, showfliers=False)
 axs[1].plot(ds[1], pwbar[1, :])
-colprops={'color': 'g'}
+colprops = {'color': 'g'}
 axs[1].boxplot(pwbar_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False)
-axs[1].set_ylabel("$<p'w'>$ (W m$^{-2}$)")
+               whiskerprops=colprops, capprops=colprops,
+               medianprops=colprops, showfliers=False)
+axs[1].set_ylabel(r"$\overline{p'w'}$ (W m$^{-2}$)")
 
 #axs[2].plot(ds[0], uwbar[0, :], 'b:')
 #axs[2].plot(ds[0], vwbar[0, :], 'b--')
 axs[2].plot(ds[0], tau[0, :], 'b-')
-colprops={'color': 'b'}
+colprops = {'color': 'b'}
 axs[2].boxplot(tau_errs[0, :, :].T, positions=ds[0], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False)
+               whiskerprops=colprops, capprops=colprops,
+               medianprops=colprops, showfliers=False)
 #axs[2].plot(ds[1], uwbar[1, :], 'g:')
 #axs[2].plot(ds[1], vwbar[1, :], 'g--')
 axs[2].plot(ds[1], tau[1, :], 'g-')
-colprops={'color': 'g'}
+colprops = {'color': 'g'}
 axs[2].boxplot(tau_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False)
+               whiskerprops=colprops, capprops=colprops,
+               medianprops=colprops, showfliers=False)
 
 axs[2].set_ylabel(r"$\tau$ (N m$^{-2}$)")
 
