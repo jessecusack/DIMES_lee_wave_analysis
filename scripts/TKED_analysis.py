@@ -105,54 +105,6 @@ matplotlib.rc('font', **{'size': 8})
 #    return epsilon, kappa
 
 
-# %% Coefficient estimation using microstructure data
-
-UK2_vmp = sp.io.loadmat('../../storage/DIMES/combined_jc054.mat',
-                        variable_names=['vmp'])['vmp']
-
-z_vmp = gsw.z_from_p(UK2_vmp['press'][0][0], UK2_vmp['startlat'][0][0][0])
-
-fig1 = plt.figure()
-plt.plot(UK2_vmp['startlon'][0][0][0], UK2_vmp['startlat'][0][0][0], 'ko')
-plt.plot(UK2_vmp['startlon'][0][0][0][25:30], UK2_vmp['startlat'][0][0][0][25:30], 'ro')
-plt.plot(E76.lon_start[:100], E76.lat_start[:100])
-plt.plot(E77.lon_start[:100], E77.lat_start[:100])
-
-z = np.arange(zmin, 0., dz)
-
-hpids = np.arange(1, 100)
-
-epsilon_76, kappa_76 = fs.w_scales_float(E76, hpids, c=0.03)
-epsilon_77, kappa_77 = fs.w_scales_float(E77, hpids, c=0.04)
-
-fig2 = plt.figure()
-plt.semilogx(UK2_vmp['eps'][0][0][:, 25:30], z_vmp[:, 25:30], color='grey',
-             alpha=0.2)
-plt.semilogx(epsilon_76, z, color='red', alpha=0.2)
-plt.semilogx(epsilon_77, z, color='red', alpha=0.2)
-
-epsilon_vmp = UK2_vmp['eps'][0][0][:, 25:30].flatten()
-z_vmp_flat = z_vmp[:, 25:30].flatten()
-use = ~np.isnan(epsilon_vmp) & (z_vmp_flat > zmin)
-
-bins = np.arange(-12., -5, 0.25)
-fig, axs = plt.subplots(3, 1, sharex='col', sharey=True, figsize=(3, 6))
-axs[0].hist(np.log10(epsilon_vmp[use]), bins=bins, color='blue', alpha=0.8,
-            normed=True, label='VMP')
-axs[1].hist(np.log10(epsilon_76.flatten()), bins=bins, color='red', alpha=0.8,
-            normed=True, label='4976')
-axs[2].hist(np.log10(epsilon_77.flatten()), bins=bins, color='red', alpha=0.8,
-            normed=True, label='4977')
-axs[2].set_xlabel('$\log_{10}(\epsilon)$ W kg$^{-1}$')
-
-axs[1].text(-7, 0.6, '$c = 0.03$')
-axs[2].text(-7, 0.6, '$c = 0.04$')
-
-for ax in axs:
-    ax.legend()
-
-pf.my_savefig(fig, 'vmp', 'comparison', sdir, ftype='pdf', fsize='single_col')
-
 # %% Start script
 # Using large eddy method first.
 # Different coefficient for each float.
