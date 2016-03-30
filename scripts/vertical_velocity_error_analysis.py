@@ -83,6 +83,72 @@ plt.grid()
 plt.title('Float {:}, Profile {:}'.format(int(pfl.floatID), int(pfl.hpid)))
 pf.my_savefig(fig, 'example', 'w_model', sdir, ftype='png', fsize='single_col')
 
+# %% Having a look at the vertical kinetic energy spectrum
+hpids = np.arange(350, 450)
+tres = 44.
+zres = 5.
+
+dt = 1.
+dz = 1.
+
+zmin = -1450.
+zmax = -100.
+tmin = 1000.
+tmax = 10000.
+
+window = 'hanning'
+
+fig, axs = plt.subplots(2, 1, sharex='col', figsize=(3.125, 5))
+
+for Float in [E76, E77]:
+
+    z = np.arange(zmin, zmax, dz)
+    t = np.arange(tmin, tmax, dt)
+    ng, __, wt = Float.get_interp_grid(hpids, t, 'dUTC', 'Ww')
+#    __, __, wz = Float.get_interp_grid(hpids, z, 'z', 'Ww')
+    __, __, pt = Float.get_interp_grid(hpids, t, 'dUTC', 'P')
+
+    Pts = []
+    Pzs = []
+    PPts = []
+
+    for i in ng[0, :]:
+
+        f, Pt = sp.signal.periodogram(wt[:, i], fs=1./dt, window=window)
+        __, PPt = sp.signal.periodogram(pt[:, i], fs=1./dt, window=window)
+#        m, Pz = sp.signal.periodogram(wz[:, i], fs=1./dz, window=window)
+
+        Pts.append(Pt)
+        PPts.append(PPt)
+#        Pzs.append(Pz)
+
+    Pts = np.asarray(Pts).T
+    PPts = np.asarray(PPts).T
+#    Pzs = np.asarray(Pzs).T
+
+    # Chop interpolation noise.
+    fuse = f < 1./tres
+#    muse = m < 1./zres
+    f, Pts, PPts = f[fuse], Pts[fuse, :], PPts[fuse, :]
+#    m, Pzs = m[muse], Pzs[muse, :]
+    Pts[0, :], PPts[0, :] = 0., 0.
+
+    # Convert to radian units.
+
+    axs[0].loglog(1./f, np.median(Pts, axis=-1), linewidth=3., alpha=0.7,
+                  label=Float.floatID)
+    axs[1].loglog(1./f, np.median(PPts, axis=-1), linewidth=3., alpha=0.7,
+                  label=Float.floatID)
+
+axs[1].legend(loc=0)
+
+axs[1].set_xlim(1e1, 1e4)
+
+axs[0].set_ylabel('Vertical kinetic energy')
+axs[1].set_ylabel('Pressure variance')
+axs[1].set_xlabel('Time period (s)')
+pf.my_savefig(fig, 'both', 'w_spec_p_spec', sdir, ftype='pdf', fsize='single_col')
+
 # %% ##########################################################################
 scaling='density'
 
