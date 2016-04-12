@@ -437,7 +437,7 @@ def plot_everything(Float, save_dir):
 
 
 def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
-               ftype='png', font_size=None):
+               ftype='png', font_size=None, **kwargs):
     """My modified version of savefig."""
 
     scol = 3.125  # inches
@@ -473,8 +473,16 @@ def my_savefig(fig, fid, fname, sdir, fsize=None, lock_aspect=True,
         fig.canvas.draw()
 
     fname = str(fid) + '_' + fname
-    fname = os.path.join(sdir, fname) + '.' + ftype
-    plt.savefig(fname, dpi=300., bbox_inches='tight')
+
+    if np.iterable(ftype) and type(ftype) is not str:
+        for ft in ftype:
+            fn = os.path.join(sdir, fname) + '.' + ft
+            plt.savefig(fn, dpi=300., bbox_inches='tight', pad_inches=0.,
+                        **kwargs)
+    else:
+        fname = os.path.join(sdir, fname) + '.' + ftype
+        plt.savefig(fname, dpi=300., bbox_inches='tight', pad_inches=0.,
+                    **kwargs)
 
 
 def step(x, y, **kwargs):
