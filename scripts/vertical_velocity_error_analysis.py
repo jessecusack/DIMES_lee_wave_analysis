@@ -23,6 +23,7 @@ if lib_path not in sys.path:
 import emapex
 import plotting_functions as pf
 import coloured_noise as cn
+import GM
 
 try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
@@ -42,18 +43,19 @@ matplotlib.rc('font', **{'size': 8})
 
 # %% ##########################################################################
 # Vertical velocity histograms
-t1, w1 = E76.get_timeseries(np.arange(1, 600), 'Ww')
-t2, w2 = E77.get_timeseries(np.arange(1, 600), 'Ww')
-__, z1 = E76.get_timeseries(np.arange(1, 600), 'z')
-__, z2 = E77.get_timeseries(np.arange(1, 600), 'z')
+t1, w1 = E76.get_timeseries(np.arange(50, 150), 'Ww')
+t2, w2 = E77.get_timeseries(np.arange(50, 150), 'Ww')
+__, z1 = E76.get_timeseries(np.arange(50, 150), 'z')
+__, z2 = E77.get_timeseries(np.arange(50, 150), 'z')
 
-zmin = -100.  # Remove top number of m.
+zmin = -50.  # Remove top number of m.
 w_combined = 100.*np.hstack((w1[z1 < zmin], w2[z2 < zmin]))
 meanw = np.mean(w_combined)
 stdw = np.std(w_combined)
 dist = sp.stats.norm(loc=meanw, scale=stdw)
 
-print("Mean vertical velocity: {} +/- {}".format(meanw, stdw))
+print("Mean vertical velocity: {} +/- {} cm s-1".format(meanw, stdw))
+print("{:1.2f}% less than 1 cm s-1 ".format(100.*np.sum(w_combined < 0.)/len(w_combined)))
 
 bins = np.arange(-8., 8.1, 0.1)
 
@@ -63,11 +65,13 @@ n, __, patches = ax.hist(w_combined, bins=bins, normed=True, histtype='step',
 #ax.plot(bins, dist.pdf(bins), linestyle=':', color='black')
 ax.set_xlabel('$w$ (cm s$^{-1}$)')
 ax.set_xlim(np.min(bins), np.max(bins))
-ax.annotate(r"Mean = {:1.1f} $\pm$ {:1.0f} cm s$^{{-1}}$".format(meanw, stdw),
-            (-7., 0.4))
-ax.set_yticks([])
+ax.annotate(r"Mean = {:1.2f} $\pm$ {:1.1f} cm s$^{{-1}}$".format(meanw, stdw),
+            (-7., 0.5))
 
-pf.my_savefig(fig, 'both', 'w_hist', sdir, ftype='pdf', fsize='single_col')
+ax.set_ylabel('Probability density')
+
+pf.my_savefig(fig, 'both', 'w_hist', sdir, ftype=('png', 'pdf'),
+              fsize='single_col')
 
 # %% ##########################################################################
 
@@ -140,6 +144,7 @@ for Float in [E76, E77]:
     axs[1].loglog(1./f, np.median(PPts, axis=-1), linewidth=3., alpha=0.7,
                   label=Float.floatID)
 
+
 axs[1].legend(loc=0)
 
 axs[1].set_xlim(1e1, 1e4)
@@ -147,7 +152,51 @@ axs[1].set_xlim(1e1, 1e4)
 axs[0].set_ylabel('Vertical kinetic energy')
 axs[1].set_ylabel('Pressure variance')
 axs[1].set_xlabel('Time period (s)')
-pf.my_savefig(fig, 'both', 'w_spec_p_spec', sdir, ftype='pdf', fsize='single_col')
+pf.my_savefig(fig, 'both', 'w_spec_p_spec', sdir, ftype='pdf',
+              fsize='single_col')
+
+# %% As above in m space
+hpids = np.arange(50, 150)
+zres = 15.
+
+dz = 1.
+
+zmin = -1450.
+zmax = -100.
+
+window = 'hanning'
+
+fig, ax = plt.subplots(1, 1, sharex='col', figsize=(3.125, 3))
+
+for Float in [E76, E77]:
+
+    z = np.arange(zmin, zmax, dz)
+    ng, __, wt = Float.get_interp_grid(hpids, z, 'z', 'Ww')
+
+    m, Pzs = sp.signal.periodogram(wt, fs=1./dz, window=window, axis=0)
+
+    # Chop interpolation noise.
+    muse = m < 1./zres
+    m, Pzs = m[muse], Pzs[muse, :]
+    Pts[0, :] = 0.
+
+    ax.loglog(1./m, np.median(Pzs, axis=-1), linewidth=2., alpha=0.7,
+                  label=Float.floatID)
+
+# Set up GM spectrum
+IWF = GM.GM(2.2e-3, -1.23e-4)
+GMw = IWF.Sm(m, 'vert_vel')
+
+ax.loglog(1./m, GMw, linewidth=2., label='GM')
+
+ax.legend(loc=0)
+
+ax.set_xlim(10, 2000)
+
+ax.set_ylabel('Vertical kinetic energy density (m$^{3}$ s$^{-2}$)')
+ax.set_xlabel('Vertical wavelength (m)')
+pf.my_savefig(fig, 'both', 'w_spec_GM', sdir, ftype=('png', 'pdf'),
+              fsize='single_col')
 
 # %% ##########################################################################
 scaling='density'
