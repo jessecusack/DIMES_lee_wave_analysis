@@ -8,15 +8,11 @@ Created on Fri Jan 23 16:25:26 2015
 import sys
 import os
 import glob
-import scipy as sp
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-import scipy.signal as sig
 from scipy.integrate import trapz
-
-import gsw
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
@@ -30,9 +26,8 @@ import emapex
 import TKED_parameterisations as fs
 import plotting_functions as pf
 import sandwell
-import window as wdw
 
-zmin = -1500.
+zmin = -1450.
 dz = 1.
 
 try:
@@ -108,7 +103,32 @@ matplotlib.rc('font', **{'size': 8})
 # %% Start script
 # Using large eddy method first.
 # Different coefficient for each float.
-cs = [0.03, 0.04]
+#cs = [0.197, 0.158]  # time
+#xvar = 'time'
+#dx = 5.
+#x = np.arange(0., 12000., dx)
+#width = 120.
+#lc = np.array([300., 120.])
+#btype = 'bandpass'
+
+#cs = [0.193, 0.160]  # height
+#xvar = 'height'
+#dx = 1.
+#x = np.arange(-1500., 0., dx)
+#width = 15.
+#lc = np.array([40., 15.])
+#btype = 'bandpass'
+
+cs = [0.176, 0.147] # timeheight
+xvar = 'timeheight'
+dx = 1.
+x = np.arange(-1450., -50, dx)
+width = 15.
+lc = np.array([100., 40.])
+btype = 'highpass'
+
+hpids = np.arange(10, 50)
+we = 0.001
 
 fig = plt.figure(figsize=(3.125, 3))
 gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
@@ -117,27 +137,33 @@ ax1 = plt.subplot(gs[0])
 
 for Float, c in zip([E76, E77], cs):
 
-    hpids = np.arange(10, 50)
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-
-    epsilon, kappa = fs.w_scales_float(Float, hpids, c=c, lc=30.)
+    epsilon, kappa = fs.w_scales_float(Float, hpids, xvar, x, width=width,
+                                       lc=lc, c=c, btype=btype, we=we,
+                                       ret_noise=False)
 
     ieps = 0.*np.zeros_like(idxs)
 
-    iZ = Float.r_z[:, 0]
-    iuse = (iZ < -100) & (iZ > -1400)
+    if xvar == 'time':
+        __, __, iZ = Float.get_interp_grid(hpids, x, 'dUTC', 'z')
+        __, __, X = Float.get_interp_grid(hpids, x, 'dUTC', 'dist_ctd')
+    elif xvar == 'height' or xvar == 'timeheight':
+        __, __, iZ = Float.get_interp_grid(hpids, x, 'z', 'z')
+        __, __, X = Float.get_interp_grid(hpids, x, 'z', 'dist_ctd')
 
     for i in xrange(len(idxs)):
-        ieps[i] = 1025.*trapz(epsilon[iuse, i], iZ[iuse])
+        iuse = (iZ[:, i] < -100) & (iZ[:, i] > -1400)
+        # The abs function accounts for problems with z being the wrong way.
+        ieps[i] = np.abs(1025.*trapz(epsilon[iuse, i], iZ[iuse, i]))
 
-    Z = (Float.r_z[:, idxs]).flatten()
+    Z = iZ.flatten()
 
     use = (Z < -100) & (Z > -1400)
 
     Z = Z[use]
 
-    X = (Float.r_dist_ctd[:, idxs]).flatten()[use]
+    X = X.flatten()[use]
     LOG_EPS = (np.log10(epsilon)).flatten()[use]
     LOG_KAP = (np.log10(kappa)).flatten()[use]
 
@@ -163,18 +189,17 @@ for Float, c in zip([E76, E77], cs):
 
     ax1.plot(Float.dist[idxs] - dbathymax, 1000.*ieps)
 
-
     sc = ax0.scatter(X, Z, s=5, c=LOG_EPS,
                      edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-11.,
-                     vmax=-7)
+                     vmax=-7, rasterized=True)
 
 ax1.set_ylabel('$P$ (mW m$^{-2}$)')
-ax1.yaxis.set_ticks(np.array([0., 5., 10., 15]))
+ax1.yaxis.set_ticks(np.array([0., 15., 30., 45]))
 ax1.xaxis.set_ticks([])
 
 ax0.fill_between(dctd[::100], bathy[::100],
                  np.nanmin(bathy), color='black', linewidth=2)
-ax0.set_ylim(np.nanmin(bathy), 0.)
+ax0.set_ylim(-4000., 0.)
 ax0.yaxis.set_ticks(np.arange(-4000, 1000, 1000))
 
 fig.subplots_adjust(right=0.8)
@@ -190,7 +215,8 @@ ax0.set_ylabel('$z$ (m)')
 
 ax1.set_xlim(*ax0.get_xlim())
 
-pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype='pdf', fsize='single_col')
+pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype=('png', 'pdf'),
+              fsize='single_col')
 
 
 # %% Using Thorpe scales

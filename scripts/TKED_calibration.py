@@ -321,14 +321,20 @@ pf.my_savefig(fig3, 'both', 'lem_hist', sdir, ftype='png')
 #width = 120.
 #lc = np.array([300., 120.])
 
-cs = [0.193, 0.160]  # height
-xvar = 'height'
-dx = 1.
-width = 15.
-lc = np.array([40., 15.])
+#cs = [0.193, 0.160]  # height
+#xvar = 'height'
+#dx = 1.
+#width = 15.
+#lc = np.array([40., 15.])
 
+cs = [0.176, 0.147] # timeheight
+x = np.arange(zmin, 0., dz)
+xvar = 'timeheight'
+dx = 1.
 hpids = np.arange(10, 500)
-btype = 'bandpass'
+width = 15.
+lc = (100., 40.)
+btype = 'highpass'
 we = 0.001
 
 Float = E77
@@ -341,7 +347,7 @@ ax1 = plt.subplot(gs[0])
 
 __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-epsilon, kappa = fs.w_scales_float(Float, hpids, xvar, dx=dx, width=width,
+epsilon, kappa = fs.w_scales_float(Float, hpids, xvar, x, width=width,
                                    lc=lc, c=c, btype=btype, we=we,
                                    ret_noise=False)
 
@@ -351,9 +357,9 @@ if xvar == 'time':
     t = np.arange(0., 10000., dx)
     __, __, iZ = Float.get_interp_grid(hpids, t, 'dUTC', 'z')
     __, __, X = Float.get_interp_grid(hpids, t, 'dUTC', 'dist_ctd')
-elif xvar == 'height':
-    iZ = Float.r_z[:, idxs]
-    X = Float.r_dist_ctd[:, idxs]
+elif xvar == 'height' or xvar == 'timeheight':
+    __, __, iZ = Float.get_interp_grid(hpids, x, 'z', 'z')
+    __, __, X = Float.get_interp_grid(hpids, x, 'z', 'dist_ctd')
 
 for i in xrange(len(idxs)):
     iuse = (iZ[:, i] < -100) & (iZ[:, i] > -1400)
@@ -414,7 +420,7 @@ ax0.set_ylabel('$z$ (m)')
 
 ax1.set_xlim(*ax0.get_xlim())
 
-pf.my_savefig(fig, '4977', 'epsilon_lem_full', sdir, ftype='png', fsize='double_col')
+#pf.my_savefig(fig, '4977', 'epsilon_lem_full', sdir, ftype='png', fsize='double_col')
 
 # %% High and low energy spectra
 isort = ieps.argsort()
