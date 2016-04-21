@@ -11,6 +11,7 @@ import numpy as np
 import scipy as sp
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from mpl_toolkits import basemap as bm
 from matplotlib.collections import LineCollection
 import gsw
@@ -115,12 +116,12 @@ UK2_vmp = sp.io.loadmat('../../storage/DIMES/combined_jc054.mat',
                         variable_names=['vmp'])['vmp']
 vmp_lon = UK2_vmp['startlon'][0][0][0]
 vmp_lat = UK2_vmp['startlat'][0][0][0]
-m.plot(*m(vmp_lon, vmp_lat), marker='*', color='yellow', linestyle='none',
-       label='UK2', markersize=10)
+m.plot(*m(vmp_lon[24:29], vmp_lat[24:29]), marker='*', color='yellow',
+       linestyle='none', label='VMP', markersize=10)
 
 plt.legend(loc=4)
 
-pf.my_savefig(fig, 'both', 'traj', sdir, ftype='pdf', fsize='double_col')
+pf.my_savefig(fig, 'both', 'traj', sdir, ftype=('pdf', 'png'), fsize='double_col')
 
 # %% Float quivers RIDGE ONLY
 # ------------------
@@ -156,7 +157,7 @@ for i, Float in enumerate([E76, E77]):
         Vs[j, i] = np.nanmean(Vpfl[(-1400 < zefpfl) & (zefpfl < -100)])
 #        Us[j, i] = Upfl
 #        Vs[j, i] = Vpfl
-        Ws[j, i] = np.nanmax(Wpfl[zpfl < -100])
+        Ws[j, i] = np.nanstd(Wpfl[zpfl < -100])
 
 llcrnrlon = np.floor(np.nanmin(lons)) - .2
 llcrnrlat = np.floor(np.nanmin(lats)) - .0
@@ -167,7 +168,7 @@ lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
 
 lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
 bathy_grid[bathy_grid > 0] = 0
-bathy_grid *= -1.
+bathy_grid *= -1
 
 m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
                llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
@@ -180,8 +181,8 @@ levels = np.arange(0., 4000., 500.)
 CS = m.contour(x, y, bathy_grid, 20, cmap=plt.get_cmap('binary_r'),
                levels=levels, rasterized=True)
 plt.clabel(CS, inline=1, fontsize=8, fmt='%1.f')
-m.fillcontinents()
-m.drawcoastlines()
+#m.fillcontinents()
+#m.drawcoastlines()
 
 parallels = [-58, -57.75, -57.5, -57.25, -57]
 m.drawparallels(parallels, labels=[1, 0, 0, 0])
@@ -195,7 +196,7 @@ for i, (lon, lat, U, V, W) in enumerate(zip(lons.T, lats.T, Us.T, Vs.T, Ws.T)):
     x, y = m(lon, lat)
     m.plot(x, y, marker[i], color='black', markersize=1., label=label[i])
     Q = m.quiver(x, y, U, V, 100.*W, scale=6, cmap=plt.get_cmap('gnuplot'))
-    plt.clim(0, 20)
+    plt.clim(0, 5)
 #    for _x, _y, hpid in zip(x, y, hpids[:, i]):
 #        plt.annotate("{:1.0f}".format(hpid), xy=(_x, _y),
 #                     xytext=(1.03*_x, 1.03*_y), color=color[i])
@@ -203,7 +204,7 @@ for i, (lon, lat, U, V, W) in enumerate(zip(lons.T, lats.T, Us.T, Vs.T, Ws.T)):
 #plt.legend()
 qk = plt.quiverkey(Q, 0.78, 0.8, 0.5, r'0.5 m s$^{-1}$', labelpos='N')
 cbar = plt.colorbar(orientation='horizontal', extend='max', pad=0.05)
-cbar.set_label('Maximum $w$ (cm s$^{-1}$)')
+cbar.set_label('Standard deviation $w$ (cm s$^{-1}$)')
 
 # This addition uses the hpids from the upstream flow stuff below to show where
 # the upstream properties come from.
@@ -220,7 +221,7 @@ cbar.set_label('Maximum $w$ (cm s$^{-1}$)')
 #m.plot(x, y, 'rx')
 
 plt.tight_layout()
-pf.my_savefig(fig, 'both', 'quiver_traj', sdir, ftype='pdf',
+pf.my_savefig(fig, 'both', 'quiver_traj', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
 
 # %% Upstream flow properties
@@ -238,7 +239,8 @@ fig, axs = plt.subplots(1, 3, sharey='row', figsize=(3.125, 3))
 
 axs[0].set_ylabel('$z$ (m)')
 
-z_mean = np.arange(-1450, 0, 5)
+zmin, zmax = -1450., -100.
+z_mean = np.arange(-1450., -100., 5.)
 #T_mean = emapex.mean_profile(pfls, 'T', z_return=z_mean)
 #S_mean = emapex.mean_profile(pfls, 'S', z_return=z_mean)
 #rho_1_mean = emapex.mean_profile(pfls, 'rho_1', z_return=z_mean)
@@ -247,14 +249,15 @@ U_abs_mean = emapex.mean_profile(pfls, 'U_abs', z_return=z_mean)
 V_abs_mean = emapex.mean_profile(pfls, 'V_abs', z_return=z_mean)
 #Ww_mean = emapex.mean_profile(pfls, 'Ww', z_return=z_mean)
 
-#for pfl in pfls:
-#
+for pfl in pfls:
+    use = (pfl.z > zmin) & (pfl.z < zmax)
+    useef = (pfl.zef > zmin) & (pfl.zef < zmax)
 #    axs[0].plot(pfl.T, pfl.z, color='k', alpha=0.3)
 #    axs[1].plot(pfl.S, pfl.z, color='k', alpha=0.3)
 #    axs[2].plot(pfl.rho_1-1000., pfl.z, color='k', alpha=0.3)
-#    axs[3].plot(np.sqrt(pfl.N2_ref)*1000., pfl.z, color='k', alpha=0.3)
-#    axs[4].plot(pfl.U_abs*100., pfl.zef, color='k', alpha=0.3)
-#    axs[5].plot(pfl.V_abs*100., pfl.zef, color='k', alpha=0.3)
+    axs[0].plot(np.sqrt(pfl.N2_ref[use])*1000., pfl.z[use], color='k', alpha=0.1)
+    axs[1].plot(pfl.U_abs[useef]*100., pfl.zef[useef], color='k', alpha=0.1)
+    axs[2].plot(pfl.V_abs[useef]*100., pfl.zef[useef], color='k', alpha=0.1)
 #    axs[6].plot(pfl.Ww*100., pfl.z, color='k', alpha=0.3)
 
 lw = 1.5
@@ -282,7 +285,7 @@ for ax in axs:
 axs[0].ticklabel_format(useOffset=False)
 plt.tight_layout()
 
-pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='single_col', ftype='pdf')
+pf.my_savefig(fig, 'both', 'upstream', sdir, fsize='single_col', ftype=('pdf', 'png'))
 
 # The average flow properties below
 z_max = -100.
@@ -325,7 +328,7 @@ Wgs = []
 ds = []
 zs = []
 
-fig = plt.figure(figsize=(3.125, 3.5))
+fig = plt.figure(figsize=(3.125, 3))
 
 for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 
@@ -385,17 +388,17 @@ plt.ylabel('$z$ (m)')
 
 plt.fill_between(dctd[::100], bathy[::100], np.nanmin(bathy), color='black',
                  linewidth=2)
-plt.ylim(np.nanmin(bathy), np.nanmax(z))
+plt.ylim(-4000., 0.)
 
 plt.grid()
 
-pf.my_savefig(fig, 'both', 'w_section', sdir, ftype='pdf', fsize='single_col')
+pf.my_savefig(fig, 'both', 'w_section', sdir, ftype=('pdf', 'png'), fsize='single_col')
 
 
 # %% Wave profiles
 
-E76_hpids = [29, 30, 31, 32, 33, 34]
-E77_hpids = [24, 25, 26, 27, 28, 29]
+E76_hpids = [29, 30, 31, 32, 33, 34, 35]
+E77_hpids = [24, 25, 26, 27, 28, 29, 30]
 
 pfls = np.hstack((E76.get_profiles(E76_hpids), E77.get_profiles(E77_hpids)))
 
@@ -439,6 +442,250 @@ axm[-1, 2].set_xlabel('$w$ (cm s$^{-1}$)')
 axm[-1, 3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
 axm[-1, 4].set_xlabel('$x$ (km)')
 #pf.my_savefig(fig, 'both', 'all_profiles', sdir, fsize='double_col')
+
+# %% Alternative waterfall wave profiles
+
+def add_waterfall(ax, x, y, z, ticks=[], ticklabels=[], btt=False, emph=None):
+    """
+    ax: axis
+    x: 1D
+    y: 1D
+    z: 2D data
+    btt: blank top tick labels (True/False)
+    """
+    if emph is None:
+        emph = np.zeros(len(x))
+
+    offset = np.max(np.ptp(z, axis=0))
+    xoffset = offset*len(x)*x/x.max()
+    if btt:
+        xoffset_str = []
+    else:
+        xoffset_str = ["{:1.1f}".format(_x) for _x in x]
+
+    axt = ax.twiny()
+    axt.xaxis.tick_bottom()
+    axt.xaxis.set_label_position('bottom')
+
+    for i in xrange(len(x)):
+        if np.ndim(y) == 2:
+            _y = y[:, i]
+        else:
+            _y = y
+
+        if emph[i]:
+            alpha = 1.
+            linewidth = 2.
+            color = 'black'
+        else:
+            alpha = 0.7
+            linewidth = 1.
+            color = 'grey'
+
+        axt.plot(z[:, i] + xoffset[i], _y, color=color, linewidth=linewidth,
+                 alpha=alpha)
+
+    xticks_ = ticks + xoffset[0]
+    axt.set_xticks(xticks_)
+    axt.set_xticklabels(ticklabels, rotation=45.)
+
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position('top')
+    ax.set_xlim(axt.get_xlim())
+    ax.set_xticks(xoffset)
+    ax.set_xticklabels(xoffset_str, rotation=45.)
+    ax.grid(axis='x')
+
+E76_hpids = np.array([27, 28, 29, 30, 31, 32, 33, 34, 35, 36])
+E77_hpids = np.array([22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
+
+emph_76 = (E76_hpids == 31) | (E76_hpids == 32)
+emph_77 = (E77_hpids == 26) | (E77_hpids == 27)
+
+__, idxs_76 = E76.get_profiles(E76_hpids, ret_idxs=True)
+__, idxs_77 = E76.get_profiles(E77_hpids, ret_idxs=True)
+
+z = np.arange(-1450., -100., 5.)
+deg = 2
+
+__, z_, w_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'Ww')
+__, __, u_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'U_abs')
+u_76 = utils.nan_detrend(z_, u_76, deg)
+__, __, v_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'V_abs')
+v_76 = utils.nan_detrend(z_, v_76, deg)
+__, __, b_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'b')
+x_76 = E76.dist[idxs_76]
+
+__, __, w_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'Ww')
+__, __, u_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'U_abs')
+u_77 = utils.nan_detrend(z_, u_77, deg)
+__, __, v_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'V_abs')
+v_77 = utils.nan_detrend(z_, v_77, deg)
+__, __, b_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'b')
+x_77 = E76.dist[idxs_77]
+
+fig, axs = plt.subplots(4, 2, sharey=True, sharex='col', figsize=(6.5, 6.5))
+
+ticks = np.array([-20., -10., 0., 10., 20.])
+ticklabels = ['-20', '', '0', '', '20']
+
+bticks = np.array([-6., -3., 0., 3., 6.])
+bticklabels = ['-6', '', '0', '', '6']
+
+z /= 1000.
+
+add_waterfall(axs[0, 0], x_76, z, 100.*w_76, ticks, ticklabels, emph=emph_76)
+add_waterfall(axs[0, 1], x_77, z, 100.*w_77, ticks, ticklabels, emph=emph_77)
+add_waterfall(axs[1, 0], x_76, z, 100.*u_76, ticks, ticklabels, btt=True, emph=emph_76)
+add_waterfall(axs[1, 1], x_77, z, 100.*u_77, ticks, ticklabels, btt=True, emph=emph_77)
+add_waterfall(axs[2, 0], x_76, z, 100.*v_76, ticks, ticklabels, btt=True, emph=emph_76)
+add_waterfall(axs[2, 1], x_77, z, 100.*v_77, ticks, ticklabels, btt=True, emph=emph_77)
+add_waterfall(axs[3, 0], x_76, z, 10000.*b_76, bticks, bticklabels, btt=True, emph=emph_76)
+add_waterfall(axs[3, 1], x_77, z, 10000.*b_77, bticks, bticklabels, btt=True, emph=emph_77)
+
+axs[0, 0].set_yticks([-1.4, -1.0, -0.6, -0.2])
+for ax in axs[:, 0]:
+    ax.set_ylabel('$z$ (km)')
+
+pf.my_savefig(fig, 'both', 'main_profiles', sdir, ftype=('png', 'pdf'),
+              fsize='double_col')
+
+# %% Other waterfall...
+
+E76_hpids = np.array([28, 29, 30, 31, 32, 33, 34, 35, 36])
+E77_hpids = np.array([22, 23, 24, 25, 26, 27, 28, 29, 30])
+
+emph_76 = (E76_hpids == 31) | (E76_hpids == 32)
+emph_77 = (E77_hpids == 26) | (E77_hpids == 27)
+
+__, idxs_76 = E76.get_profiles(E76_hpids, ret_idxs=True)
+__, idxs_77 = E76.get_profiles(E77_hpids, ret_idxs=True)
+
+z = np.arange(-1450., -100., 5.)
+deg = 2
+
+__, z_, w_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'Ww')
+__, __, u_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'U_abs')
+u_76 = utils.nan_detrend(z_, u_76, deg)
+__, __, v_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'V_abs')
+v_76 = utils.nan_detrend(z_, v_76, deg)
+__, __, b_76 = E76.get_interp_grid(E76_hpids, z, 'z', 'b')
+x_76 = E76.dist[idxs_76]
+
+__, __, w_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'Ww')
+__, __, u_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'U_abs')
+u_77 = utils.nan_detrend(z_, u_77, deg)
+__, __, v_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'V_abs')
+v_77 = utils.nan_detrend(z_, v_77, deg)
+__, __, b_77 = E77.get_interp_grid(E77_hpids, z, 'z', 'b')
+x_77 = E76.dist[idxs_77]
+
+hpids = np.hstack((E76_hpids, E77_hpids))
+u = np.hstack((u_76, u_77))
+v = np.hstack((v_76, v_77))
+w = np.hstack((w_76, w_77))
+b = np.hstack((b_76, b_77))
+
+ticks = np.array([-20., -10., 0., 10., 20.])
+ticklabels = ['-20', '', '0', '', '20']
+
+bticks = np.array([-6., -3., 0., 3., 6.])
+bticklabels = ['-6', '', '0', '', '6']
+
+z /= 1000.
+
+
+fig = plt.figure(figsize=(6.5, 6.5))
+N76 = len(E76_hpids)
+N77 = len(E77_hpids)
+Nc = N76 + N77
+
+grid = gridspec.GridSpec(2, 2, wspace=0.1, hspace=0.15, height_ratios=[3,1])
+grid00 = gridspec.GridSpecFromSubplotSpec(3, N76, wspace=0., hspace=0.06, subplot_spec=grid[0])
+grid01 = gridspec.GridSpecFromSubplotSpec(3, N77, wspace=0., hspace=0.06, subplot_spec=grid[1])
+grid10 = gridspec.GridSpecFromSubplotSpec(1, N76, wspace=0., subplot_spec=grid[2])
+grid11 = gridspec.GridSpecFromSubplotSpec(1, N77, wspace=0., subplot_spec=grid[3])
+
+# The order of the grids is important!!!
+for gs in [grid00, grid10, grid01, grid11]:
+    for g in gs:
+        ax = plt.Subplot(fig, g)
+        fig.add_subplot(ax)
+
+axsl = fig.get_axes()
+axsg = np.hstack((np.asarray(axsl[:4*N76]).reshape(4, N76),
+                  np.asarray(axsl[4*N76:]).reshape(4, N77)))
+
+color = 'black'
+for i in xrange(Nc):
+    axsg[0, i].plot(100.*u[:, i], z, color=color)
+    axsg[1, i].plot(100.*v[:, i], z, color=color)
+    axsg[2, i].plot(100.*w[:, i], z, color=color)
+    axsg[3, i].plot(10000.*b[:, i], z, color=color)
+
+# Remove everything
+for ax in axsl:
+    ax.set_ylim(-1.5, 0.)
+    ax.vlines(0., *ax.get_ylim(), color='grey', alpha=0.8)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+# Set limits
+labelpad = -1
+imark = 5
+for ax in axsg[:3, :].flatten():
+    ax.set_xlim(-30., 30.)
+axsg[2, imark].set_xticks([-25., 0., 25.])
+axsg[2, imark].set_xticklabels(['-25', '0', '25'])
+axsg[2, imark].xaxis.set_ticks_position('bottom')
+axsg[2, imark].spines['bottom'].set_visible(True)
+plt.setp(axsg[2, imark].get_xticklabels(), fontsize=6)
+axsg[2, imark].set_xlabel("Velocity (cm s$^{-1}$)", labelpad=labelpad)
+
+for ax in axsg[3, :]:
+    ax.set_xlim(-10., 10.)
+    ax.set_xticks([])
+axsg[3, imark].set_xticks([-8., 0., 8.])
+axsg[3, imark].set_xticklabels(['-8', '0', '8'])
+axsg[3, imark].xaxis.set_ticks_position('bottom')
+axsg[3, imark].spines['bottom'].set_visible(True)
+plt.setp(axsg[3, imark].get_xticklabels(), fontsize=6)
+axsg[3, imark].set_xlabel("Buoyancy ($10^{-4}$ m s$^{-2}$)", labelpad=labelpad)
+
+# y labels
+for i in xrange(4):
+    axsg[i, 0].set_ylabel('$z$ (km)')
+    axsg[i, 0].set_yticks([-1.5, -1.2, -0.9, -0.6, -0.3])
+    axsg[i, 0].spines['left'].set_visible(True)
+    axsg[i, 0].yaxis.set_ticks_position('left')
+
+plt.figtext(0.495, 0.8, '$u^\prime$', fontdict={'size':15})
+plt.figtext(0.495, 0.62, '$v^\prime$', fontdict={'size':15})
+plt.figtext(0.495, 0.43, '$w^\prime$', fontdict={'size':15})
+plt.figtext(0.495, 0.18, '$b^\prime$', fontdict={'size':15})
+
+ylims = {27: (-1.0, -0.15),
+         26: (-1.45, -0.6),
+         31: (-1.45, -0.6),
+         32: (-1.45, -0.4)}
+# titles
+for i in xrange(Nc):
+    axsg[0, i].set_title(str(hpids[i]))
+    axsg[0, i].spines['top'].set_visible(True)
+    axsg[3, i].spines['top'].set_visible(True)
+    # Shade some areas
+    if hpids[i] in ylims.keys():
+        for ax in axsg[:, i]:
+            ax.axhspan(*ylims[hpids[i]], color='grey', alpha=0.3,
+                       edgecolor='none')
+
+axsg[0, 0].set_title("Float 4976\n"+str(hpids[0]))
+axsg[0, N76].set_title("Float 4977\n"+str(hpids[N76]))
+
+
+pf.my_savefig(fig, 'both', 'main_profiles', sdir, ftype=('png', 'pdf'),
+              fsize='double_col')
 
 
 # %% Alternative highlighted wave profiles
