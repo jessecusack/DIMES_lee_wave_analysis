@@ -44,7 +44,7 @@ sdir = '../figures/polarisation_relation_analysis'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
-matplotlib.rc('font', **{'size': 9})
+matplotlib.rc('font', **{'size': 8})
 
 # %%
 
@@ -328,19 +328,22 @@ axs[1].yaxis.set_ticks_position('both')
 axs[1].yaxis.set_label_position('right')
 
 labels=[r'$\frac{\alpha^2}{1 + \alpha^2}N^2$', r'$|\frac{w_0}{b_0}|N^2$']
-axs[0].boxplot([om_alt/N, om/N], labels=labels);
+axs[0].boxplot([om_alt/N, om/N], labels=labels, showfliers=False);
 axs[0].set_ylabel('$\omega/N$ (-)')
 axs[0].hlines(f/N, *axs[0].get_xlim())
 axs[0].annotate('$f$', xy=(0.5, f/N))
 axs[0].hlines(1., *axs[0].get_xlim())
 axs[0].annotate('$N$', xy=(0.5, 1))
-axs[1].boxplot(alpha, labels=[r'$\frac{w_0^2}{u_0^2 + v_0^2}$']);
+axs[1].boxplot(alpha, labels=[r'$\frac{w_0^2}{u_0^2 + v_0^2}$'], showfliers=False);
 axs[1].set_ylabel(r'$\alpha$ (-)')
 
 for ax in axs:
     ax.set_yscale('log')
+    plt.setp(ax.get_xticklabels(), fontsize=12)
 
-pf.my_savefig(fig, 'both', 'omega_alpha_box', sdir, ftype='pdf', fsize='single_col')
+
+pf.my_savefig(fig, 'both', 'omega_alpha_box', sdir, ftype=('png', 'pdf'),
+              fsize='single_col')
 
 
 # %%
