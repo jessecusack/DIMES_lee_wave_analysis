@@ -51,13 +51,13 @@ args = parser.parse_args()
 # Model
 wscale = 1.5
 bscale = 250.
-
+pscale = 10.
 
 def w_model(params, data):
 
     phi_0, X, Y, Z, phase_0 = params
 
-    time, x, y, z, U, V, N, f = data
+    t, x, y, z, U, V, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
@@ -65,7 +65,7 @@ def w_model(params, data):
 
     om = gw.omega(N, k, m, l, f)
 
-    w = gw.w(x, y, z, time, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
+    w = gw.w(x, y, z, t, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
 
     return wscale*w
 
@@ -74,7 +74,7 @@ def u_model(params, data):
 
     phi_0, X, Y, Z, phase_0 = params
 
-    time, x, y, z, U, V, N, f = data
+    t, x, y, z, U, V, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
@@ -82,7 +82,7 @@ def u_model(params, data):
 
     om = gw.omega(N, k, m, l, f)
 
-    u = gw.u(x, y, z, time, phi_0, k, l, m, om, f=f, U=U, V=V, phase_0=phase_0)
+    u = gw.u(x, y, z, t, phi_0, k, l, m, om, f=f, U=U, V=V, phase_0=phase_0)
 
     return u
 
@@ -91,7 +91,7 @@ def v_model(params, data):
 
     phi_0, X, Y, Z, phase_0 = params
 
-    time, x, y, z, U, V, N, f = data
+    t, x, y, z, U, V, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
@@ -99,7 +99,7 @@ def v_model(params, data):
 
     om = gw.omega(N, k, m, l, f)
 
-    v = gw.v(x, y, z, time, phi_0, k, l, m, om, f=f, U=U, V=V, phase_0=phase_0)
+    v = gw.v(x, y, z, t, phi_0, k, l, m, om, f=f, U=U, V=V, phase_0=phase_0)
 
     return v
 
@@ -108,7 +108,7 @@ def b_model(params, data):
 
     phi_0, X, Y, Z, phase_0 = params
 
-    time, x, y, z, U, V, N, f = data
+    t, x, y, z, U, V, N, f = data
 
     k = 2*np.pi/X
     l = 2*np.pi/Y
@@ -116,19 +116,38 @@ def b_model(params, data):
 
     om = gw.omega(N, k, m, l, f)
 
-    b = gw.b(x, y, z, time, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
+    b = gw.b(x, y, z, t, phi_0, k, l, m, om, N, U=U, V=V, phase_0=phase_0)
 
     return bscale*b
+
+
+def p_model(params, data):
+
+    phi_0, X, Y, Z, phase_0 = params
+
+    t, x, y, z, U, V, N, f = data
+
+    k = 2*np.pi/X
+    l = 2*np.pi/Y
+    m = 2*np.pi/Z
+
+    om = gw.omega(N, k, m, l, f)
+
+    p = gw.phi(x, y, z, t, phi_0, k, l, m, om, U=U, V=V, phase_0=phase_0)
+
+    return pscale*p
 
 
 def full_model(params, data):
     return np.hstack((u_model(params, data),
                       v_model(params, data),
                       w_model(params, data),
-                      b_model(params, data)))
+                      b_model(params, data),
+                      p_model(params, data)))
 
 
 Float = emapex.load(args.floatID)
+Float.calculate_pressure_perturbation()
 
 time, z = Float.get_timeseries([args.hpid], 'z')
 timeef, U = Float.get_timeseries([args.hpid], 'U_abs')
@@ -138,6 +157,14 @@ __, B = Float.get_timeseries([args.hpid], 'b')
 __, N2 = Float.get_timeseries([args.hpid], 'N2_ref')
 __, x = Float.get_timeseries([args.hpid], 'x_ctd')
 __, y = Float.get_timeseries([args.hpid], 'y_ctd')
+__, PP = Float.get_timeseries([args.hpid], 'Pprime')
+
+# Correct for sign error in pp for downward profiles with large aspect
+# ratio. w is proxy for aspect.
+if (np.max(np.abs(W)) > 0.05) and (args.hpid % 2 != 0.):
+    PP *= -1.
+else:
+    PP *= 1.5
 
 zmin, zmax = args.zrange
 nope = (z > zmax) | (z < zmin)
@@ -145,6 +172,7 @@ nope = (z > zmax) | (z < zmin)
 time = time[~nope]
 W = W[~nope]
 B = B[~nope]
+PP = PP[~nope]
 x = x[~nope]
 y = y[~nope]
 z = z[~nope]
@@ -166,13 +194,14 @@ Vmean = np.mean(V)
 
 U = utils.nan_detrend(z, U, args.detrend)
 V = utils.nan_detrend(z, V, args.detrend)
+PP = utils.nan_detrend(z, PP, 1.)
 
 time *= 60.*60.*24
 time -= np.min(time)
 
 data = [time, x, y, z, Umean, Vmean, N, f]
 
-data_stack = np.hstack((U, V, wscale*W, bscale*B))
+data_stack = np.hstack((U, V, wscale*W, bscale*B, pscale*PP))
 
 X0, Y0, Z0 = args.xyz
 
@@ -181,11 +210,11 @@ def model():
 
     # Priors.
     sig = 0.02
-    phi_0 = pymc.Uniform('phi_0', 0, 0.2, value=0.05)
-    X = pymc.Uniform('X', -1000000., 1000000., value=X0)
-    Y = pymc.Uniform('Y', -100000., 1000000., value=Y0)
-    Z = pymc.Uniform('Z', -50000., 50000., value=Z0)
-    phase = pymc.Uniform('phase', -np.pi*4, np.pi*4, value=0.)
+    phi_0 = pymc.Uniform('phi_0', 0, 0.1, value=0.02)
+    X = pymc.Uniform('X', -5000., 0., value=X0)
+    Y = pymc.Uniform('Y', -100000., 100000., value=Y0)
+    Z = pymc.Uniform('Z', -5000., 0., value=Z0)
+    phase = pymc.Uniform('phase', -np.pi*100, np.pi*100, value=0.)
 
     @pymc.deterministic()
     def wave_model(phi_0=phi_0, X=X, Y=Y, Z=Z, phase=phase):
@@ -251,7 +280,7 @@ pf.my_savefig(fig, save_string, 'MCMC_triangle', sdir, ftype='png',
 plt.close()
 
 # Plot fit comparison.
-fig, axs = plt.subplots(1, 4, sharey=True, figsize=(6.5, 3))
+fig, axs = plt.subplots(1, 5, sharey=True, figsize=(6.5, 3))
 axs[0].plot(100.*U, z, color='black')
 axs[0].set_xlabel('$u$ (cm s$^{-1}$)')
 axs[0].set_ylabel('$z$ (m)')
@@ -261,6 +290,8 @@ axs[2].plot(100.*W, z, color='black')
 axs[2].set_xlabel('$w$ (cm s$^{-1}$)')
 axs[3].plot(10000.*B, z, color='black')
 axs[3].set_xlabel('$b$ ($10^{-4}$ m s$^{-2}$)')
+axs[4].plot(100.*PP, z, color='black')
+axs[4].set_xlabel('$\phi$ ($10^{-2}$ m$^2$ s$^{-2}$)')
 
 Ns = (samples - burn)/thin
 
@@ -272,6 +303,7 @@ for i in xrange(0, Ns, 40):
     axs[2].plot(100.*w_model(params, data)/wscale, z, color='red', alpha=0.03)
     axs[3].plot(10000.*b_model(params, data)/bscale, z, color='red',
                 alpha=0.03)
+    axs[4].plot(100.*p_model(params, data)/pscale, z, color='red', alpha=0.03)
 
 for ax in axs:
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=60)
