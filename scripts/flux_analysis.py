@@ -12,7 +12,7 @@ import os
 import glob
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+import pickle
 
 lib_path = os.path.abspath('../modules')
 if lib_path not in sys.path:
@@ -27,6 +27,7 @@ import emapex
 import utils
 import plotting_functions as pf
 import coloured_noise as cn
+import GM
 
 
 try:
@@ -53,7 +54,80 @@ if not os.path.exists(sdir):
 # Universal figure font size.
 matplotlib.rc('font', **{'size': 8})
 
+
+# %% Horizontal kinetic energy spectrum
+hpids = np.arange(50, 150)
+zres = 15.
+
+dz = 1.
+
+zmin = -1450.
+zmax = -100.
+
+window = 'hanning'
+deg = 0
+
+fig, axs = plt.subplots(1, 2, sharex=True, sharey='row', figsize=(6.5, 3))
+
+for Float in [E76, E77]:
+
+    z = np.arange(zmin, zmax, dz)
+    __, z_, U = Float.get_interp_grid(hpids, z, 'z', 'U_abs')
+    __, __, V = Float.get_interp_grid(hpids, z, 'z', 'V_abs')
+    __, __, W = Float.get_interp_grid(hpids, z, 'z', 'Ww')
+    U = utils.nan_detrend(z_, U, deg)
+    V = utils.nan_detrend(z_, V, deg)
+
+    m, PUs = sp.signal.periodogram(U, fs=1./dz, window=window, axis=0)
+    __, PVs = sp.signal.periodogram(V, fs=1./dz, window=window, axis=0)
+    __, VKE = sp.signal.periodogram(W, fs=1./dz, window=window, axis=0)
+
+    # Chop interpolation noise.
+    muse = m < 1./zres
+    m, PUs, PVs, VKE = m[muse], PUs[muse, :], PVs[muse, :], VKE[muse, :]
+
+    HKE = (PUs + PVs)/2.
+
+    axs[0].loglog(1./m, np.median(HKE, axis=-1), linewidth=2., alpha=0.7,
+              label=Float.floatID)
+    axs[1].loglog(1./m, np.median(VKE, axis=-1), linewidth=2., alpha=0.7,
+              label=Float.floatID)
+
+# Set up GM spectrum
+IWF = GM.GM(2.2e-3, -1.23e-4)
+GMHKE = IWF.Sm(m, 'horiz_vel')
+GMVKE = IWF.Sm(m, 'vert_vel')
+axs[0].loglog(1./m, GMHKE, linewidth=2., label='GM')
+axs[1].loglog(1./m, GMVKE, linewidth=2., label='GM')
+
+# Set up noise estimate
+Unoise = cn.noise(len(z), dz, -2)
+Unoise *= 0.03/np.std(Unoise)
+__, PUnoise = sp.signal.periodogram(Unoise, fs=1./dz, window=window)
+PUnoise = PUnoise[muse]
+axs[0].loglog(1./m, PUnoise, linewidth=2., label='noise')
+
+Wnoise = cn.noise(len(z), dz, -2)
+Wnoise *= 0.005/np.std(Wnoise)
+__, PWnoise = sp.signal.periodogram(Wnoise, fs=1./dz, window=window)
+PWnoise = PWnoise[muse]
+axs[1].loglog(1./m, PWnoise, linewidth=2., label='noise')
+
+
+axs[0].legend(loc=0)
+
+for ax in axs:
+    ax.set_xlim(10, 2000)
+    ax.set_xlabel('Vertical wavelength (m)')
+
+axs[0].set_ylabel('Horizontal kinetic energy density (m$^{3}$ s$^{-2}$)')
+axs[1].set_ylabel('Vertical kinetic energy density (m$^{3}$ s$^{-2}$)')
+
+pf.my_savefig(fig, 'both', 'UV_spec_GM', sdir, ftype=('png', 'pdf'),
+              fsize='double_col')
+
 # %%
+
 np.random.seed(1029301)
 # The portions of the profiles that contain the wave. Found by eye.
 zlims = {4976: {25: (-1600, -100),
@@ -81,10 +155,13 @@ zlims = {4976: {25: (-1600, -100),
                 30: (-1600, -100),
                 31: (-1600, -100)}}
 
-hpids_76 = np.array([28, 29, 30, 31, 32, 33, 34, 35])
-hpids_77 = np.array([23, 24, 25, 26, 27, 28, 29, 30])
+#hpids_76 = np.array([28, 29, 30, 31, 32, 33, 34, 35])
+#hpids_77 = np.array([23, 24, 25, 26, 27, 28, 29, 30])
+hpids_76 = np.array([31, 32])
+hpids_77 = np.array([26, 27])
 
-
+N76 = hpids_76.size
+N77 = hpids_77.size
 N = np.sum((hpids_76.size, hpids_77.size))
 
 rho0 = 1025.
@@ -208,7 +285,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
             noise2 = cn.noise(Ndata, DT*60.*60.*24./Ndata, -2)
             noise2 *= 0.03/np.std(noise2)
             noise3 = cn.noise(Ndata, DT*60.*60.*24./Ndata, -2)
-            noise3 *= 0.02/np.std(noise3)
+            noise3 *= 0.005/np.std(noise3)
             u_e = u + noise1
             v_e = v + noise2
             w_e = w + noise3
@@ -261,12 +338,17 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         j += 1
     i += 1
 
-
+with open('/noc/users/jc3e13/storage/processed/Edens.p', 'wb') as f:
+    pickle.dump(E_errs, f)
+with open('/noc/users/jc3e13/storage/processed/Eflux.p', 'wb') as f:
+    pickle.dump(pwbar_errs, f)
+with open('/noc/users/jc3e13/storage/processed/Mflux.p', 'wb') as f:
+    pickle.dump(tau_errs, f)
 
 # %%
 
 fig, axs = plt.subplots(1, 3, figsize=(3.125, 3))
-
+fig.tight_layout()
 #for ax in axs[1:]:
 #    ax.yaxis.tick_right()
 #    ax.yaxis.set_ticks_position('both')
@@ -274,38 +356,47 @@ fig, axs = plt.subplots(1, 3, figsize=(3.125, 3))
 
 colors = ['blue', 'green', 'red', 'purple']
 
-for i in xrange(N):
+Ns = [N76, N77]
+k = 0
+for i in xrange(2):
+    for j in xrange(Ns[i]):
 
-    colprops={'color': colors[i]}
+        colprops={'color': colors[k]}
 
-    axs[0].boxplot(E_errs[i], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False,
-                   labels=['Energy density'])
-    axs[1].boxplot(pwbar_errs[i], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False,
-                   labels=['Energy flux'])
-    axs[2].boxplot(tau_errs[i], boxprops=colprops,
-                   whiskerprops=colprops, capprops=colprops,
-                   medianprops=colprops, showfliers=False,
-                   labels=['Momentum flux'])
+        axs[0].boxplot(E_errs[i, j, :], boxprops=colprops,
+                       whiskerprops=colprops, capprops=colprops,
+                       medianprops=colprops, showfliers=False,
+                       labels=[''])
+        axs[1].boxplot(pwbar_errs[i, j, :], boxprops=colprops,
+                       whiskerprops=colprops, capprops=colprops,
+                       medianprops=colprops, showfliers=False,
+                       labels=[''])
+        axs[2].boxplot(tau_errs[i, j, :], boxprops=colprops,
+                       whiskerprops=colprops, capprops=colprops,
+                       medianprops=colprops, showfliers=False,
+                       labels=[''])
+
+        k += 1
 
 # The legend
-labels = ['E 4976 P 31', 'E 4976 P 32', 'E 4977 P 26', 'E 4977 P 27']
-yloc = [29., 28., 27., 26.]
+labels = ['4976 P 31', '4976 P 32', '4977 P 26', '4977 P 27']
+yloc = [38., 36., 34., 32.]
 for i in xrange(4):
-    colprops={'color': colors[i]}
-    axs[0].text(0.55, yloc[i], labels[i], fontdict=colprops)
+    fontprops={'color': colors[i], 'fontsize': 6}
+    axs[0].text(0.55, yloc[i], labels[i], fontdict=fontprops)
 
-axs[0].set_ylabel('E (J m$^{-3}$)')
+labelpad = -1.5
+axs[0].set_ylabel('Energy density $E$ (J m$^{-3}$)', labelpad=labelpad)
+axs[0].set_ylim(0., 40.)
 axs[0].grid(axis='y')
-axs[1].set_ylabel('$F_E{(z)}$ (W m$^{-2}$)')
+axs[1].set_ylabel(r"Vertical energy flux $\overline{p'w'}$ (W m$^{-2}$)", labelpad=labelpad)
 axs[1].grid(axis='y')
-axs[2].set_ylabel('$F_M{(z)}$ (N m$^{-2}$)')
+axs[1].set_ylim(0., 2.)
+axs[2].set_ylabel('Vertical momentum flux $F_M^{(z)}$ (N m$^{-2}$)', labelpad=labelpad)
 axs[2].grid(axis='y')
+axs[2].set_ylim(0., 12.)
 
-pf.my_savefig(fig, 'both', 'observed_flux_boxplots', sdir, ftype='pdf',
+pf.my_savefig(fig, 'both', 'observed_flux_boxplots', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
 
 # %% More figures
@@ -352,6 +443,7 @@ axs[1].boxplot(pwbar_errs[1, :, :].T, positions=ds[1], boxprops=colprops,
                whiskerprops=colprops, capprops=colprops,
                medianprops=colprops, showfliers=False)
 axs[1].set_ylabel(r"$\overline{p'w'}$ (W m$^{-2}$)")
+axs[1].hlines(0., *axs[1].get_xlim(), color='k')
 
 #axs[2].plot(ds[0], uwbar[0, :], 'b:')
 #axs[2].plot(ds[0], vwbar[0, :], 'b--')
@@ -380,7 +472,7 @@ axs[3].set_xlim(np.nanmin(d), np.nanmax(d))
 axs[3].set_xticks([-10., 0., 10., 20.])
 axs[3].set_xticklabels([-10., 0., 10., 20.])
 
-pf.my_savefig(fig, 'both', 'fluxes', sdir, ftype='pdf', fsize='single_col')
+pf.my_savefig(fig, 'both', 'fluxes', sdir, ftype=('png', 'pdf'), fsize='single_col')
 
 ## Just the horizontal component of the momentum flux.
 #
