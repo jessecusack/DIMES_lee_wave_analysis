@@ -633,7 +633,7 @@ for ax in axsl:
         spine.set_visible(False)
 # Set limits
 labelpad = -1
-imark = 5
+imark = 4
 for ax in axsg[:3, :].flatten():
     ax.set_xlim(-30., 30.)
 axsg[2, imark].set_xticks([-25., 0., 25.])
@@ -659,6 +659,11 @@ for i in xrange(4):
     axsg[i, 0].set_yticks([-1.5, -1.2, -0.9, -0.6, -0.3])
     axsg[i, 0].spines['left'].set_visible(True)
     axsg[i, 0].yaxis.set_ticks_position('left')
+
+    axsg[i, N76].spines['left'].set_visible(True)
+    axsg[i, N76].yaxis.set_ticks_position('left')
+    axsg[i, N76].set_yticks([-1.5, -1.2, -0.9, -0.6, -0.3])
+    axsg[i, N76].set_yticklabels([])
 
 plt.figtext(0.495, 0.8, '$u^\prime$', fontdict={'size':15})
 plt.figtext(0.495, 0.62, '$v^\prime$', fontdict={'size':15})
