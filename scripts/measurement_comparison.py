@@ -31,16 +31,17 @@ def drdt(r, t, phi_0, k, l, m, N=2e-3, U=0.3, V=0., Wf=0.1, f=0., phase_0=0.):
 
     return np.array([dxdt, dydt, dzdt])
 
+
 # Define the wave.
 X = -1500.
 Y = -1500.
-Z = -1500.
-phi_0 = 0.04
+Z = -600.
+phi_0 = 0.004
 N = 2e-3
 f = 1.2e-4
-U = 0.3
+U = 0.
 V = 0.
-Wf = 0.12
+Wf = -0.12
 phase_0 = 0.
 rho0 = 1025.
 
@@ -54,8 +55,8 @@ Edens = gw.Edens(w_0, k, m, l, rho0)
 Efluxz = gw.Efluxz(w_0, k, m, N, l, f, rho0)
 Mfluxz = gw.Mfluxz(phi_0, k, l, m, om, N, f, rho0)
 
-t = np.arange(0., 11000.)
-r0 = np.array([0., 0., -1500.])
+t = np.arange(0., 50000.)
+r0 = np.array([0., 0., 0.])
 args = (phi_0, k, l, m, N, U, V, Wf, f, phase_0)
 r = sp.integrate.odeint(drdt, r0, t, args=args)
 x, y, z = r[:, 0], r[:, 1], r[:, 2]
@@ -66,10 +67,27 @@ b = gw.buoy(r, t, phi_0, N, k, l, m, om, U=U, V=V, phase_0=phase_0)
 p = gw.phi(r[:, 0], r[:, 1], r[:, 2], t, phi_0, k, l, m, om, U=U, V=V)
 
 # Nash method of estimating pressure perturbation
-ivar = r[:, 2]
-bi = sp.integrate.cumtrapz(b, ivar, initial=0.)
-bii = sp.integrate.cumtrapz(bi, ivar, initial=0.)
-pi = bi + (0. - bii[-1])/(ivar[-1] - ivar[0] )
+# z should be increasing.
+if z[0] > z[-1]:
+    print("Downward Profile!\n")
+    zud = np.flipud(z)
+    bud = np.flipud(b)
+    bi = sp.integrate.cumtrapz(bud, zud, initial=0.)
+    bii = sp.integrate.cumtrapz(bi, zud, initial=0.)
+
+    H = zud.max() - zud.min()
+
+    pi = bi + (bii[0] - bii[-1])/H
+
+    pi = np.flipud(pi)
+
+else:
+    bi = sp.integrate.cumtrapz(b, z, initial=0.)
+    bii = sp.integrate.cumtrapz(bi, z, initial=0.)
+
+    H = zud.max() - zud.min()
+
+    pi = bi + (bii[0] - bii[-1])/H
 
 nhs = 1.  # Non hydrostatic factor...
 pi *= nhs
@@ -180,10 +198,11 @@ for il, (X, phi_0) in enumerate(zip(Xg.flatten(), phi_0g.flatten())):
     Edens = gw.Edens(w_0, k, m, l, rho0)
     Efluxz = gw.Efluxz(w_0, k, m, N, l, f, rho0)
 
-    t = np.arange(0., 15000.)
-    r0 = np.array([0., 0., -1500.])
+    t = np.arange(0., 50000.)
+    r0 = np.array([0., 0., 0.])
     args = (phi_0, k, l, m, N, U, V, Wf, f, phase_0)
     r = sp.integrate.odeint(drdt, r0, t, args=args)
+    x, y, z = r[:, 0], r[:, 1], r[:, 2]
 
     vel = gw.wave_vel(r, t, phi_0, N, f, k, l, m, om, U=U, V=V, phase_0=phase_0)
     u, v, w = vel[:, 0], vel[:, 1], vel[:, 2]
@@ -191,10 +210,26 @@ for il, (X, phi_0) in enumerate(zip(Xg.flatten(), phi_0g.flatten())):
     p = gw.phi(r[:, 0], r[:, 1], r[:, 2], t, phi_0, k, l, m, om, U=U, V=V)
 
     # Nash method of estimating pressure perturbation
-    ivar = r[:, 2]
-    bi = sp.integrate.cumtrapz(b, ivar, initial=0.)
-    bii = sp.integrate.cumtrapz(bi, ivar, initial=0.)
-    pi = bi + (0. - bii[-1])/(ivar[-1] - ivar[0] )
+    if z[0] > z[-1]:
+        print("Downward Profile!\n")
+        zud = np.flipud(z)
+        bud = np.flipud(b)
+        bi = sp.integrate.cumtrapz(bud, zud, initial=0.)
+        bii = sp.integrate.cumtrapz(bi, zud, initial=0.)
+
+        H = zud.max() - zud.min()
+
+        pi = bi + (bii[0] - bii[-1])/H
+
+        pi = np.flipud(pi)
+
+    else:
+        bi = sp.integrate.cumtrapz(b, z, initial=0.)
+        bii = sp.integrate.cumtrapz(bi, z, initial=0.)
+
+        H = zud.max() - zud.min()
+
+        pi = bi + (bii[0] - bii[-1])/H
 
     # Measurements of momentum flux
     idxs = dp.detect_peaks(w)
@@ -207,3 +242,5 @@ for il, (X, phi_0) in enumerate(zip(Xg.flatten(), phi_0g.flatten())):
 
 plt.figure()
 plt.plot(alphag[0, :-4], np.mean(Erat[:, :-4], axis=0))
+plt.xlabel('Aspect Ratio')
+plt.ylabel('Energy flux error factor')
