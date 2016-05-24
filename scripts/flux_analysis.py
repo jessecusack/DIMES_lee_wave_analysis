@@ -11,6 +11,7 @@ import sys
 import os
 import glob
 import matplotlib
+from mpl_toolkits import basemap as bm
 import matplotlib.pyplot as plt
 import pickle
 
@@ -48,7 +49,7 @@ bp = os.path.join(os.path.expanduser('~'), 'storage', 'smith_sandwell',
                   'topo_*.img')
 bf = os.path.abspath(glob.glob(bp)[0])
 # Figure save path.
-sdir = '../figures/flux analysis'
+sdir = '../figures/flux_analysis'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
@@ -398,6 +399,75 @@ axs[2].set_ylim(0., 12.)
 
 pf.my_savefig(fig, 'both', 'observed_flux_boxplots', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
+
+# %% Momentum flux vector
+
+# Number of half profiles.
+hpids = np.array([[31, 32], [26, 27]])
+
+lons = np.empty_like(hpids, dtype=float)
+lats = np.empty_like(hpids, dtype=float)
+
+for i, Float in enumerate([E76, E77]):
+    __, idxs = Float.get_profiles(hpids[:, i], ret_idxs=True)
+    lons[:, i] = Float.lon_end[idxs]
+    lats[:, i] = Float.lat_end[idxs]
+
+
+llcrnrlon = np.floor(np.nanmin(lons)) - 1.
+llcrnrlat = np.floor(np.nanmin(lats)) - .1
+urcrnrlon = np.ceil(np.nanmax(lons)) + 0.3
+urcrnrlat = np.ceil(np.nanmax(lats)) + .1
+
+lon_lat = np.array([llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat])
+
+lon_grid, lat_grid, bathy_grid = sandwell.read_grid(lon_lat, bf)
+bathy_grid[bathy_grid > 0] = 0
+bathy_grid *= -1
+
+m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
+               llcrnrlat=llcrnrlat, urcrnrlon=urcrnrlon,
+               urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
+               lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
+
+fig = plt.figure(figsize=(3.125, 3.5))
+x, y = m(lon_grid, lat_grid)
+levels = np.arange(0., 4000., 500.)
+CS = m.contour(x, y, bathy_grid, 20, cmap=plt.get_cmap('binary_r'),
+               levels=levels, rasterized=True)
+plt.clabel(CS, inline=1, fontsize=8, fmt='%1.f')
+
+parallels = [-58, -57.75, -57.5, -57.25, -57]
+m.drawparallels(parallels, labels=[1, 0, 0, 0])
+meridians = [-68, -67, -66, -65]
+m.drawmeridians(meridians, labels=[0, 0, 0, 1])
+
+
+marker = ['o', '*']
+label = ['4976', '4977']
+color = ['b', 'g']
+for i, (lon, lat, uw, vw, pw) in enumerate(zip(lons.T, lats.T, uwbar.T, vwbar.T, pwbar.T)):
+    x, y = m(lon, lat)
+    m.plot(x, y, 'ko', markersize=5., label=label[i])
+    Q = m.quiver(x, y, uw, vw, pw, scale=10., scale_units='inches', cmap=plt.get_cmap('gnuplot'))
+    plt.clim(0., 1.5)
+    for _x, _y, hpid in zip(x, y, hpids[:, i]):
+        if hpid == 26:
+            _x *= 0.9
+        plt.annotate("{:1.0f}".format(hpid), xy=(_x, _y),
+                     xytext=(1.0*_x, 0.9*_y), color='k')
+
+#plt.legend()
+qk = plt.quiverkey(Q, 0.78, 0.8, 5., r'5 N m$^{-2}$', labelpos='N')
+cbar = plt.colorbar(orientation='horizontal', extend='max', pad=0.08)
+cbar.set_label(r"Vertical energy flux $\overline{p'w'}$ (W m$^{-2}$)", labelpad=-1)
+cbar.set_ticks([0., 0.5, 1.0, 1.5])
+
+plt.tight_layout()
+pf.my_savefig(fig, 'both', 'quiver_momentum', sdir, ftype=('png', 'pdf'),
+              fsize='single_col')
+
+
 
 # %% More figures
 
