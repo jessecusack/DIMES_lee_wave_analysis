@@ -24,6 +24,7 @@ import emapex
 import plotting_functions as pf
 import coloured_noise as cn
 import GM
+import vertical_velocity_model as vvm
 
 try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
@@ -88,7 +89,7 @@ plt.title('Float {:}, Profile {:}'.format(int(pfl.floatID), int(pfl.hpid)))
 pf.my_savefig(fig, 'example', 'w_model', sdir, ftype='png', fsize='single_col')
 
 # %% Having a look at the vertical kinetic energy spectrum
-hpids = np.arange(350, 450)
+hpids = np.arange(150, 250)
 tres = 44.
 zres = 5.
 
@@ -224,8 +225,8 @@ for i in xrange(N):
     me, Pe[:, i] = sp.signal.periodogram(We, 1./dze, scaling=scaling)
 
     # Pick a random profile.
-    pfl76 = E76.get_profiles(160+i)
-    pfl77 = E77.get_profiles(160+i)
+    pfl76 = E76.get_profiles(400+i)
+    pfl77 = E77.get_profiles(400+i)
 
     # Chop out the top.
     Ww76 = pfl76.r_Ww[pfl76.r_z < zmax]
@@ -463,23 +464,27 @@ for Float in [E76, E77]:
 
     wfi = Float.__wfi
     z = Float.z
-    data = [getattr(Float, data_name) for data_name in wfi.data_names]
+    data = [getattr(Float, data_name) for data_name in wfi['data_names']]
     iz, ix = Float.Ww.shape
-    ip = wfi.ps.shape[0]
+    ip = wfi['ps'].shape[0]
     w_set = np.empty((iz, ix, ip))
 
     print("Float {}".format(Float.floatID))
-    for i in xrange(len(wfi.p)):
-        pfit = wfi.p[i]
-        pstd = np.std(wfi.ps[:, i])
+    for i in xrange(len(wfi['p'])):
+        pfit = wfi['p'][i]
+        pstd = np.std(wfi['ps'][:, i])
         print("P{}: {} +/- {}".format(i, pfit, pstd))
     print("\n")
 
-    for i, p_set in enumerate(wfi.ps):
-        w_set[:, :, i] = wfi.model_func(p_set, data, wfi.fixed)
+    N = float(len(wfi['ps']))
+    fig, ax = plt.subplots(1, 1)
+    for i, p_set in enumerate(wfi['ps']):
+        w_set[:, :, i] = vvm.still_water_model_1(p_set, data, wfi['fixed'])
+        ax.plot(w_set[:, 311, i], color=str(i/N))
 
     plt.figure()
     plt.plot(np.std(w_set, axis=-1), z, color='black', alpha=0.1)
+
 
 # %% Recreating w profiles with red noise
 
