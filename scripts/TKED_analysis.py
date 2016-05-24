@@ -139,9 +139,10 @@ for Float, c in zip([E76, E77], cs):
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-    epsilon, kappa = fs.w_scales_float(Float, hpids, xvar, x, width=width,
-                                       lc=lc, c=c, btype=btype, we=we,
-                                       ret_noise=False)
+    epsilon, kappa, __, noise = fs.w_scales_float(Float, hpids, xvar, x,
+                                                  width=width, lc=lc, c=c,
+                                                  btype=btype, we=we,
+                                                  ret_noise=True)
 
     ieps = 0.*np.zeros_like(idxs)
 
@@ -159,11 +160,12 @@ for Float, c in zip([E76, E77], cs):
 
     Z = iZ.flatten()
 
-    use = (Z < -100) & (Z > -1400)
+    use = (Z < -10) & (Z > -1400)
 
     Z = Z[use]
 
     X = X.flatten()[use]
+    noise = noise.flatten()[use]
     LOG_EPS = (np.log10(epsilon)).flatten()[use]
     LOG_KAP = (np.log10(kappa)).flatten()[use]
 
@@ -189,8 +191,10 @@ for Float, c in zip([E76, E77], cs):
 
     ax1.plot(Float.dist[idxs] - dbathymax, 1000.*ieps)
 
+    LOG_EPS[noise] = np.NaN
+
     sc = ax0.scatter(X, Z, s=5, c=LOG_EPS,
-                     edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-11.,
+                     edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-10.,
                      vmax=-7, rasterized=True)
 
 ax1.set_ylabel('$P$ (mW m$^{-2}$)')
