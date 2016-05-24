@@ -197,8 +197,9 @@ for i, M in enumerate(Ms):
     k = np.pi*2./M.trace('X')[:]
     l = np.pi*2./M.trace('Y')[:]
     m = np.pi*2./M.trace('Z')[:]
-
+    print("complete wavelength = {}".format(np.mean(np.pi*2/np.sqrt(k**2 + l**2 + m**2))))
     om = gw.omega(N, k, m, l, f)
+    print("om/N = {}".format(np.mean(om/N)))
     w_0 = gw.W_0(phi_0, m, om, N)
     Edens = gw.Edens(w_0, k, m, l)
     Efluxz = gw.Efluxz(w_0, k, m, N, l, f)
@@ -522,11 +523,13 @@ for M_file in M_files:
     m = np.pi*2/M.trace('Z')[:]
 
     om = gw.omega(N, k, m, l, f)
+    om_eulerian = om + k*Umean + l*Vmean
     w_0 = gw.W_0(phi_0, m, om, N)
     Efluxz = gw.Efluxz(w_0, k, m, N, l, f)
     Mfluxz = gw.Mfluxz(phi_0, k, l, m, om, N)
 
     print("Mean frequency: {} +/- {}\n"
+          "Eulerian frequency: {} +/- {}\n"
           "Mean X: {} +/- {}\n"
           "Mean Y: {} +/- {}\n"
           "Mean Z: {} +/- {}\n"
@@ -534,6 +537,7 @@ for M_file in M_files:
           "Mean vertical energy flux: {} +/- {}\n"
           "Mean vertical momentum flux: {} +/- {}\n"
           "".format(np.mean(om), np.std(om),
+                    np.mean(om_eulerian), np.std(om_eulerian),
                     np.mean(M.trace('X')[:]), np.std(M.trace('X')[:]),
                     np.mean(M.trace('Y')[:]), np.std(M.trace('Y')[:]),
                     np.mean(M.trace('Z')[:]), np.std(M.trace('Z')[:]),
@@ -671,11 +675,13 @@ for i in xrange(2):
     m = np.pi*2/M.trace('Z')[:]
 
     om = gw.omega(N, k, m, l, f)
+    om_eulerian = om + k*Umean + l*Vmean
     w_0 = gw.W_0(phi_0, m, om, N)
     Efluxz = gw.Efluxz(w_0, k, m, N, l, f)
     Mfluxz = gw.Mfluxz(phi_0, k, l, m, om, N)
 
     print("Mean frequency: {} +/- {}\n"
+          "Eulerian frequency: {} +/- {}\n"
           "Mean X: {} +/- {}\n"
           "Mean Y: {} +/- {}\n"
           "Mean Z: {} +/- {}\n"
@@ -683,6 +689,7 @@ for i in xrange(2):
           "Mean vertical energy flux: {} +/- {}\n"
           "Mean vertical momentum flux: {} +/- {}\n"
           "".format(np.mean(om), np.std(om),
+                    np.mean(om_eulerian), np.std(om_eulerian),
                     np.mean(M.trace('X')[:]), np.std(M.trace('X')[:]),
                     np.mean(M.trace('Y')[:]), np.std(M.trace('Y')[:]),
                     np.mean(M.trace('Z')[:]), np.std(M.trace('Z')[:]),
