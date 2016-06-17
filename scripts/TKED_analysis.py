@@ -158,16 +158,16 @@ for Float, c in zip([E76, E77], cs):
         # The abs function accounts for problems with z being the wrong way.
         ieps[i] = np.abs(1025.*trapz(epsilon[iuse, i], iZ[iuse, i]))
 
-    Z = iZ.flatten()
+    Z = iZ.flatten(order='F')
 
     use = (Z < -10) & (Z > -1400)
 
     Z = Z[use]
 
-    X = X.flatten()[use]
-    noise = noise.flatten()[use]
-    LOG_EPS = (np.log10(epsilon)).flatten()[use]
-    LOG_KAP = (np.log10(kappa)).flatten()[use]
+    X = X.flatten(order='F')[use]
+    noise = noise.flatten(order='F')[use]
+    LOG_EPS = (np.log10(epsilon)).flatten(order='F')[use]
+    LOG_KAP = (np.log10(kappa)).flatten(order='F')[use]
 
     # Plotting #
     # Epsilon
@@ -189,17 +189,20 @@ for Float, c in zip([E76, E77], cs):
     dctd -= dbathymax
     X -= dbathymax
 
-    ax1.plot(Float.dist[idxs] - dbathymax, 1000.*ieps)
+    ax1.plot(Float.dist[idxs] - dbathymax, 1000.*ieps, label=Float.floatID)
 
     LOG_EPS[noise] = np.NaN
 
-    sc = ax0.scatter(X, Z, s=5, c=LOG_EPS,
+    step = 10
+    sc = ax0.scatter(X[::step], Z[::step], s=5, c=LOG_EPS[::step],
                      edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-10.,
-                     vmax=-7, rasterized=True)
+                     vmax=-7, alpha=.5)
 
 ax1.set_ylabel('$P$ (mW m$^{-2}$)')
 ax1.yaxis.set_ticks(np.array([0., 15., 30., 45]))
 ax1.xaxis.set_ticks([])
+
+ax1.legend(loc='upper right', fontsize=7)
 
 ax0.fill_between(dctd[::100], bathy[::100],
                  np.nanmin(bathy), color='black', linewidth=2)
