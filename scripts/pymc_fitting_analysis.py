@@ -528,22 +528,30 @@ for M_file in M_files:
     Efluxz = gw.Efluxz(w_0, k, m, N, l, f)
     Mfluxz = gw.Mfluxz(phi_0, k, l, m, om, N)
 
+    stdf = 3.
+
     print("Mean frequency: {} +/- {}\n"
           "Eulerian frequency: {} +/- {}\n"
           "Mean X: {} +/- {}\n"
           "Mean Y: {} +/- {}\n"
           "Mean Z: {} +/- {}\n"
+          "Mean k: {} +/- {}\n"
+          "Mean l: {} +/- {}\n"
+          "Mean m: {} +/- {}\n"
           "Mean phi_0: {} +/- {}\n"
           "Mean vertical energy flux: {} +/- {}\n"
           "Mean vertical momentum flux: {} +/- {}\n"
-          "".format(np.mean(om), np.std(om),
-                    np.mean(om_eulerian), np.std(om_eulerian),
-                    np.mean(M.trace('X')[:]), np.std(M.trace('X')[:]),
-                    np.mean(M.trace('Y')[:]), np.std(M.trace('Y')[:]),
-                    np.mean(M.trace('Z')[:]), np.std(M.trace('Z')[:]),
-                    np.mean(M.trace('phi_0')[:]), np.std(M.trace('phi_0')[:]),
-                    np.mean(Efluxz), np.std(Efluxz),
-                    np.mean(Mfluxz), np.std(Mfluxz)))
+          "".format(np.mean(om), stdf*np.std(om),
+                    np.mean(om_eulerian), stdf*np.std(om_eulerian),
+                    np.mean(M.trace('X')[:]), stdf*np.std(M.trace('X')[:]),
+                    np.mean(M.trace('Y')[:]), stdf*np.std(M.trace('Y')[:]),
+                    np.mean(M.trace('Z')[:]), stdf*np.std(M.trace('Z')[:]),
+                    np.mean(k), stdf*np.std(k),
+                    np.mean(l), stdf*np.std(l),
+                    np.mean(m), stdf*np.std(m),
+                    np.mean(M.trace('phi_0')[:]), stdf*np.std(M.trace('phi_0')[:]),
+                    np.mean(Efluxz),stdf* np.std(Efluxz),
+                    np.mean(Mfluxz), stdf*np.std(Mfluxz)))
 
     # Plot fit comparison.
     fig, axs = plt.subplots(1, 5, sharey=True, figsize=(3.125, 3))
@@ -680,22 +688,30 @@ for i in xrange(2):
     Efluxz = gw.Efluxz(w_0, k, m, N, l, f)
     Mfluxz = gw.Mfluxz(phi_0, k, l, m, om, N)
 
+    stdf = 3.
+
     print("Mean frequency: {} +/- {}\n"
           "Eulerian frequency: {} +/- {}\n"
           "Mean X: {} +/- {}\n"
           "Mean Y: {} +/- {}\n"
           "Mean Z: {} +/- {}\n"
+          "Mean k: {} +/- {}\n"
+          "Mean l: {} +/- {}\n"
+          "Mean m: {} +/- {}\n"
           "Mean phi_0: {} +/- {}\n"
           "Mean vertical energy flux: {} +/- {}\n"
           "Mean vertical momentum flux: {} +/- {}\n"
-          "".format(np.mean(om), np.std(om),
-                    np.mean(om_eulerian), np.std(om_eulerian),
-                    np.mean(M.trace('X')[:]), np.std(M.trace('X')[:]),
-                    np.mean(M.trace('Y')[:]), np.std(M.trace('Y')[:]),
-                    np.mean(M.trace('Z')[:]), np.std(M.trace('Z')[:]),
-                    np.mean(M.trace('phi_0')[:]), np.std(M.trace('phi_0')[:]),
-                    np.mean(Efluxz), np.std(Efluxz),
-                    np.mean(Mfluxz), np.std(Mfluxz)))
+          "".format(np.mean(om), stdf*np.std(om),
+                    np.mean(om_eulerian), stdf*np.std(om_eulerian),
+                    np.mean(M.trace('X')[:]), stdf*np.std(M.trace('X')[:]),
+                    np.mean(M.trace('Y')[:]), stdf*np.std(M.trace('Y')[:]),
+                    np.mean(M.trace('Z')[:]), stdf*np.std(M.trace('Z')[:]),
+                    np.mean(k), stdf*np.std(k),
+                    np.mean(l), stdf*np.std(l),
+                    np.mean(m), stdf*np.std(m),
+                    np.mean(M.trace('phi_0')[:]), stdf*np.std(M.trace('phi_0')[:]),
+                    np.mean(Efluxz),stdf* np.std(Efluxz),
+                    np.mean(Mfluxz), stdf*np.std(Mfluxz)))
 
     # Plot fit comparison.
     z = z.copy()/1000.
