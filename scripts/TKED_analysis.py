@@ -41,63 +41,13 @@ except NameError:
 # %% Script params.
 
 # Bathymetry file path.
-bf = os.path.abspath(glob.glob('/noc/users/jc3e13/storage/smith_sandwell/topo_*.img')[0])
+bf = os.path.abspath(glob.glob('../../storage/smith_sandwell/topo_*.img')[0])
 # Figure save path.
 sdir = '../figures/TKED_estimation'
 if not os.path.exists(sdir):
     os.makedirs(sdir)
 # Universal figure font size.
 matplotlib.rc('font', **{'size': 8})
-
-
-# %% Experimental functions
-#
-#def w_scales_experimental(w, z, N2, dz=5., c=0.5, eff=0.2, lc=30.):
-#    """Inputs should be regularly spaced."""
-#
-#    # First we have to design the high pass filter the data. Beaird et. al.
-#    # 2012 use a forth order butterworth with a cutoff of 30m.
-#    mc = 1./lc  # cut off wavenumber (m-1)
-#    normal_cutoff = mc*dz*2.  # Nyquist frequency is half 1/dz.
-#    b, a = sig.butter(4, normal_cutoff, btype='highpass')
-#
-#    # Filter the data.
-#    w_filt = sig.lfilter(b, a, w)
-#
-#    w_wdws = wdw.window(z, w_filt, width=10., overlap=-1.)
-#    N2_wdws = wdw.window(z, N2, width=10., overlap=-1.)
-#
-#    w_rms = np.zeros_like(z)
-#    N2_mean = np.zeros_like(z)
-#
-#    for i, (w_wdw, N2_wdw) in enumerate(zip(w_wdws, N2_wdws)):
-#        w_rms[i] = np.std(w_wdw[1])
-#        N2_mean[i] = np.mean(N2_wdw[1])
-#
-#    epsilon = c*np.sqrt(N2_mean)*w_rms**2
-#    kappa = eff*epsilon/N2_mean
-#
-#    return epsilon, kappa
-#
-#
-#def w_scales_float_experimental(Float, hpids, c=0.5, eff=0.2, lc=30.):
-#
-#    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-#
-#    w = Float.r_Ww[:, idxs]
-#    z = Float.r_z[:, 0]
-#    N2 = Float.r_N2_ref[:, idxs]
-#
-#    dz = z[0] - z[1]
-#
-#    epsilon = np.zeros_like(w)
-#    kappa = np.zeros_like(w)
-#
-#    for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-#        epsilon[:, i], kappa[:, i] = w_scales_experimental(w_row, z, N2_row,
-#                                                           dz, c, eff, lc)
-#
-#    return epsilon, kappa
 
 
 # %% Start script
@@ -119,13 +69,21 @@ matplotlib.rc('font', **{'size': 8})
 #lc = np.array([40., 15.])
 #btype = 'bandpass'
 
-cs = [0.176, 0.147] # timeheight
-xvar = 'timeheight'
+#cs = [0.176, 0.147] # timeheight
+#xvar = 'timeheight'
+#dx = 1.
+#x = np.arange(-1450., -50, dx)
+#width = 15.
+#lc = np.array([100., 40.])
+#btype = 'highpass'
+
+cs = [0.192, 0.159]  # eheight
+x = np.arange(zmin, 0., dz)
+xvar = 'eheight'
 dx = 1.
-x = np.arange(-1450., -50, dx)
-width = 15.
-lc = np.array([100., 40.])
-btype = 'highpass'
+width = 20.
+lc = np.array([40., 15.])
+btype = 'bandpass'
 
 hpids = np.arange(10, 50)
 we = 0.001
@@ -149,6 +107,13 @@ for Float, c in zip([E76, E77], cs):
     if xvar == 'time':
         __, __, iZ = Float.get_interp_grid(hpids, x, 'dUTC', 'z')
         __, __, X = Float.get_interp_grid(hpids, x, 'dUTC', 'dist_ctd')
+    if xvar == 'eheight':
+        __, __, it = Float.get_interp_grid(hpids, x, 'zw', 'dUTC')
+        iZ = np.zeros_like(it)
+        X = np.zeros_like(it)
+        for i, pfl in enumerate(Float.get_profiles(hpids)):
+            iZ[:, i] = pfl.interp(it[:, i], 'dUTC', 'z')
+            X[:, i] = pfl.interp(it[:, i], 'dUTC', 'dist_ctd')
     elif xvar == 'height' or xvar == 'timeheight':
         __, __, iZ = Float.get_interp_grid(hpids, x, 'z', 'z')
         __, __, X = Float.get_interp_grid(hpids, x, 'z', 'dist_ctd')
@@ -199,7 +164,7 @@ for Float, c in zip([E76, E77], cs):
                      vmax=-7, alpha=.5)
 
 ax1.set_ylabel('$P$ (mW m$^{-2}$)')
-ax1.yaxis.set_ticks(np.array([0., 15., 30., 45]))
+ax1.yaxis.set_ticks(np.array([0., 5., 10., 15.]))
 ax1.xaxis.set_ticks([])
 
 ax1.legend(loc='upper right', fontsize=7)
