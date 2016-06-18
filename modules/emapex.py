@@ -556,8 +556,6 @@ class EMApexFloat(object):
 
             self.Ws = w_model(wfi['p'], data, wfi['fixed'])
             print("  Added: Ws.")
-            self.Ww = self.Wz - self.Ws
-            print("  Added: Ww.")
 
         elif wfi['profiles'] == 'updown':
 
@@ -575,11 +573,17 @@ class EMApexFloat(object):
             self.Ws[:, down] = w_model(wfi['p'][1], data, wfi['fixed'])
             print("  Added: Ws. (descents)")
 
-            self.Ww = self.Wz - self.Ws
-            print("  Added: Ww.")
-
         else:
-            raise RuntimeError
+            raise ValueError("Don't know what to do with wfi['profiles']",
+                             wfi['profiles'])
+
+        self.Ww = self.Wz - self.Ws
+        print("  Added: Ww.")
+
+        zw = cumtrapz(self.Ws, self.dUTC, axis=0)
+        zw += self.z[0, :]
+        self.zw = np.vstack((self.z[0, :], zw))
+        print("  Added: zw. (effective distance travelled)")
 
         self.update_profiles()
 
