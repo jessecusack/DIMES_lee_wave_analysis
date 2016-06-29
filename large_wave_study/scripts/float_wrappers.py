@@ -67,22 +67,3 @@ def analyse_float(Float, hpids, params=default_params):
     # Nothing special for now. It doesn't even work.
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
     return [analyse_profile(Pfl, params) for Pfl in Float.Profiles[idxs]]
-    
-
-def w_scales_float(Float, hpids, c=0.1, eff=0.2, lc=30.):
-
-    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
-
-    w = Float.r_Ww[:, idxs]
-    z = Float.r_z[:, 0]
-    N2 = Float.r_N2_ref[:, idxs]
-
-    dz = z[0] - z[1]
-
-    epsilon = np.zeros_like(w)
-    kappa = np.zeros_like(w)
-
-    for i, (w_row, N2_row) in enumerate(zip(w.T, N2.T)):
-        epsilon[:, i], kappa[:, i] = w_scales(w_row, z, N2_row, dz, c, eff, lc)
-
-    return epsilon, kappa

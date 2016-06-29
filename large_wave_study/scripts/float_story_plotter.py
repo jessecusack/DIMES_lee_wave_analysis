@@ -8,18 +8,9 @@ import matplotlib.colors as mcolors
 import scipy.optimize as op
 import gsw
 import os
-import sys
 from scipy.interpolate import griddata
 from scipy.integrate import cumtrapz
 import scipy.signal as sig
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import sandwell
 import emapex

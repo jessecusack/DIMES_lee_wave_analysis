@@ -7,12 +7,6 @@ Created on Mon Dec 29 10:10:37 2014
 
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import sys
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import gravity_waves as gw
 

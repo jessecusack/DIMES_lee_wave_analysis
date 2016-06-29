@@ -16,16 +16,7 @@ from mpl_toolkits import basemap as bm
 from matplotlib.collections import LineCollection
 import gsw
 import os
-import sys
 import glob
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import sandwell
 import utils

@@ -9,17 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import os
-import sys
 from scipy.interpolate import griddata
 import mpl_toolkits.basemap as bm
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 import sandwell

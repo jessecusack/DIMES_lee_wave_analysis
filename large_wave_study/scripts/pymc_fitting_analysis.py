@@ -6,25 +6,15 @@ Created on Thu Nov 20 12:58:56 2014
 """
 
 import numpy as np
-import sys
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
 import glob
 import pickle
-
 import gsw
 import triangle
 import pymc
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 import utils

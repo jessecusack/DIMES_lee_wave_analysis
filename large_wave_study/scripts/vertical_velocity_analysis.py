@@ -13,14 +13,8 @@ import matplotlib.colors as mcolors
 import pandas as pd
 import os
 import pickle
-import sys
 
 import corner
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
 import emapex
 import vertical_velocity_fitter as vvf
 

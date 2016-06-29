@@ -9,12 +9,6 @@ import scipy.optimize as op
 import matplotlib.pyplot as plt
 import pylab as pyl
 import numpy as np
-import os
-import sys
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 

@@ -7,22 +7,12 @@ Created on Thu Aug 27 11:59:10 2015
 
 import argparse
 import numpy as np
-import sys
 import matplotlib
 import matplotlib.pyplot as plt
 import os
-
 import gsw
 import triangle
 import pymc
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 import utils

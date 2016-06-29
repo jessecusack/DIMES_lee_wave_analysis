@@ -7,18 +7,8 @@ Created on Wed Mar 25 11:55:19 2015
 
 import numpy as np
 import scipy as sp
-import sys
-import os
 import matplotlib.pyplot as plt
 
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-    
 import emapex
 import gravity_waves as gw
 

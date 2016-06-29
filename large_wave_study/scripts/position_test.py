@@ -8,14 +8,7 @@ Created on Tue Oct 21 10:22:36 2014
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import cumtrapz, trapz
-import sys
-import os
-
 from geopy.distance import vincenty
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 

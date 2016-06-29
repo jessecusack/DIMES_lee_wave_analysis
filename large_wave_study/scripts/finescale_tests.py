@@ -9,18 +9,7 @@ import numpy as np
 import scipy as sp
 import scipy.signal as sig
 import matplotlib.pyplot as plt
-import os
-import sys
-
 import gsw
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import finescale as fs
 import window as wdw

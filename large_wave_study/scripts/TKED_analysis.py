@@ -5,7 +5,6 @@ Created on Fri Jan 23 16:25:26 2015
 @author: jc3e13
 """
 
-import sys
 import os
 import glob
 import numpy as np
@@ -13,14 +12,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from scipy.integrate import trapz
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 import TKED_parameterisations as fs

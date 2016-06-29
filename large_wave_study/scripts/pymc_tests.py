@@ -6,9 +6,7 @@ Created on Tue Mar 24 11:00:28 2015
 """
 
 import numpy as np
-#from scipy import optimize as op
 import matplotlib.pyplot as plt
-
 import pymc
 import triangle
 
@@ -102,6 +100,7 @@ b_noisy = b + b_noise
 
 uvwb_noise = np.hstack((u_noise, v_noise, w_noise, b_noise))
 uvwb_noisy = uvwb + uvwb_noise
+
 
 # Solve using MCMC sampling.
 def pymc_model(data, uvwb_noisy, noise_amp, N, U):

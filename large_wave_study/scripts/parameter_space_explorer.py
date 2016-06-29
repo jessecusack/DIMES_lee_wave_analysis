@@ -6,25 +6,15 @@ Created on Mon Dec 15 14:43:24 2014
 """
 
 import os
-import sys
 import glob
 import itertools
 import pickle
-
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 # from matplotlib.colors import LogNorm
 # from matplotlib.ticker import LogFormatterMathtext
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 import float_advection_routines as far

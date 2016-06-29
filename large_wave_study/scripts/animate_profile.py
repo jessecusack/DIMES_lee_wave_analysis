@@ -6,22 +6,12 @@ Created on Fri Jun 17 15:15:52 2016
 """
 
 import os
-import sys
 import glob
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-
 import gsw
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import emapex
 from my_savefig import my_savefig
@@ -49,6 +39,7 @@ if not os.path.exists(sdir):
 matplotlib.rc('font', **{'size': 9})
 
 # %% Show...
+
 
 def w_model(params, data):
 

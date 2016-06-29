@@ -7,21 +7,12 @@ Created on Tue Feb  3 10:40:31 2015
 
 import numpy as np
 import scipy as sp
-import sys
 import os
 import glob
 import matplotlib
 from mpl_toolkits import basemap as bm
 import matplotlib.pyplot as plt
 import pickle
-
-lib_path = os.path.abspath('../modules')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
-
-lib_path = os.path.abspath('../../ocean-tools')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
 
 import sandwell
 import emapex
