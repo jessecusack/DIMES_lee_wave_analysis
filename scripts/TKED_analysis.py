@@ -77,13 +77,24 @@ matplotlib.rc('font', **{'size': 8})
 #lc = np.array([100., 40.])
 #btype = 'highpass'
 
-cs = [0.192, 0.159]  # eheight
+#cs = [0.192, 0.159]  # eheight
+#x = np.arange(zmin, 0., dz)
+#xvar = 'eheight'
+#dx = 1.
+#width = 20.
+#lc = np.array([40., 15.])
+#btype = 'bandpass'
+
+cs = [0.146, 0.123]  # timeeheight
 x = np.arange(zmin, 0., dz)
-xvar = 'eheight'
+xvar = 'timeeheight'
 dx = 1.
+hpids = np.arange(50, 150)
 width = 20.
-lc = np.array([40., 15.])
-btype = 'bandpass'
+lc = (100., 40.)
+c = 1.
+btype = 'highpass'
+we = 0.001
 
 hpids = np.arange(10, 50)
 we = 0.001
@@ -107,7 +118,7 @@ for Float, c in zip([E76, E77], cs):
     if xvar == 'time':
         __, __, iZ = Float.get_interp_grid(hpids, x, 'dUTC', 'z')
         __, __, X = Float.get_interp_grid(hpids, x, 'dUTC', 'dist_ctd')
-    if xvar == 'eheight':
+    if xvar == 'eheight' or xvar == 'timeeheight':
         __, __, it = Float.get_interp_grid(hpids, x, 'zw', 'dUTC')
         iZ = np.zeros_like(it)
         X = np.zeros_like(it)
@@ -164,7 +175,7 @@ for Float, c in zip([E76, E77], cs):
                      vmax=-7, alpha=.5)
 
 ax1.set_ylabel('$P$ (mW m$^{-2}$)')
-ax1.yaxis.set_ticks(np.array([0., 5., 10., 15.]))
+ax1.yaxis.set_ticks(np.array([0., 5., 10.]))
 ax1.xaxis.set_ticks([])
 
 ax1.legend(loc='upper right', fontsize=7)
@@ -173,6 +184,7 @@ ax0.fill_between(dctd[::100], bathy[::100],
                  np.nanmin(bathy), color='black', linewidth=2)
 ax0.set_ylim(-4000., 0.)
 ax0.yaxis.set_ticks(np.arange(-4000, 1000, 1000))
+ax0.yaxis.set_ticklabels(['-4', '-3', '-2', '-1', '0'])
 
 fig.subplots_adjust(right=0.8)
 cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
@@ -183,9 +195,13 @@ C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
 ax0.set_xlim(np.min(X), np.max(X))
 
 ax0.set_xlabel('Distance from ridge top (km)')
-ax0.set_ylabel('$z$ (m)')
+ax0.set_ylabel('$z$ (km)')
 
 ax1.set_xlim(*ax0.get_xlim())
+
+fontdict={'size': 10}
+plt.figtext(-0.05, 0.85, 'a)', fontdict=fontdict)
+plt.figtext(-0.05, 0.65, 'b)', fontdict=fontdict)
 
 pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype=('png', 'pdf'),
               fsize='single_col')

@@ -344,6 +344,74 @@ for ax in axs:
 
 pf.my_savefig(fig3, 'timeheight', 'lem_hist', sdir, ftype='png')
 
+# %% Time and effective height.
+
+z = np.arange(zmin, 0., dz)
+xvar = 'timeeheight'
+dx = 1.
+hpids = np.arange(50, 150)
+width = 15.
+lc = (100., 40.)
+c = 1.
+btype = 'highpass'
+we = 0.001
+
+epsilon_76, __, ep_noise_76, flag_76 = \
+    fs.w_scales_float(E76, hpids, xvar, z, width=width, lc=lc, c=c,
+                      btype=btype, we=we, ret_noise=True)
+epsilon_77, __, ep_noise_77, flag_77 = \
+    fs.w_scales_float(E77, hpids, xvar, z, width=width, lc=lc, c=c,
+                      btype=btype, we=we, ret_noise=True)
+
+epsilon_vmp = UK2_vmp['eps'][0][0][:, 25:30].flatten()
+z_vmp = gsw.z_from_p(UK2_vmp['press'][0][0], UK2_vmp['startlat'][0][0][0])
+z_vmp_flat = z_vmp[:, 25:30].flatten()
+use = ~np.isnan(epsilon_vmp) & (z_vmp_flat > zmin) & (z_vmp_flat < zmax)
+use_76 = np.array([list(z < zmax),]*len(hpids)).transpose()
+use_77 = use_76
+
+c_76 = np.median(epsilon_vmp[use])/np.median(epsilon_76[use_76])
+c_77 = np.median(epsilon_vmp[use])/np.median(epsilon_77[use_77])
+
+print("c(4976) = {:1.3f} and c(4977) = {:1.3f}.".format(c_76, c_77))
+
+epsilon_76 *= c_76
+epsilon_77 *= c_77
+ep_noise_76 *= c_76
+ep_noise_77 *= c_77
+
+fig2 = plt.figure()
+plt.semilogx(epsilon_76, z, color='red', alpha=0.2)
+plt.semilogx(epsilon_77, z, color='red', alpha=0.2)
+plt.semilogx(UK2_vmp['eps'][0][0][:, 25:30], z_vmp[:, 25:30], color='grey',
+             alpha=0.5)
+plt.semilogx(ep_noise_76, z, color='red')
+plt.semilogx(ep_noise_77, z, color='red')
+plt.ylim(-1500., 0.)
+
+bins = np.arange(-12., -5, 0.25)
+
+fig3, axs = plt.subplots(3, 1, sharex='col', figsize=(3, 6))
+axs[0].hist(np.log10(epsilon_vmp[use]), bins=bins, color='blue',
+            alpha=0.8, label='VMP')
+axs[1].hist(np.log10(epsilon_76[use_76]).flatten(), bins=bins, color='red',
+            alpha=0.8, label='4976')
+axs[1].hist(np.log10(epsilon_76[~(flag_76 | ~use_76)]), bins=bins,
+            color='green', alpha=0.8, label='4976 above noise')
+axs[2].hist(np.log10(epsilon_77[use_77]).flatten(), bins=bins, color='red',
+            alpha=0.8, label='4977')
+axs[2].hist(np.log10(epsilon_77[~(flag_77 | ~use_77)]), bins=bins,
+            color='green', alpha=0.8, label='4977 above noise')
+axs[2].set_xlabel('$\log_{10}(\epsilon)$ W kg$^{-1}$')
+
+axs[1].text(-7, 0.6, r'c = {:1.3f}'.format(c_76))
+axs[2].text(-7, 0.6, r'c = {:1.3f}'.format(c_77))
+
+for ax in axs:
+    ax.legend()
+
+pf.my_savefig(fig3, 'timeeheight', 'lem_hist', sdir, ftype='png')
+
 # %% Full trajectory of dissipation.
 
 #cs = [0.197, 0.158]  # time
@@ -368,17 +436,85 @@ pf.my_savefig(fig3, 'timeheight', 'lem_hist', sdir, ftype='png')
 #btype = 'highpass'
 #we = 0.001
 
-cs = [0.192, 0.159]  # eheight
+#cs = [0.192, 0.159]  # eheight
+#x = np.arange(zmin, 0., dz)
+#xvar = 'eheight'
+#dx = 1.
+#width = 20.
+#lc = np.array([40., 15.])
+
+z = np.arange(zmin, 0., dz)  # timeeheight
 x = np.arange(zmin, 0., dz)
-xvar = 'eheight'
+xvar = 'timeeheight'
 dx = 1.
+hpids = np.arange(50, 150)
 width = 20.
-lc = np.array([40., 15.])
+lc = (100., 40.)
+c = 1.
+btype = 'highpass'
+we = 0.001
+
+epsilon_76, __, ep_noise_76, flag_76 = \
+    fs.w_scales_float(E76, hpids, xvar, z, width=width, lc=lc, c=c,
+                      btype=btype, we=we, ret_noise=True)
+epsilon_77, __, ep_noise_77, flag_77 = \
+    fs.w_scales_float(E77, hpids, xvar, z, width=width, lc=lc, c=c,
+                      btype=btype, we=we, ret_noise=True)
+
+epsilon_vmp = UK2_vmp['eps'][0][0][:, 25:30].flatten()
+z_vmp = gsw.z_from_p(UK2_vmp['press'][0][0], UK2_vmp['startlat'][0][0][0])
+z_vmp_flat = z_vmp[:, 25:30].flatten()
+use = ~np.isnan(epsilon_vmp) & (z_vmp_flat > zmin) & (z_vmp_flat < zmax)
+use_76 = np.array([list(z < zmax),]*len(hpids)).transpose()
+use_77 = use_76
+
+c_76 = np.median(epsilon_vmp[use])/np.median(epsilon_76[use_76])
+c_77 = np.median(epsilon_vmp[use])/np.median(epsilon_77[use_77])
+
+print("c(4976) = {:1.3f} and c(4977) = {:1.3f}.".format(c_76, c_77))
+
+epsilon_76 *= c_76
+epsilon_77 *= c_77
+ep_noise_76 *= c_76
+ep_noise_77 *= c_77
+
+fig2 = plt.figure()
+plt.semilogx(epsilon_76, z, color='red', alpha=0.2)
+plt.semilogx(epsilon_77, z, color='red', alpha=0.2)
+plt.semilogx(UK2_vmp['eps'][0][0][:, 25:30], z_vmp[:, 25:30], color='grey',
+             alpha=0.5)
+plt.semilogx(ep_noise_76, z, color='red')
+plt.semilogx(ep_noise_77, z, color='red')
+plt.ylim(-1500., 0.)
+
+bins = np.arange(-12., -5, 0.25)
+
+fig3, axs = plt.subplots(3, 1, sharex='col', figsize=(3, 6))
+axs[0].hist(np.log10(epsilon_vmp[use]), bins=bins, color='blue',
+            alpha=0.8, label='VMP')
+axs[1].hist(np.log10(epsilon_76[use_76]).flatten(), bins=bins, color='red',
+            alpha=0.8, label='4976')
+axs[1].hist(np.log10(epsilon_76[~(flag_76 | ~use_76)]), bins=bins,
+            color='green', alpha=0.8, label='4976 above noise')
+axs[2].hist(np.log10(epsilon_77[use_77]).flatten(), bins=bins, color='red',
+            alpha=0.8, label='4977')
+axs[2].hist(np.log10(epsilon_77[~(flag_77 | ~use_77)]), bins=bins,
+            color='green', alpha=0.8, label='4977 above noise')
+axs[2].set_xlabel('$\log_{10}(\epsilon)$ W kg$^{-1}$')
+
+axs[1].text(-7, 0.6, r'c = {:1.3f}'.format(c_76))
+axs[2].text(-7, 0.6, r'c = {:1.3f}'.format(c_77))
+
+for ax in axs:
+    ax.legend()
+
+pf.my_savefig(fig3, xvar, 'lem_hist', sdir, ftype='png')
 
 ####
 
 Float = E77
-c = cs[1]
+c = c_77
+hpids = np.arange(10, 70)
 
 fig = plt.figure(figsize=(7, 4))
 gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
@@ -397,7 +533,7 @@ if xvar == 'time':
     t = np.arange(0., 10000., dx)
     __, __, iZ = Float.get_interp_grid(hpids, t, 'dUTC', 'z')
     __, __, X = Float.get_interp_grid(hpids, t, 'dUTC', 'dist_ctd')
-if xvar == 'eheight':
+if xvar == 'eheight' or xvar == 'timeeheight':
     __, __, it = Float.get_interp_grid(hpids, x, 'zw', 'dUTC')
     iZ = np.zeros_like(it)
     X = np.zeros_like(it)
@@ -412,6 +548,8 @@ for i in xrange(len(idxs)):
     iuse = (iZ[:, i] < -100) & (iZ[:, i] > -1400)
     # The abs function accounts for problems with z being the wrong way.
     ieps[i] = np.abs(1025.*trapz(epsilon[iuse, i], iZ[iuse, i]))
+
+print("Max integrated dissipation: {}".format(np.max(ieps)))
 
 Z = iZ.flatten()
 
