@@ -181,14 +181,20 @@ for Float in [E76, E77]:
     m, Pzs = m[muse], Pzs[muse, :]
     Pts[0, :] = 0.
 
-    ax.loglog(1./m, np.median(Pzs, axis=-1), linewidth=2., alpha=0.7,
-                  label=Float.floatID)
+    if Float.floatID == 4977:
+        label = 'Floats'
+    else:
+        label = None
+
+    ax.loglog(1./m, np.median(Pzs, axis=-1), color='grey', linewidth=2.,
+              alpha=0.7, label=label)
+
 
 # Set up GM spectrum
 IWF = GM.GM(2.2e-3, -1.23e-4)
 GMw = IWF.Sm(m, 'vert_vel')
 
-ax.loglog(1./m, GMw, linewidth=2., label='GM')
+ax.loglog(1./m, GMw, '-k', linewidth=2., label='GM')
 
 ax.legend(loc=0)
 
