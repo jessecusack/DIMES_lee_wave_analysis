@@ -66,7 +66,7 @@ for root, dirnames, filenames in os.walk(dirpath):
 
 # Initial parameters
 V_0 = 2.62e-2
-CA = 5e-2
+CA = 2e-2
 
 if single_mis_file:
     mis = loadmat(mis_file, squeeze_me=True)
@@ -88,6 +88,7 @@ else:
 
 if True:  # Optional override of above initialisation.
     alpha_p = 3.6e-6
+    p_0 = 800.
     alpha_ppos = 1.1e-6
     ppos_0 = 42.
 
@@ -107,14 +108,14 @@ save_name = os.path.join(psdir, name)
 if profiles == 'all':
     print('Fitting drag to up and down profiles together.')
     p0 = np.array([V_0, CA, alpha_p, p_0, alpha_ppos, ppos_0, M])
-    pfixed = [V_0, None, None, p_0, None, None, M]
+    pfixed = [V_0, None, None, p_0, None, ppos_0, M]
 if profiles == 'updown':
     print('Fitting drag to up and down profiles separately.')
     p0 = np.array([V_0, CA, CA, alpha_p, p_0, alpha_ppos, ppos_0, M])
-    pfixed = [V_0, None, None, None, p_0, None, None, M]
+    pfixed = [V_0, None, None, None, None, None, None, M]
 
 wfi = vvf.fitter(Float, p0, pfixed, profiles=profiles, save_name=save_name,
-                 N_bootstrap=100, method='TNC')
+                 N_bootstrap=200, method='Nelder-Mead')
 print("Fitting completed, starting assessment.")
 
 Float.apply_w_model(wfi)
