@@ -31,83 +31,101 @@ except NameError:
 
 # %% ##########################################################################
 
-# cf_key = 'diffsq'
-# params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-# fixed = [None, None, None, None, None, None, None]
-# wfi = vvf.fitter(E76, params0, fixed, model=model, profiles='all',
-#                 cf_key=cf_key)
-# E76.apply_w_model(wfi)
-# vvf.assess_w_fit(E76, str(E76.floatID))
-# print(E76.__wfi.p)
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, None, None, None]
+#wfi = vvf.fitter(E76, params0, fixed, model=model, profiles='all',
+#                cf_key=cf_key)
+#E76.apply_w_model(wfi)
+#vvf.assess_w_fit(E76, str(E76.floatID))
+#print(E76.__wfi.p)
 #
-# cf_key = 'diffsq'
-# params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-# fixed = [None, None, None, None, None, None, None]
-# wfi = vvf.fitter(E77, params0, fixed, model=model, profiles='all',
-#                 cf_key=cf_key)
-# E77.apply_w_model(wfi)
-# vvf.assess_w_fit(E77, str(E77.floatID))
-# print(E77.__wfi.p)
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, None, None, None]
+#wfi = vvf.fitter(E77, params0, fixed, model=model, profiles='all',
+#                cf_key=cf_key)
+#E77.apply_w_model(wfi)
+#vvf.assess_w_fit(E77, str(E77.floatID))
+#print(E77.__wfi.p)
 
 # %% ##########################################################################
 
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, None, None, 27.179]
-wfi = vvf.fitter(E76, params0, fixed, model=model, profiles='all',
-                 cf_key=cf_key)
-E76.apply_w_model(wfi)
-vvf.assess_w_fit(E76, str(E76.floatID)+'_fix_M')
-print(E76.__wfi['p'])
-
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, None, None, 27.179]
-wfi = vvf.fitter(E77, params0, fixed, model=model, profiles='all',
-                 cf_key=cf_key)
-E77.apply_w_model(wfi)
-vvf.assess_w_fit(E77, str(E77.floatID)+'_fix_M')
-print(E77.__wfi['p'])
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, None, None, 27.179]
+#wfi = vvf.fitter(E76, params0, fixed, profiles='all', cf_key=cf_key)
+#E76.apply_w_model(wfi)
+#vvf.assess_w_fit(E76, save_figures=False, save_id='4976_fix_M', save_dir=sdir,
+#                 save_name='4976_fix_M_wfi.p')
+#print(E76.__wfi['p'])
+#
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, None, None, 27.179]
+#wfi = vvf.fitter(E77, params0, fixed, profiles='all', cf_key=cf_key, 
+#                 save_name='4977_fix_M_wfi.p')
+#E77.apply_w_model(wfi)
+#vvf.assess_w_fit(E77, save_figures=False, save_id='4977_fix_M', save_dir=sdir)
+#print(E77.__wfi['p'])
 
 # %% ##########################################################################
-
+# ALL
 cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, 2000., None, 16, 27.179]
+p0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+pfixed = [None, None, None, 2000., None, 16, 27.179]
 Plims = (60., 1500.)
 hpids = np.arange(50, 151)
 
-wfi = vvf.fitter(E76, hpids, params0, fixed, Plims=Plims, profiles='all',
-                 cf_key=cf_key)
+wfi = vvf.fitter(E76, p0, pfixed, hpids=hpids, Plims=Plims, profiles='all',
+                 cf_key=cf_key, save_name='4976_fix_p0k0M_wfi.p')
 E76.apply_w_model(wfi)
-vvf.assess_w_fit(E76, str(E76.floatID)+'_fix_p0k0M')
+vvf.assess_w_fit(E76, save_figures=True, save_id='4976_fix_p0k0M', save_dir=sdir)
 print(E76.__wfi['p'])
 
-wfi = vvf.fitter(E77, hpids, params0, fixed, Plims=Plims, profiles='all',
-                 cf_key=cf_key)
+wfi = vvf.fitter(E77, p0, pfixed, hpids=hpids, Plims=Plims, profiles='all',
+                 cf_key=cf_key, save_name='4977_fix_p0k0M_wfi.p')
 E77.apply_w_model(wfi)
-vvf.assess_w_fit(E77, str(E77.floatID)+'_fix_p0k0M')
+vvf.assess_w_fit(E77, save_figures=True, save_id='4977_fix_p0k0M', save_dir=sdir)
+print(E77.__wfi['p'])
+
+# %% ##########################################################################
+# UP DOWN SEPARATE
+cf_key = 'diffsq'
+p0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+pfixed = [None, None, None, 2000., None, 16, 27.179]
+Plims = (60., 1500.)
+hpids = np.arange(50, 151)
+
+wfi = vvf.fitter(E76, p0, pfixed, hpids=hpids, Plims=Plims, profiles='updown',
+                 cf_key=cf_key, save_name='4976_fix_p0k0M_ud_wfi.p')
+E76.apply_w_model(wfi)
+vvf.assess_w_fit(E76, save_figures=True, save_id='4976_fix_p0k0M_ud', save_dir=sdir)
+print(E76.__wfi['p'])
+
+wfi = vvf.fitter(E77, p0, pfixed, hpids=hpids, Plims=Plims, profiles='updown',
+                 cf_key=cf_key, save_name='4977_fix_p0k0M_ud_wfi.p')
+E77.apply_w_model(wfi)
+vvf.assess_w_fit(E77, save_figures=True, save_id='4977_fix_p0k0M_ud', save_dir=sdir)
 print(E77.__wfi['p'])
 
 # %% ##########################################################################
 
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, 1.156e-6, None, 27.179]
-wfi = vvf.fitter(E76, params0, fixed, model=model, profiles='all',
-                 cf_key=cf_key)
-E76.apply_w_model(wfi)
-vvf.assess_w_fit(E76, str(E76.floatID)+'_fix_alphakM')
-print(E76.__wfi['p'])
-
-cf_key = 'diffsq'
-params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
-fixed = [None, None, None, None, 1.156e-6, None, 27.179]
-wfi = vvf.fitter(E77, params0, fixed, model=model, profiles='all',
-                 cf_key=cf_key)
-E77.apply_w_model(wfi)
-vvf.assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
-print(E77.__wfi['p'])
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, 1.156e-6, None, 27.179]
+#wfi = vvf.fitter(E76, params0, fixed, profiles='all', cf_key=cf_key)
+#E76.apply_w_model(wfi)
+#vvf.assess_w_fit(E76, str(E76.floatID)+'_fix_alphakM')
+#print(E76.__wfi['p'])
+#
+#cf_key = 'diffsq'
+#params0 = np.array([3e-2, 5e-2, 3e-6, 4e+2, 1e-6, 16., 27.179])
+#fixed = [None, None, None, None, 1.156e-6, None, 27.179]
+#wfi = vvf.fitter(E77, params0, fixed, profiles='all', cf_key=cf_key)
+#E77.apply_w_model(wfi)
+#vvf.assess_w_fit(E77, str(E77.floatID)+'_fix_alphakM')
+#print(E77.__wfi['p'])
 
 # %% ##########################################################################
 #
