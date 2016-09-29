@@ -13,7 +13,7 @@ import os
 import glob
 import pickle
 import gsw
-import triangle
+import corner
 import pymc
 
 import emapex
@@ -152,7 +152,7 @@ Z = np.hstack((M1.trace('Z')[:], M2.trace('Z')[:], M3.trace('Z')[:], M4.trace('Z
 phi_0 = np.hstack((M1.trace('phi_0')[:], M2.trace('phi_0')[:],
                    M3.trace('phi_0')[:], M4.trace('phi_0')))
 
-triangle.corner(np.transpose(np.asarray([X, Y, Z, phi_0])),
+corner.corner(np.transpose(np.asarray([X, Y, Z, phi_0])),
                 labels=['$\lambda_x$ (m)', '$\lambda_y$ (m)',
                         '$\lambda_z$ (m)', '$\phi_0$ (m$^2$ s$^{-2}$)'])
 
@@ -601,7 +601,7 @@ samples = 10000000
 burn = 9800000
 thin = 10
 
-fig, axs = plt.subplots(2, 5, sharey=True, sharex='col', figsize=(3.125, 3))
+fig, axs = plt.subplots(2, 5, sharey='row', sharex='col', figsize=(3.125, 3))
 #fig.tight_layout()
 
 for i in xrange(2):
@@ -663,6 +663,7 @@ for i in xrange(2):
 
     time *= 60.*60.*24
     time -= np.min(time)
+    thrs = time/3600
 
     data = [time, x, y, z, Umean, Vmean, N, f]
 
@@ -706,7 +707,7 @@ for i in xrange(2):
     # Plot fit comparison.
     z = z.copy()/1000.
 
-    axs[i, 0].set_ylabel('$z$ (km)')
+    axs[i, 0].set_ylabel('$t$ (hours)')
     axs[i, 0].set_title(str(Float.floatID) + ' P ' + str(hpid))
 
     Ns = (samples - burn)/thin
@@ -719,19 +720,19 @@ for i in xrange(2):
         else:
             label = None
         alpha = 0.9
-        axs[i, 0].plot(100.*u_model(params, data), z, color='red', alpha=alpha, label=label)
-        axs[i, 1].plot(100.*v_model(params, data), z, color='red', alpha=alpha, label=label)
-        axs[i, 2].plot(100.*w_model(params, data), z, color='red', alpha=alpha, label=label)
-        axs[i, 3].plot(10000.*b_model(params, data), z, color='red', alpha=alpha, label=label)
-        axs[i, 4].plot(100.*p_model(params, data), z, color='red', alpha=alpha, label=label)
+        axs[i, 0].plot(100.*u_model(params, data), thrs, color='red', alpha=alpha, label=label)
+        axs[i, 1].plot(100.*v_model(params, data), thrs, color='red', alpha=alpha, label=label)
+        axs[i, 2].plot(100.*w_model(params, data), thrs, color='red', alpha=alpha, label=label)
+        axs[i, 3].plot(10000.*b_model(params, data), thrs, color='red', alpha=alpha, label=label)
+        axs[i, 4].plot(100.*p_model(params, data), thrs, color='red', alpha=alpha, label=label)
 
     label = 'obs'
     alpha = 0.9
-    axs[i, 0].plot(100.*U, z, color='black', alpha=alpha, label=label)
-    axs[i, 1].plot(100.*V, z, color='black', alpha=alpha, label=label)
-    axs[i, 2].plot(100.*W, z, color='black', alpha=alpha, label=label)
-    axs[i, 3].plot(10000.*B, z, color='black', alpha=alpha, label=label)
-    axs[i, 4].plot(100.*PP, z, color='black', alpha=alpha, label=label)
+    axs[i, 0].plot(100.*U, thrs, color='black', alpha=alpha, label=label)
+    axs[i, 1].plot(100.*V, thrs, color='black', alpha=alpha, label=label)
+    axs[i, 2].plot(100.*W, thrs, color='black', alpha=alpha, label=label)
+    axs[i, 3].plot(10000.*B, thrs, color='black', alpha=alpha, label=label)
+    axs[i, 4].plot(100.*PP, thrs, color='black', alpha=alpha, label=label)
 
 axs[1, 0].set_xlabel('$u^\prime$\n(cm s$^{-1}$)')
 axs[1, 0].set_xlim(-30., 30.)
