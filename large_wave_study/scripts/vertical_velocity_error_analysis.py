@@ -39,9 +39,14 @@ t1, w1 = E76.get_timeseries(np.arange(50, 150), 'Ww')
 t2, w2 = E77.get_timeseries(np.arange(50, 150), 'Ww')
 __, z1 = E76.get_timeseries(np.arange(50, 150), 'z')
 __, z2 = E77.get_timeseries(np.arange(50, 150), 'z')
+__, wwave1 = E76.get_timeseries(np.arange(28, 37), 'Ww')
+__, wwave2 = E77.get_timeseries(np.arange(22, 30), 'Ww')
+__, zwave1 = E76.get_timeseries(np.arange(28, 37), 'z')
+__, zwave2 = E77.get_timeseries(np.arange(22, 30), 'z')
 
 zmin = -50.  # Remove top number of m.
 w_combined = 100.*np.hstack((w1[z1 < zmin], w2[z2 < zmin]))
+wwave_combined = 100.*np.hstack((wwave1[zwave1 < zmin], wwave2[zwave2 < zmin]))
 meanw = np.mean(w_combined)
 stdw = np.std(w_combined)
 dist = sp.stats.norm(loc=meanw, scale=stdw)
@@ -53,15 +58,19 @@ bins = np.arange(-8., 8.1, 0.1)
 
 fig, ax = plt.subplots(1, 1, figsize=(3.125, 3))
 n, __, patches = ax.hist(w_combined, bins=bins, normed=True, histtype='step',
-                         color='black')
-#ax.plot(bins, dist.pdf(bins), linestyle=':', color='black')
+                         color='black', label='Far')
+__, __, __ = ax.hist(wwave_combined, bins=bins, normed=True, histtype='step',
+                     color='grey', linestyle='-', label='Near')
+gaus = n.max()*np.exp(-bins**2/(2*np.var(w_combined)))
+ax.plot(bins, gaus, color='grey', label='Gaus')
+
 ax.set_xlabel('$w$ (cm s$^{-1}$)')
 ax.set_xlim(np.min(bins), np.max(bins))
 ax.annotate(r"Mean = {:1.2f} $\pm$ {:1.1f} cm s$^{{-1}}$".format(meanw, stdw),
             (-7., 0.5))
 
 ax.set_ylabel('Probability density')
-
+ax.legend(loc=2)
 pf.my_savefig(fig, 'both', 'w_hist', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
 
