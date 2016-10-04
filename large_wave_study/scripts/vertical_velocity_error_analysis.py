@@ -21,9 +21,9 @@ try:
     print("Floats {} and {}.".format(E76.floatID, E77.floatID))
 except NameError:
     E76 = emapex.load(4976)
-    E76.generate_regular_grids(dz=1.)
+#    E76.generate_regular_grids(dz=1.)
     E77 = emapex.load(4977)
-    E77.generate_regular_grids(dz=1.)
+#    E77.generate_regular_grids(dz=1.)
 
 # Figure save path.
 sdir = os.path.join('..', 'figures', 'vertical_velocity_analysis')
@@ -175,33 +175,48 @@ for Float in [E76, E77]:
     ng, __, wt = Float.get_interp_grid(hpids, z, 'z', 'Ww')
 
     m, Pzs = sp.signal.periodogram(wt, fs=1./dz, window=window, axis=0)
+    # Convert to angular units
+    Pzs /= 2.*np.pi
 
     # Chop interpolation noise.
     muse = m < 1./zres
     m, Pzs = m[muse], Pzs[muse, :]
-    Pts[0, :] = 0.
+    Pzs[0, :] = 0.
 
     if Float.floatID == 4977:
         label = 'Floats'
     else:
         label = None
 
-    ax.loglog(1./m, np.median(Pzs, axis=-1), color='grey', linewidth=2.,
-              alpha=0.7, label=label)
+#    mean = np.
+#    median = np.median(Pzs, axis=-1)
+#    std = np.std(Pzs, axis=-1)
+
+    # convert to angular units
+    m *= 2.*np.pi
+
+    ax.loglog(m, Pzs, color='grey', linewidth=2.,
+              alpha=0.01, label=None)
+    ax.loglog(m, np.median(Pzs, axis=-1), '-k', linewidth=2.,
+              alpha=1, label=label)
 
 
 # Set up GM spectrum
-IWF = GM.GM(2.2e-3, -1.23e-4)
-GMw = IWF.Sm(m, 'vert_vel')
+N = 2.2e-3
+f = -1.23e-4
+#IWF = GM.GM(N, f)
+#GMw = IWF.Sm(m/(2.*np.pi), 'vert_vel')
+GMw2 = GM.E_VKE(m, f, N, b_=1000)
 
-ax.loglog(1./m, GMw, '-k', linewidth=2., label='GM')
+ax.loglog(m, GMw2, '--k', linewidth=2., label='GM')
+#ax.loglog(m, GMw2, '--r', linewidth=2., label='GM2')
 
 ax.legend(loc=0)
 
-ax.set_xlim(10, 2000)
-
-ax.set_ylabel('Vertical kinetic energy density (m$^{3}$ s$^{-2}$)')
-ax.set_xlabel('Vertical wavelength (m)')
+ax.set_xlim(3e-3, .5)
+ax.set_ylim(1e-7, 1e-1)
+ax.set_ylabel('Vertical kinetic energy density (m$^{2}$ s$^{-2}$ (rad m$^{-1}$)$^{-1}$)')
+ax.set_xlabel('Vertical wavenumber (rad m$^{-1}$)')
 pf.my_savefig(fig, 'both', 'w_spec_GM', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
 
