@@ -15,7 +15,7 @@ from scipy.integrate import trapz
 
 import emapex
 import TKED_parameterisations as fs
-import plotting_functions as pf
+import plotting_functions as pf  # my_savefig
 import sandwell
 
 zmin = -1450.
@@ -25,9 +25,9 @@ try:
     print("Floats {} and {} exist!.".format(E76.floatID, E77.floatID))
 except NameError:
     E76 = emapex.load(4976)
-    E76.generate_regular_grids(zmin=zmin, dz=dz)
+#    E76.generate_regular_grids(zmin=zmin, dz=dz)
     E77 = emapex.load(4977)
-    E77.generate_regular_grids(zmin=zmin, dz=dz)
+#    E77.generate_regular_grids(zmin=zmin, dz=dz)
 
 # %% Script params.
 
