@@ -37,41 +37,12 @@ matplotlib.rc('font', **{'size': 8})
 
 # %%
 
-def VKE_method(z, w):
-    m0 = 1.
-    c = 0.021
-    C = c*m0**2
-    width = 320.
-    overlap = 160.
-    zmin = np.min(z)
-    wdws = wdw.window(x, wp, width, overlap, cap_left=True, cap_right=True)
-    epsilon = []
-    z_mid = []
-    z_mean = []
-    for i, (z_, w_) in enumerate(wdws):
-        m, VKE = sig.periodogram(w_)
-        VKE /= 2*np.pi
-        m *= 2*np.pi
-        mc = 0.1
-        use = (m < mc) & (m != 0)
-        VKE = VKE[use]
-        m = m[use]
-        B = np.polyfit(np.zeros(len(VKE)), np.log(VKE) + 2*np.log(m), 0)
-        p0 = np.exp(B)
-        eps = (p0/C)**2
-        epsilon.append(eps)
-        z_mid.append(zmin + (i + 1)*width/2.)  # WRONG FIX IT
-        z_mean.append(np.mean(z_))
-
-    return z_mid, z_mean, epsilon
-
-
-hpid = 32
-Float = E76
+hpid = 26
+Float = E77
 #c = 0.146  # 4976
-#c = 0.123  # 4977
+c = 0.123  # 4977
 # eheight
-c = 0.192  # 4976
+#c = 0.192  # 4976
 #c = 0.159  # 4977
 
 pfl = Float.get_profiles(hpid)
@@ -87,31 +58,44 @@ ws = pfl.Ws[nnan]
 
 rho_1s = np.sort(rho_1)[::-1]
 
-thorpe_scales, thorpe_disp, x_sorted, idxs = TKED.thorpe_scales(zw, rho_1)
+
+###############################################################################
+# Thorpe
+thorpe_scales, thorpe_disp, x_sorted, idxs = TKED.thorpe_scales(zw, rho_1, acc=3e-3)
 eps_thorpe = 0.8*thorpe_scales**2 * N2_ref**(3./2.)
 
+width = 200.
+binned = wdw.window(zw, eps_thorpe, width=width, overlap=width/2)
+eps_av = np.zeros(len(binned))
+z_av = np.zeros(len(binned))
+for i, (z_, ep_) in enumerate(binned):
+    eps_av[i] = np.trapz(ep_, z_)/width
+    z_av[i] = np.mean(z_)
+
+###############################################################################
+# LEM
 zmin = np.ceil(np.min(zw))
 zmax = np.floor(np.max(zw))
 dz = 1.
 
 x = np.arange(zmin, zmax, dz)
 ####
+overlap = -1
 
-
-xvar = 'eheight'
-dx = 1.
-width = 10.
-lc = 30.
-btype = 'highpass'
-we = 0.001
-###
-#xvar = 'timeeheight'
+#xvar = 'eheight'
 #dx = 1.
-#width = 20.
-#lc = (100., 40.)
-#c = 1.
+#width = 10.
+#lc = 30.
 #btype = 'highpass'
 #we = 0.001
+###
+xvar = 'timeeheight'
+dx = 1.
+width = 20.
+lc = (100., 40.)
+c = 1.
+btype = 'highpass'
+we = 0.001
 
 
 if xvar == 'time':
@@ -153,12 +137,16 @@ normal_cutoff = xc*dx*2.  # Nyquist frequency is half 1/dx.
 b, a = sig.butter(4, normal_cutoff, btype=btype)
 w_filt = sig.filtfilt(b, a, wp)
 
-
 eps_lem, __, eps_lem_noise, noise_flag = \
-    TKED.w_scales(wp, x, N2p, dx, width, lc, c, 0.2, btype, we, True)
+    TKED.w_scales(wp, x, N2p, dx, width, overlap, lc, c, 0.2, btype, we, True)
 
-z_mid, z_mean, eps_VKE = VKE_method(x, wp)
+###############################################################################
+# VKE
+width = 320.
+overlap = width/2.
+z_mid, eps_VKE = TKED.VKE_method(x, wp, width, overlap)
 
+###############################################################################
 fig, axs = plt.subplots(1, 6, sharey='row')
 axs[0].plot(rho_1, zw, 'k')
 axs[0].plot(rho_1s, zw, 'r')
@@ -170,7 +158,8 @@ axs[2].plot(w_filt, x, 'k')
 axs[3].plot(wz, zw, 'k')
 axs[3].plot(ws, zw, 'r')
 axs[4].plot(thorpe_scales, zw, 'k')
-axs[5].semilogx(eps_lem_noise, x, 'r')
-axs[5].semilogx(eps_thorpe, zw, 'k')
-axs[5].semilogx(eps_lem, x, 'b')
-axs[5].semilogx(eps_VKE, z_mean, 'g')
+axs[5].semilogx(eps_lem_noise, x, 'grey')
+axs[5].semilogx(eps_thorpe, zw, 'y', linestyle='none', marker='.')
+axs[5].semilogx(eps_av, z_av, 'yo-')
+axs[5].semilogx(eps_lem, x, 'k')
+axs[5].semilogx(eps_VKE, z_mid, 'go-')
