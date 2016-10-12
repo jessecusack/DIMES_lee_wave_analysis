@@ -10,7 +10,7 @@ import numpy as np
 import scipy.signal as sig
 import matplotlib
 import matplotlib.pyplot as plt
-
+import gsw
 import emapex
 import TKED_parameterisations as TKED
 import plotting_functions as pf
@@ -36,8 +36,34 @@ if not os.path.exists(sdir):
 matplotlib.rc('font', **{'size': 8})
 
 # %%
+# Estimate density measurement error.
+Terr = 0.002
+Tmean = 3.5
+Serr = 0.002
+Smean = 34.2
+P = 1000.
+P_ref = 1000.
+lon = -60.
+lat = -56.
 
-hpid = 26
+Tr = np.random.normal(Tmean, Terr, 1000)
+Sr = np.random.normal(Smean, Serr, 1000)
+
+SAr = gsw.SA_from_SP(Sr, P, lon, lat)
+CTr = gsw.CT_from_t(SAr, Tr, P)
+rho1r = gsw.rho(SAr, CTr, P_ref)
+
+#fig, axs = plt.subplots(1, 3)
+#axs[0].hist(SAr - SAr.mean())
+#axs[1].hist(CTr - CTr.mean())
+#axs[2].hist(rho1r - rho1r.mean())
+
+print("Standard dev rho1 {}".format(rho1r.std()))
+
+
+# %%
+
+hpid = 46
 Float = E77
 #c = 0.146  # 4976
 c = 0.123  # 4977
@@ -60,8 +86,15 @@ rho_1s = np.sort(rho_1)[::-1]
 
 
 ###############################################################################
-# Thorpe
-thorpe_scales, thorpe_disp, x_sorted, idxs = TKED.thorpe_scales(zw, rho_1, acc=3e-3)
+# %% Thorpe
+
+__, __, rho_1_av = TKED.intermediate_profile(rho_1, 1030., 2e-3)
+
+#fig, ax = plt.subplots(1, 1)
+#ax.plot(rho_1, zw, rho_1_lr, zw, rho_1_rl, zw, rho_1_av, zw)
+
+
+thorpe_scales, thorpe_disp, x_sorted, idxs = TKED.thorpe_scales(zw, rho_1_av, R0=0.25)
 eps_thorpe = 0.8*thorpe_scales**2 * N2_ref**(3./2.)
 
 width = 200.
@@ -73,7 +106,7 @@ for i, (z_, ep_) in enumerate(binned):
     z_av[i] = np.mean(z_)
 
 ###############################################################################
-# LEM
+# %% LEM
 zmin = np.ceil(np.min(zw))
 zmax = np.floor(np.max(zw))
 dz = 1.
@@ -141,12 +174,13 @@ eps_lem, __, eps_lem_noise, noise_flag = \
     TKED.w_scales(wp, x, N2p, dx, width, overlap, lc, c, 0.2, btype, we, True)
 
 ###############################################################################
-# VKE
+# %% VKE
 width = 320.
 overlap = width/2.
 z_mid, eps_VKE = TKED.VKE_method(x, wp, width, overlap)
 
 ###############################################################################
+# %% Plot
 fig, axs = plt.subplots(1, 6, sharey='row')
 axs[0].plot(rho_1, zw, 'k')
 axs[0].plot(rho_1s, zw, 'r')
@@ -157,9 +191,11 @@ axs[2].vlines(0., *axs[2].get_ylim())
 axs[2].plot(w_filt, x, 'k')
 axs[3].plot(wz, zw, 'k')
 axs[3].plot(ws, zw, 'r')
+axs[4].plot(thorpe_disp, zw, 'grey')
 axs[4].plot(thorpe_scales, zw, 'k')
-axs[5].semilogx(eps_lem_noise, x, 'grey')
-axs[5].semilogx(eps_thorpe, zw, 'y', linestyle='none', marker='.')
-axs[5].semilogx(eps_av, z_av, 'yo-')
-axs[5].semilogx(eps_lem, x, 'k')
-axs[5].semilogx(eps_VKE, z_mid, 'go-')
+axs[5].plot(np.log10(eps_lem_noise), x, 'grey')
+axs[5].plot(np.log10(eps_thorpe), zw, 'y', linestyle='none', marker='.')
+axs[5].plot(np.log10(eps_av), z_av, 'yo-')
+axs[5].plot(np.log10(eps_lem), x, 'k')
+axs[5].plot(np.log10(eps_VKE), z_mid, 'go-')
+axs[5].grid()
