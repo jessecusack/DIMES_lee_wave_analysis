@@ -12,9 +12,11 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from scipy.integrate import trapz
+from scipy.stats import binned_statistic
 
 import emapex
-import TKED_parameterisations as fs
+import misc_data_processing as mdp
+import TKED_parameterisations as TKED
 import plotting_functions as pf  # my_savefig
 import sandwell
 
@@ -32,7 +34,7 @@ except NameError:
 # %% Script params.
 
 # Bathymetry file path.
-bf = os.path.abspath(glob.glob('../../storage/smith_sandwell/topo_*.img')[0])
+bf = os.path.abspath(glob.glob('../../../storage/smith_sandwell/topo_*.img')[0])
 # Figure save path.
 sdir = '../figures/TKED_estimation'
 if not os.path.exists(sdir):
@@ -80,7 +82,7 @@ cs = [0.146, 0.123]  # timeeheight
 x = np.arange(zmin, 0., dz)
 xvar = 'timeeheight'
 dx = 1.
-hpids = np.arange(50, 150)
+hpids = np.arange(10, 52)
 width = 20.
 lc = (100., 40.)
 c = 1.
@@ -99,10 +101,10 @@ for Float, c in zip([E76, E77], cs):
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
-    epsilon, kappa, __, noise = fs.w_scales_float(Float, hpids, xvar, x,
-                                                  width=width, lc=lc, c=c,
-                                                  btype=btype, we=we,
-                                                  ret_noise=True)
+    epsilon, kappa, __, noise = mdp.w_scales_float(Float, hpids, xvar, x,
+                                                   width=width, overlap=-1.,
+                                                   lc=lc, c=c, btype=btype,
+                                                   we=we, ret_noise=True)
 
     ieps = 0.*np.zeros_like(idxs)
 
@@ -199,7 +201,105 @@ pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype=('png', 'pdf'),
 
 
 # %% Using Thorpe scales
-#fs.thorpe_scales()
+
+
+hpids = np.arange(10, 52, 2)
+zvar = 'zw'
+dbin = 200.
+bins = np.arange(-1500., -100. + dbin, dbin)
+eps_av = np.zeros((len(bins) - 1, len(hpids)))
+z_av = np.zeros((len(bins) - 1, len(hpids)))
+d_av = np.zeros((len(bins) - 1, len(hpids)))
+
+fig = plt.figure(figsize=(3.125, 3))
+gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
+ax0 = plt.subplot(gs[1])
+ax1 = plt.subplot(gs[0])
+
+for Float in [E76, E77]:
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+
+    N2_ref = Float.N2_ref[:, idxs]
+    z = getattr(Float, zvar)[:, idxs]
+    d = getattr(Float, 'dist_ctd')[:, idxs]
+
+    ts, td = mdp.thorpe_float(Float, hpids, zvar=zvar)
+
+    eps_thorpe = 0.8*ts**2 * N2_ref**(3./2.)
+
+#    LOG_EPS = np.log10(eps_thorpe).flatten(order='F')
+#    Z = z.flatten(order='F')
+#    X = Float.dist_ctd[:, idxs].flatten(order='F')
+
+    ieps = 0.*np.zeros_like(idxs)
+
+    for i in xrange(len(idxs)):
+        eps_av[:, i], __, __ = binned_statistic(z[:, i], eps_thorpe[:, i], statistic=np.nanmean, bins=bins)
+        z_av[:, i], __, __ = binned_statistic(z[:, i], z[:, i], statistic=np.nanmean, bins=bins)
+        d_av[:, i], __, __ = binned_statistic(z[:, i], d[:, i], statistic=np.nanmean, bins=bins)
+
+        eps_av[:, i] *= 2./dbin
+
+#        iuse = (z[:, i] < -100) & (z[:, i] > -1400)
+        # The abs function accounts for problems with z being the wrong way.
+        ieps[i] = np.abs(1025.*trapz(eps_av[:, i], z_av[:, i]))
+
+
+    # Plotting #
+    # Epsilon
+    lon = getattr(Float, 'lon_start')[idxs]
+    lat = getattr(Float, 'lat_start')[idxs]
+    bathy = sandwell.interp_track(lon, lat, bf)
+    dbathymax = Float.dist[idxs][bathy.argmax()]
+
+    pdist = Float.dist[idxs] - dbathymax
+
+    ax1.plot(pdist, 1000.*ieps, label=Float.floatID)
+
+    LOG_EPS_AV = np.ma.masked_invalid(np.log10(eps_av))
+
+#    LOG_EPS[~np.isfinite(LOG_EPS)] = np.NaN
+
+    sc = ax0.pcolormesh(d_av - dbathymax, z_av, LOG_EPS_AV, cmap=plt.get_cmap('YlOrRd'), vmin=-10.,
+                        vmax=-7, alpha=.5)
+
+#    step = 1
+#    sc = ax0.scatter(X[::step], Z[::step], s=5, c=LOG_EPS[::step],
+#                     edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-10.,
+#                     vmax=-7, alpha=.5)
+
+ax1.set_ylabel('$P$ (mW m$^{-2}$)')
+#ax1.yaxis.set_ticks(np.array([0., 5., 10.]))
+ax1.xaxis.set_ticks([])
+
+ax1.legend(loc='upper left', fontsize=7)
+
+ax0.fill_between(pdist, bathy, np.nanmin(bathy), color='black', linewidth=2)
+ax0.set_ylim(-4000., 0.)
+ax0.yaxis.set_ticks(np.arange(-4000, 1000, 1000))
+ax0.yaxis.set_ticklabels(['-4', '-3', '-2', '-1', '0'])
+
+fig.subplots_adjust(right=0.8)
+cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
+C = fig.colorbar(sc, cax=cbar_ax, extend='both')
+C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
+
+plt.clim(-11., -7.)
+ax0.set_xlim(np.min(X), np.max(X))
+
+ax0.set_xlabel('Distance from ridge top (km)')
+ax0.set_ylabel('$z$ (km)')
+
+ax1.set_xlim(*ax0.get_xlim())
+
+fontdict={'size': 10}
+plt.figtext(-0.05, 0.85, 'a)', fontdict=fontdict)
+plt.figtext(-0.05, 0.65, 'b)', fontdict=fontdict)
+
+#pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype=('png', 'pdf'),
+#              fsize='single_col')
+
 
 # %% Using finescale parameterisation
 

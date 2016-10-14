@@ -63,10 +63,10 @@ print("Standard dev rho1 {}".format(rho1r.std()))
 
 # %%
 
-hpid = 46
-Float = E77
-#c = 0.146  # 4976
-c = 0.123  # 4977
+hpid = 111
+Float = E76
+c = 0.146  # 4976
+#c = 0.123  # 4977
 # eheight
 #c = 0.192  # 4976
 #c = 0.159  # 4977
@@ -82,23 +82,36 @@ w = pfl.Ww[nnan]
 wz = pfl.Wz[nnan]
 ws = pfl.Ws[nnan]
 
-rho_1s = np.sort(rho_1)[::-1]
-
-
 ###############################################################################
 # %% Thorpe
 
-__, __, rho_1_av = TKED.intermediate_profile(rho_1, 1030., 2e-3)
+rho_1_td, rho_1_bu, rho_1_av = TKED.intermediate_profile(rho_1, 1030., 2e-3)
 
-#fig, ax = plt.subplots(1, 1)
-#ax.plot(rho_1, zw, rho_1_lr, zw, rho_1_rl, zw, rho_1_av, zw)
-
-
-thorpe_scales, thorpe_disp, x_sorted, idxs = TKED.thorpe_scales(zw, rho_1_av, R0=0.25)
+R0 = 0.25
+acc = 2e-3
+thorpe_scales, thorpe_disp, Ls, R, rho_1s, __ = \
+    TKED.thorpe_scales(-zw, rho_1, R0=R0, acc=acc, full_output=True)
+L_o, L_neg, L_pos = Ls
 eps_thorpe = 0.8*thorpe_scales**2 * N2_ref**(3./2.)
 
+fig, axs = plt.subplots(1, 3, figsize=(6.5, 3), sharey='row')
+axs[0].plot(rho_1, zw, label='original')
+#axs[0].plot(rho_1_td, zw, label='int td')
+#axs[0].plot(rho_1_bu, zw, label='int bu')
+axs[0].plot(rho_1_av, zw, label='int av')
+axs[0].plot(rho_1s, zw, label='sorted')
+axs[0].legend(loc=0)
+axs[1].plot(thorpe_disp, zw, 'yo-')
+axs[1].plot(thorpe_scales, zw, 'k')
+axs[1].plot(L_o, zw, 'b')
+axs[1].plot(L_neg, zw, 'r')
+axs[1].plot(L_pos, zw, 'g')
+axs[2].plot(R, zw)
+axs[2].vlines(R0, *axs[2].get_ylim())
+
+
 width = 200.
-binned = wdw.window(zw, eps_thorpe, width=width, overlap=width/2)
+binned = wdw.window(zw, eps_thorpe, width=width, overlap=0)
 eps_av = np.zeros(len(binned))
 z_av = np.zeros(len(binned))
 for i, (z_, ep_) in enumerate(binned):
@@ -181,8 +194,9 @@ z_mid, eps_VKE = TKED.VKE_method(x, wp, width, overlap)
 
 ###############################################################################
 # %% Plot
-fig, axs = plt.subplots(1, 6, sharey='row')
+fig, axs = plt.subplots(1, 6, figsize=(6.5, 3), sharey='row')
 axs[0].plot(rho_1, zw, 'k')
+axs[0].plot(rho_1_av, zw, 'k:')
 axs[0].plot(rho_1s, zw, 'r')
 axs[1].vlines(0., *axs[2].get_ylim())
 axs[1].plot(N2, zw, 'k')
@@ -193,6 +207,8 @@ axs[3].plot(wz, zw, 'k')
 axs[3].plot(ws, zw, 'r')
 axs[4].plot(thorpe_disp, zw, 'grey')
 axs[4].plot(thorpe_scales, zw, 'k')
+#axs[5].plot(R, zw)
+#axs[5].vlines(R0, *axs[5].get_ylim())
 axs[5].plot(np.log10(eps_lem_noise), x, 'grey')
 axs[5].plot(np.log10(eps_thorpe), zw, 'y', linestyle='none', marker='.')
 axs[5].plot(np.log10(eps_av), z_av, 'yo-')
