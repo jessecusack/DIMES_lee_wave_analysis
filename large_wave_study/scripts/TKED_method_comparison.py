@@ -63,10 +63,10 @@ print("Standard dev rho1 {}".format(rho1r.std()))
 
 # %%
 
-hpid = 111
-Float = E76
-c = 0.146  # 4976
-#c = 0.123  # 4977
+hpid = 26
+Float = E77
+#c = 0.146  # 4976
+c = 0.123  # 4977
 # eheight
 #c = 0.192  # 4976
 #c = 0.159  # 4977
@@ -89,10 +89,10 @@ rho_1_td, rho_1_bu, rho_1_av = TKED.intermediate_profile(rho_1, 1030., 2e-3)
 
 R0 = 0.25
 acc = 2e-3
-thorpe_scales, thorpe_disp, Ls, R, rho_1s, __ = \
+thorpe_scales, thorpe_disp, Nthorpe, Ls, R, rho_1s, __ = \
     TKED.thorpe_scales(-zw, rho_1, R0=R0, acc=acc, full_output=True)
 L_o, L_neg, L_pos = Ls
-eps_thorpe = 0.8*thorpe_scales**2 * N2_ref**(3./2.)
+eps_thorpe = (0.8*thorpe_scales)**2 * Nthorpe**(3./2.)
 
 fig, axs = plt.subplots(1, 3, figsize=(6.5, 3), sharey='row')
 axs[0].plot(rho_1, zw, label='original')

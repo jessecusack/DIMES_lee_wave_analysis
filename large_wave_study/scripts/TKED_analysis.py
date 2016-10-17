@@ -89,7 +89,7 @@ c = 1.
 btype = 'highpass'
 we = 0.001
 
-hpids = np.arange(10, 50)
+hpids = np.arange(10, 150)
 we = 0.001
 
 fig = plt.figure(figsize=(3.125, 3))
@@ -202,8 +202,16 @@ pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype=('png', 'pdf'),
 
 # %% Using Thorpe scales
 
+def bin_weighted_average(x, y, bins):
+    Nbins = len(bins)
+    out = np.zeros(Nbins-1)
+    bidxs = np.digitize(x, bins)
+    for i in xrange(Nbins-1):
+        inbin = bidxs == i
+        out[i] = trapz(y[inbin], x[inbin])/(bins[i+1] - bins[i])
+    return out
 
-hpids = np.arange(10, 52, 2)
+hpids = np.arange(10, 152, 2)
 zvar = 'zw'
 dbin = 200.
 bins = np.arange(-1500., -100. + dbin, dbin)
@@ -224,9 +232,9 @@ for Float in [E76, E77]:
     z = getattr(Float, zvar)[:, idxs]
     d = getattr(Float, 'dist_ctd')[:, idxs]
 
-    ts, td = mdp.thorpe_float(Float, hpids, zvar=zvar)
+    ts, td, Nsq = mdp.thorpe_float(Float, hpids, zvar=zvar)
 
-    eps_thorpe = 0.8*ts**2 * N2_ref**(3./2.)
+    eps_thorpe = (0.8*ts)**2 * Nsq**(3./2.)
 
 #    LOG_EPS = np.log10(eps_thorpe).flatten(order='F')
 #    Z = z.flatten(order='F')
@@ -235,14 +243,12 @@ for Float in [E76, E77]:
     ieps = 0.*np.zeros_like(idxs)
 
     for i in xrange(len(idxs)):
-        eps_av[:, i], __, __ = binned_statistic(z[:, i], eps_thorpe[:, i], statistic=np.nanmean, bins=bins)
+        eps_av[:, i] = bin_weighted_average(z[:, i], eps_thorpe[:, i], bins)
         z_av[:, i], __, __ = binned_statistic(z[:, i], z[:, i], statistic=np.nanmean, bins=bins)
         d_av[:, i], __, __ = binned_statistic(z[:, i], d[:, i], statistic=np.nanmean, bins=bins)
 
-        eps_av[:, i] *= 2./dbin
+#        eps_av[:, i] *= 2./dbin
 
-#        iuse = (z[:, i] < -100) & (z[:, i] > -1400)
-        # The abs function accounts for problems with z being the wrong way.
         ieps[i] = np.abs(1025.*trapz(eps_av[:, i], z_av[:, i]))
 
 
@@ -273,7 +279,7 @@ ax1.set_ylabel('$P$ (mW m$^{-2}$)')
 #ax1.yaxis.set_ticks(np.array([0., 5., 10.]))
 ax1.xaxis.set_ticks([])
 
-ax1.legend(loc='upper left', fontsize=7)
+ax1.legend(loc='upper right', fontsize=7)
 
 ax0.fill_between(pdist, bathy, np.nanmin(bathy), color='black', linewidth=2)
 ax0.set_ylim(-4000., 0.)
@@ -285,8 +291,8 @@ cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
 C = fig.colorbar(sc, cax=cbar_ax, extend='both')
 C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
 
-plt.clim(-11., -7.)
-ax0.set_xlim(np.min(X), np.max(X))
+#plt.clim(-11., -7.)
+ax0.set_xlim(np.min(pdist), np.max(pdist))
 
 ax0.set_xlabel('Distance from ridge top (km)')
 ax0.set_ylabel('$z$ (km)')
@@ -297,13 +303,13 @@ fontdict={'size': 10}
 plt.figtext(-0.05, 0.85, 'a)', fontdict=fontdict)
 plt.figtext(-0.05, 0.65, 'b)', fontdict=fontdict)
 
-#pf.my_savefig(fig, 'both', 'epsilon_lem', sdir, ftype=('png', 'pdf'),
-#              fsize='single_col')
+pf.my_savefig(fig, 'both', 'epsilon_thorpe', sdir, ftype=('png', 'pdf'),
+              fsize='single_col')
 
 
 # %% Using finescale parameterisation
 
-params = fs.default_params
+params = TKED.default_params
 
 params['plot_results'] = False
 params['plot_profiles'] = False
