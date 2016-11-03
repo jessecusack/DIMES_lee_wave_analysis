@@ -62,6 +62,8 @@ p = gw.phi(r[:, 0], r[:, 1], r[:, 2], t, phi_0, k, l, m, om, U=U, V=V)
 
 # Nash method of estimating pressure perturbation
 # z should be increasing.
+do_nh = False  # Note this non-hydrostatic method is not correct because it
+# misses out a phase shift of 90 degrees in the signal.
 if z[0] > z[-1]:
     print("Downward Profile!\n")
     zud = np.flipud(z)
@@ -70,18 +72,30 @@ if z[0] > z[-1]:
     bii = sp.integrate.cumtrapz(bi, zud, initial=0.)
 
     H = zud.max() - zud.min()
-
     pi = bi + (bii[0] - bii[-1])/H
-
     pi = np.flipud(pi)
+
+    if do_nh:
+        wud = np.flipud(w)
+        wi = sp.integrate.cumtrapz(wud, zud, initial=0.)
+        wii = sp.integrate.cumtrapz(wi, zud, initial=0.)
+
+        pi_nh = om*(wi + (wii[0] - wii[-1])/H)
+        pi += pi_nh
 
 else:
     bi = sp.integrate.cumtrapz(b, z, initial=0.)
     bii = sp.integrate.cumtrapz(bi, z, initial=0.)
 
     H = zud.max() - zud.min()
-
     pi = bi + (bii[0] - bii[-1])/H
+
+    if do_nh:
+        wi = sp.integrate.cumtrapz(w, z, initial=0.)
+        wii = sp.integrate.cumtrapz(wi, z, initial=0.)
+
+        pi_nh = om*(wi + (wii[0] - wii[-1])/H)
+        pi += pi_nh
 
 nhs = 1.  # Non hydrostatic factor...
 pi *= nhs
