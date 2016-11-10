@@ -66,8 +66,8 @@ ax.plot(bins, gaus, color='grey', label='Gaus')
 
 ax.set_xlabel('$w$ (cm s$^{-1}$)')
 ax.set_xlim(np.min(bins), np.max(bins))
-ax.annotate(r"Mean = {:1.2f} $\pm$ {:1.1f} cm s$^{{-1}}$".format(meanw, stdw),
-            (-7., 0.5))
+#ax.annotate(r"Mean = {:1.2f} $\pm$ {:1.1f} cm s$^{{-1}}$".format(meanw, stdw),
+#            (-7., 0.5))
 
 ax.set_ylabel('Probability density')
 ax.legend(loc=2)
