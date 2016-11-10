@@ -63,16 +63,20 @@ print("Standard dev rho1 {}".format(rho1r.std()))
 
 # %%
 
-hpid = 26
-Float = E77
-#c = 0.146  # 4976
-c = 0.123  # 4977
+hpid = 28
+Float = E76
+c = 0.146  # 4976
+#c = 0.123  # 4977
 # eheight
 #c = 0.192  # 4976
 #c = 0.159  # 4977
 
 pfl = Float.get_profiles(hpid)
 nnan = ~np.isnan(pfl.P)
+nnanef = ~np.isnan(pfl.U_abs)
+tef = pfl.UTCef[nnanef]
+U = pfl.U_abs[nnanef]
+V = pfl.V_abs[nnanef]
 rho_1 = pfl.rho_1[nnan]
 z = pfl.z[nnan]
 zw = pfl.zw[nnan]
@@ -81,33 +85,35 @@ N2_ref = pfl.N2_ref[nnan]
 w = pfl.Ww[nnan]
 wz = pfl.Wz[nnan]
 ws = pfl.Ws[nnan]
+buoy = pfl.b[nnan]
+t = pfl.UTC[nnan]
+zwef = np.interp(tef, t, zw)
 
 ###############################################################################
 # %% Thorpe
 
-rho_1_td, rho_1_bu, rho_1_av = TKED.intermediate_profile(rho_1, 1030., 2e-3)
-
-R0 = 0.25
-acc = 2e-3
+R0 = 0.3
+acc = 1.6e-3
+rho_1_td, rho_1_bu, rho_1_av = TKED.intermediate_profile(rho_1, 1030., acc)
 thorpe_scales, thorpe_disp, Nthorpe, Ls, R, rho_1s, __ = \
-    TKED.thorpe_scales(-zw, rho_1, R0=R0, acc=acc, full_output=True)
+    TKED.thorpe_scales(-zw, rho_1_av, R0=R0, acc=acc, full_output=True)
 L_o, L_neg, L_pos = Ls
 eps_thorpe = (0.8*thorpe_scales)**2 * Nthorpe**(3./2.)
 
-fig, axs = plt.subplots(1, 3, figsize=(6.5, 3), sharey='row')
-axs[0].plot(rho_1, zw, label='original')
-#axs[0].plot(rho_1_td, zw, label='int td')
-#axs[0].plot(rho_1_bu, zw, label='int bu')
-axs[0].plot(rho_1_av, zw, label='int av')
-axs[0].plot(rho_1s, zw, label='sorted')
-axs[0].legend(loc=0)
-axs[1].plot(thorpe_disp, zw, 'yo-')
-axs[1].plot(thorpe_scales, zw, 'k')
-axs[1].plot(L_o, zw, 'b')
-axs[1].plot(L_neg, zw, 'r')
-axs[1].plot(L_pos, zw, 'g')
-axs[2].plot(R, zw)
-axs[2].vlines(R0, *axs[2].get_ylim())
+#fig, axs = plt.subplots(1, 3, figsize=(6.5, 3), sharey='row')
+#axs[0].plot(rho_1, zw, label='original')
+##axs[0].plot(rho_1_td, zw, label='int td')
+##axs[0].plot(rho_1_bu, zw, label='int bu')
+#axs[0].plot(rho_1_av, zw, label='int av')
+#axs[0].plot(rho_1s, zw, label='sorted')
+#axs[0].legend(loc=0)
+#axs[1].plot(thorpe_disp, zw, 'yo-')
+#axs[1].plot(thorpe_scales, zw, 'k')
+#axs[1].plot(L_o, zw, 'b')
+#axs[1].plot(L_neg, zw, 'r')
+#axs[1].plot(L_pos, zw, 'g')
+#axs[2].plot(R, zw)
+#axs[2].vlines(R0, *axs[2].get_ylim())
 
 
 width = 200.
@@ -117,6 +123,11 @@ z_av = np.zeros(len(binned))
 for i, (z_, ep_) in enumerate(binned):
     eps_av[i] = np.trapz(ep_, z_)/width
     z_av[i] = np.mean(z_)
+
+# Integrated dissipation from Thorpe
+use = z < -100.
+eps_thorpe_int = np.abs(np.trapz(eps_thorpe[use], zw[use])*1025.)
+print("Thorpe integrated dissipation: {} mWm-2".format(1000.*eps_thorpe_int))
 
 ###############################################################################
 # %% LEM
@@ -139,7 +150,6 @@ xvar = 'timeeheight'
 dx = 1.
 width = 20.
 lc = (100., 40.)
-c = 1.
 btype = 'highpass'
 we = 0.001
 
@@ -186,15 +196,21 @@ w_filt = sig.filtfilt(b, a, wp)
 eps_lem, __, eps_lem_noise, noise_flag = \
     TKED.w_scales(wp, x, N2p, dx, width, overlap, lc, c, 0.2, btype, we, True)
 
+
+a = 0.066
+use = x < (x.max() - a*(x.max() - x.min()))
+eps_lem_int = np.abs(np.trapz(eps_lem[use], x[use])*1025.)
+print("LEM integrated dissipation: {} mWm-2".format(1000.*eps_lem_int))
+
 ###############################################################################
 # %% VKE
-width = 320.
-overlap = width/2.
-z_mid, eps_VKE = TKED.VKE_method(x, wp, width, overlap)
+#width = 320.
+#overlap = width/2.
+#z_mid, eps_VKE = TKED.VKE_method(x, wp, width, overlap)
 
 ###############################################################################
 # %% Plot
-fig, axs = plt.subplots(1, 6, figsize=(6.5, 3), sharey='row')
+fig, axs = plt.subplots(1, 7, figsize=(6.5, 3), sharey='row')
 axs[0].plot(rho_1, zw, 'k')
 axs[0].plot(rho_1_av, zw, 'k:')
 axs[0].plot(rho_1s, zw, 'r')
@@ -205,13 +221,17 @@ axs[2].vlines(0., *axs[2].get_ylim())
 axs[2].plot(w_filt, x, 'k')
 axs[3].plot(wz, zw, 'k')
 axs[3].plot(ws, zw, 'r')
-axs[4].plot(thorpe_disp, zw, 'grey')
-axs[4].plot(thorpe_scales, zw, 'k')
+axs[3].plot(w, zw, 'g')
+#axs[3].plot(U, zwef)
+#axs[3].plot(V, zwef)
+axs[4].plot(buoy, zw, 'k')
+axs[5].plot(thorpe_disp, zw, 'grey')
+axs[5].plot(thorpe_scales, zw, 'k')
 #axs[5].plot(R, zw)
 #axs[5].vlines(R0, *axs[5].get_ylim())
-axs[5].plot(np.log10(eps_lem_noise), x, 'grey')
-axs[5].plot(np.log10(eps_thorpe), zw, 'y', linestyle='none', marker='.')
-axs[5].plot(np.log10(eps_av), z_av, 'yo-')
-axs[5].plot(np.log10(eps_lem), x, 'k')
-axs[5].plot(np.log10(eps_VKE), z_mid, 'go-')
-axs[5].grid()
+axs[6].plot(np.log10(eps_lem_noise), x, 'grey')
+axs[6].plot(np.log10(eps_thorpe), zw, 'y', linestyle='none', marker='.')
+axs[6].plot(np.log10(eps_av), z_av, 'yo-')
+axs[6].plot(np.log10(eps_lem), x, 'k')
+#axs[6].plot(np.log10(eps_VKE), z_mid, 'go-')
+axs[6].grid()
