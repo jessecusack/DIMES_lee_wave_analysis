@@ -293,29 +293,40 @@ axs[4].boxplot(obsMflux, boxprops=colprops,
                medianprops=colprops, showfliers=False,
                labels=[''])
 
-amps_31 = np.array([[0.17, 0.11, 0.17, 4e-4],
-                    [-0.12, -0.08, -0.025, -4e-4],
-                    [0.2, 0.045, 0.07, -3.6e-4]])
-amps_32 = np.array([[0.1, 0.18, 0.19, 2e-4],
-                    [-0.06, -0.2, -0.2, -5e-4],
-                    [-0.05, 0.22, 0.1, 5e-4],
-                    [-0.17, 0., -0.2, -6e-4]])
-amps_26 = np.array([[-0.095, -0.075, 0.16, 4.5e-4],
-                    [0.2, 0.16, -0.1, -4e-4],
-                    [-0.1, -0.04, 0.17, 3e-4],
-                    [0.11, 0.17, -0.21, -6e-4]])
-amps_27 = np.array([[-0.13, 0., -0.08, -3e-4],
-                    [0.1, 0., 0.12, 2.7e-4],
-                    [-0.03, 0., -0.07, 2.3e-4]])
+#amps_31 = np.array([[0.17, 0.11, 0.17, 4e-4],
+#                    [-0.12, -0.08, -0.025, -4e-4],
+#                    [0.2, 0.045, 0.07, -3.6e-4]])
+amps_32 = np.array([[0.1, 0.18, 0.19, 2e-4, 1e-2],
+                    [-0.06, -0.2, -0.2, -5e-4, -5e-2],
+                    [-0.05, 0.22, 0.1, 5e-4, 6e-2],
+                    [-0.17, 0., -0.2, -6e-4, -1e-2]])
+amps_26 = np.array([[-0.095, -0.075, 0.16, 4.5e-4, 4e-2],
+                    [0.2, 0.16, -0.1, -4e-4, -3e-2],
+                    [-0.1, -0.04, 0.17, 3e-4, 2e-2],
+                    [0.11, 0.17, -0.21, -6e-4, -2e-2]])
+#amps_27 = np.array([[-0.13, 0., -0.08, -3e-4],
+#                    [0.1, 0., 0.12, 2.7e-4],
+#                    [-0.03, 0., -0.07, 2.3e-4]])
 
-amps = np.vstack((amps_31, amps_32, amps_26, amps_27))
+amps = np.vstack((amps_32, amps_26))
 
 u_amp = amps[:, 0]
 v_amp = amps[:, 1]
 w_amp = amps[:, 2]
+b_amp = amps[:, 3]
+p_amp = amps[:, 4]
 
 alpha2 = w_amp**2/(u_amp**2 + v_amp**2)
 obsom = np.sqrt(alpha2*N**2/(1 + alpha2))
+k = u_amp*obsom/p_amp
+l = v_amp*obsom/p_amp
+m = np.sqrt((k**2 + l**2)/alpha2)
+
+#data = [-np.abs(k), -np.abs(l), -np.abs(m)]
+#axs[0].boxplot(data, boxprops=colprops,
+#               whiskerprops=colprops, capprops=colprops,
+#               medianprops=colprops, showfliers=False,
+#               labels=['$k$', '$l$', '$m$'])
 
 axs[1].boxplot(obsom/N, boxprops=colprops,
                whiskerprops=colprops, capprops=colprops,

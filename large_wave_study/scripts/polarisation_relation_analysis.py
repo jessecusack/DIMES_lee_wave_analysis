@@ -26,6 +26,9 @@ except NameError:
     E76 = emapex.load(4976)
     E77 = emapex.load(4977)
 
+E76.calculate_pressure_perturbation()
+E77.calculate_pressure_perturbation()
+
 # %% Script params.
 
 # Bathymetry file path.
@@ -51,12 +54,14 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     v = Float.V_abs[:, idxs]
     w = Float.Ww[:, idxs]
     b = Float.b[:, idxs]
+    p = Float.Pprime[:, idxs]
     N = np.sqrt(Float.N2_ref[:, idxs])
 
     ud = utils.nan_detrend(zef, u)
     vd = utils.nan_detrend(zef, v)
+    pd = utils.nan_detrend(z, p)
 
-    fig, axs = plt.subplots(1, 5, sharey=True, figsize=(16, 6))
+    fig, axs = plt.subplots(1, 6, sharey=True, figsize=(16, 6))
     axs[0].set_ylabel('$z$ (m)')
     axs[0].plot(ud, zef)
     axs[0].set_xlabel('$u$')
@@ -66,8 +71,10 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     axs[2].set_xlabel('$w$')
     axs[3].plot(b, z)
     axs[3].set_xlabel('$b$')
-    axs[4].plot(N, z)
-    axs[4].set_xlabel('$N$')
+    axs[4].plot(pd, z)
+    axs[4].set_xlabel('$p$')
+    axs[5].plot(N, z)
+    axs[5].set_xlabel('$N$')
 
     for ax in axs:
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)

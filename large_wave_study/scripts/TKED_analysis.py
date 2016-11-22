@@ -521,8 +521,8 @@ eps_av = np.zeros((len(bins) - 1, len(hpids_t)))
 z_av = np.zeros((len(bins) - 1, len(hpids_t)))
 d_av = np.zeros((len(bins) - 1, len(hpids_t)))
 
-fig = plt.figure(figsize=(3.125, 3))
-gs = gridspec.GridSpec(2, 1, height_ratios=[1, 5])
+fig = plt.figure(figsize=(3.125, 4))
+gs = gridspec.GridSpec(2, 1, height_ratios=[3, 5])
 #gs.update(wspace=0.1)
 ax0 = plt.subplot(gs[0])
 ax2 = plt.subplot(gs[1])
@@ -636,7 +636,7 @@ for j, (Float, c) in enumerate(zip([E76, E77], cs)):
 ax0.set_ylabel('$P$ (mW m$^{-2}$)')
 ax0.yaxis.set_ticks(np.array([0., 12.5, 25.]))
 ax0.xaxis.set_ticks([])
-ax0.legend(loc='top centre', fontsize=7, ncol=2, bbox_to_anchor=(0., 1.02, 1., .102), borderaxespad=0.)
+ax0.legend(loc='upper left', fontsize=7, ncol=1, bbox_to_anchor=(0.8, 1.02), borderaxespad=0.)
 
 #ax1.xaxis.set_ticks([])
 #ax1.set_ylim(-1500., 0.)
@@ -650,7 +650,7 @@ ax2.yaxis.set_ticks(np.arange(-4000, 1000, 1000))
 ax2.yaxis.set_ticklabels(['-4', '-3', '-2', '-1', '0'])
 
 fig.subplots_adjust(right=0.8)
-cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
+cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.4])
 C = fig.colorbar(sc, cax=cbar_ax, extend='both')
 C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
 
@@ -658,15 +658,15 @@ C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
 ax2.set_xlim(np.min(X), np.max(X))
 
 ax2.set_xlabel('Distance from ridge top (km)')
-ax1.set_ylabel('$z$ (km)')
+#ax1.set_ylabel('$z$ (km)')
 ax2.set_ylabel('$z$ (km)')
 
 ax0.set_xlim(*ax2.get_xlim())
 #ax1.set_xlim(*ax2.get_xlim())
 
 fontdict={'size': 10}
-plt.figtext(-0.05, 0.97, 'a)', fontdict=fontdict)
-plt.figtext(-0.05, 0.65, 'b)', fontdict=fontdict)
+plt.figtext(-0.05, 0.88, 'a)', fontdict=fontdict)
+plt.figtext(-0.05, 0.53, 'b)', fontdict=fontdict)
 
 pf.my_savefig(fig, 'both', 'epsilon_lem_thorpe_combined', sdir, ftype=('png', 'pdf'),
               fsize='single_col')

@@ -103,7 +103,7 @@ boxlats = np.hstack((lats[0]*np.ones_like(lons), lats,
 m.plot(*m(boxlons, boxlats), color='white', linewidth=2)
 
 # Add VMP casts.
-UK2_vmp = sp.io.loadmat('../../storage/DIMES/combined_jc054.mat',
+UK2_vmp = sp.io.loadmat('/noc/users/jc3e13/storage/DIMES/combined_jc054.mat',
                         variable_names=['vmp'])['vmp']
 vmp_lon = UK2_vmp['startlon'][0][0][0]
 vmp_lat = UK2_vmp['startlat'][0][0][0]
@@ -166,7 +166,7 @@ m = bm.Basemap(projection='tmerc', llcrnrlon=llcrnrlon,
                urcrnrlat=urcrnrlat, lon_0=0.5*(llcrnrlon+urcrnrlon),
                lat_0=0.5*(llcrnrlat+urcrnrlat), resolution='f')
 
-fig = plt.figure(figsize=(3.125, 3.5))
+fig = plt.figure(figsize=(3, 3.5))
 x, y = m(lon_grid, lat_grid)
 levels = np.arange(0., 4000., 500.)
 CS = m.contour(x, y, bathy_grid, 20, cmap=plt.get_cmap('binary_r'),
