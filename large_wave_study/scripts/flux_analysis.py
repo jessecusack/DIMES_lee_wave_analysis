@@ -178,6 +178,7 @@ Uuwbar = np.zeros((2, N/2))
 Vvwbar = np.zeros((2, N/2))
 tau = np.zeros((2, N/2))
 E = np.zeros((2, N/2))
+cgz = np.zeros((2, N/2))
 
 Nreps = 200
 
@@ -186,7 +187,7 @@ vwbar_errs = np.zeros((2, N/2, Nreps))
 pwbar_errs = np.zeros((2, N/2, Nreps))
 tau_errs = np.zeros((2, N/2, Nreps))
 E_errs = np.zeros((2, N/2, Nreps))
-
+cgz_errs = np.zeros((2, N/2, Nreps))
 
 i = 0
 for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
@@ -263,12 +264,15 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         kinetic = 0.5*rho0*sp.integrate.trapz(u**2 + v**2 + w**2, tef)/DT
         potential = 0.5*rho0*sp.integrate.trapz(b**2/N2mean, tef)/DT
         E[i, j] = kinetic + potential
+        cgz[i, j] = pwbar[i, j]/E[i, j]
 
         uwbar_e = np.zeros(Nreps)
         vwbar_e = np.zeros(Nreps)
         pwbar_e = np.zeros(Nreps)
         tau_e = np.zeros(Nreps)
         E_e = np.zeros(Nreps)
+        cgz_e = np.zeros(Nreps)
+
         # ERROR ESTIMATES
         for ii in xrange(Nreps):
 
@@ -290,24 +294,28 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
             kinetic_e = 0.5*rho0*sp.integrate.trapz(u_e**2 + v_e**2 + w_e**2, tef)/DT
             E_e[ii] = kinetic_e + potential
+            cgz_e[ii] = pwbar_e[ii]/E_e[ii]
 
         uwbar_errs[i, j, :] = uwbar_e
         vwbar_errs[i, j, :] = vwbar_e
         pwbar_errs[i, j, :] = pwbar_e
         tau_errs[i, j, :] = tau_e
         E_errs[i, j, :] = E_e
+        cgz_errs[i, j, :] = cgz_e
 
         uwbar_mean = np.mean(uwbar_errs, axis=-1)
         vwbar_mean = np.mean(vwbar_errs, axis=-1)
         pwbar_mean = np.mean(pwbar_errs, axis=-1)
         tau_mean = np.mean(tau_errs, axis=-1)
         E_mean = np.mean(E_errs, axis=-1)
+        cgz_mean = np.mean(cgz_errs, axis=-1)
 
         uwbar_std = np.std(uwbar_errs, axis=-1)
         vwbar_std = np.std(vwbar_errs, axis=-1)
         pwbar_std = np.std(pwbar_errs, axis=-1)
         tau_std = np.std(tau_errs, axis=-1)
         E_std = 2*np.std(E_errs, axis=-1) #  2x because error in b, and equipartition of energy
+        cgz_std = np.std(cgz_errs, axis=-1)
 
         print("Reynolds stress: {:1.2f} +/- {:1.2f} N m-2".format(tau[i, j], tau_std[i, j]))
         print("Components: ({:1.2f}, {:1.2f}) +/- ({:1.2f}, {:1.2f}) N m-2".format(uwbar[i, j], vwbar[i, j], uwbar_std[i, j], vwbar_std[i, j]))
@@ -318,6 +326,7 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
         print("Vertical energy from from (Uuw, Vvw): ({:1.2f}, {:1.2f})"
               ", total {:1.2f} W m-2 ".format(Uuwbar[i, j], Vvwbar[i, j],
                                               Efluxz))
+        print("Vertical group velocity: {:1.3f} +/- {:1.3f}".format(cgz[i, j], cgz_std[i, j]))
 
 #        print(1025.*sp.integrate.trapz(v*u, z)/(z[0]-z[-1]))
 
@@ -329,6 +338,10 @@ for Float, hpids in zip([E76, E77], [hpids_76, hpids_77]):
 
         j += 1
     i += 1
+
+cgz_av = np.average(cgz, weights=1./cgz_std**2)
+err = np.sqrt(np.sum(cgz_std**2))
+print("\nWeighted average cgz {:1.4f} +/- {:1.4f} m s-1".format(cgz_av, err))
 
 with open('/noc/users/jc3e13/storage/processed/Edens.p', 'wb') as f:
     pickle.dump(E_errs, f)

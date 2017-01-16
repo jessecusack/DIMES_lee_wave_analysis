@@ -521,11 +521,13 @@ eps_av = np.zeros((len(bins) - 1, len(hpids_t)))
 z_av = np.zeros((len(bins) - 1, len(hpids_t)))
 d_av = np.zeros((len(bins) - 1, len(hpids_t)))
 
-fig = plt.figure(figsize=(3.125, 4))
-gs = gridspec.GridSpec(2, 1, height_ratios=[3, 5])
+fig = plt.figure(figsize=(3.125, 5))
+gs = gridspec.GridSpec(4, 1)
 #gs.update(wspace=0.1)
 ax0 = plt.subplot(gs[0])
-ax2 = plt.subplot(gs[1])
+ax1 = plt.subplot(gs[1])
+ax2 = plt.subplot(gs[2])
+ax3 = plt.subplot(gs[3])
 #ax2 = plt.subplot(gs[2])
 
 colors = ['b', 'g']
@@ -620,7 +622,7 @@ for j, (Float, c) in enumerate(zip([E76, E77], cs)):
 
     LOG_EPS_AV = np.ma.masked_invalid(np.log10(eps_av))
 
-    sc = ax2.scatter(pdist.flatten(), z_av.flatten(), s=80., c=LOG_EPS_AV.flatten(),
+    sc = ax1.scatter(pdist.flatten(), z_av.flatten(), s=80., c=LOG_EPS_AV.flatten(),
                      cmap=plt.get_cmap('YlOrRd'), vmin=-10., vmax=-7, alpha=.5)
 
     ax0.plot(Float.dist[idxs] - dbathymax, 1000.*ieps_lem, color=colors[j], linestyle='-', label="{} LEM".format(Float.floatID))
@@ -634,42 +636,49 @@ for j, (Float, c) in enumerate(zip([E76, E77], cs)):
 
 
 ax0.set_ylabel('$P$ (mW m$^{-2}$)')
-ax0.yaxis.set_ticks(np.array([0., 12.5, 25.]))
-ax0.xaxis.set_ticks([])
-ax0.legend(loc='upper left', fontsize=7, ncol=1, bbox_to_anchor=(0.8, 1.02), borderaxespad=0.)
+ax0.yaxis.set_ticks([0., 12., 24.])
+ax0.yaxis.set_ticklabels(['0', '12', '24'])
+ax0.legend(loc='upper left', fontsize=7, ncol=1, bbox_to_anchor=(0.75, 1.02), borderaxespad=0.)
 
-#ax1.xaxis.set_ticks([])
-#ax1.set_ylim(-1500., 0.)
-#ax1.yaxis.set_ticks(np.arange(-1500, 500, 500))
-#ax1.yaxis.set_ticklabels(['-1.5', '-1', '-0.5', '0'])
-
-ax2.fill_between(dctd[::100], bathy[::100],
+ax3.fill_between(dctd[::100], bathy[::100],
                  np.nanmin(bathy), color='black', linewidth=2)
-ax2.set_ylim(-4000., 0.)
-ax2.yaxis.set_ticks(np.arange(-4000, 1000, 1000))
-ax2.yaxis.set_ticklabels(['-4', '-3', '-2', '-1', '0'])
+ax3.set_ylim(-4000., -2000.)
+ax3.yaxis.set_ticks([-4000., -3000., -2000.])
+ax3.yaxis.set_ticklabels(['-4.0', '-3.0', '-2.0'])
 
 fig.subplots_adjust(right=0.8)
-cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.4])
+cbar_ax = fig.add_axes([0.82, 0.29, 0.02, 0.42])
 C = fig.colorbar(sc, cax=cbar_ax, extend='both')
-C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
+C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)', labelpad=-2)
 
-#    plt.clim(-11., -7.)
-ax2.set_xlim(np.min(X), np.max(X))
 
-ax2.set_xlabel('Distance from ridge top (km)')
-#ax1.set_ylabel('$z$ (km)')
-ax2.set_ylabel('$z$ (km)')
+ax3.set_xlim(np.min(X), np.max(X))
 
-ax0.set_xlim(*ax2.get_xlim())
-#ax1.set_xlim(*ax2.get_xlim())
+ax3.set_xlabel('Distance from ridge top (km)')
+
+
+for ax in [ax0, ax1, ax2]:
+    ax.set_xlim(*ax3.get_xlim())
+
+for ax in [ax0, ax1, ax2, ax3]:
+    ax.xaxis.set_ticks([-60., -40., -20., 0., 20., 40., 60.])
+    ax.xaxis.set_ticklabels([])
+
+ax3.xaxis.set_ticklabels([-60, -40, -20, 0, 20, 40, 60])
+
+for ax in [ax1, ax2, ax3]:
+    ax.set_ylabel('$z$ (km)')
+
+for ax in [ax1, ax2]:
+    ax.set_ylim(-1500., 0.)
+    ax.yaxis.set_ticks([-1500., -1000., -500., 0.])
+    ax.yaxis.set_ticklabels(['-1.5', '-1.0', '-0.5', '-0.0'])
 
 fontdict={'size': 10}
-plt.figtext(-0.05, 0.88, 'a)', fontdict=fontdict)
-plt.figtext(-0.05, 0.53, 'b)', fontdict=fontdict)
+plt.figtext(-0.02, 0.90, 'a)', fontdict=fontdict)
+plt.figtext(-0.02, 0.69, 'b)', fontdict=fontdict)
+plt.figtext(-0.02, 0.48, 'c)', fontdict=fontdict)
+plt.figtext(-0.02, 0.27, 'd)', fontdict=fontdict)
 
 pf.my_savefig(fig, 'both', 'epsilon_lem_thorpe_combined', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
-
-
-

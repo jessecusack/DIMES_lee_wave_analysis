@@ -615,7 +615,28 @@ thin = 10
 fig, axs = plt.subplots(2, 5, sharey='row', sharex='col', figsize=(3.125, 3))
 #fig.tight_layout()
 
+axs[0, 0].set_ylim(0., 2.3)
+
+axs[1, 0].set_xlabel('$u^\prime$\n(cm s$^{-1}$)')
+axs[1, 0].set_xlim(-30., 30.)
+axs[1, 0].set_xticks([-20., 0., 20.])
+axs[1, 1].set_xlabel('$v^\prime$\n(cm s$^{-1}$)')
+axs[1, 1].set_xlim(-30., 30.)
+axs[1, 1].set_xticks([-20., 0., 20.])
+axs[1, 2].set_xlabel('$w^\prime$\n(cm s$^{-1}$)')
+axs[1, 2].set_xlim(-30., 30.)
+axs[1, 2].set_xticks([-20., 0., 20.])
+axs[1, 3].set_xlabel('$b^\prime$ ($10^{-4}$\nm s$^{-2}$)')
+axs[1, 3].set_xlim(-10., 10.)
+axs[1, 3].set_xticks([-6., 0., 6.])
+axs[1, 4].set_xlabel('$p^\prime$ ($10^{-2}$\nm$^2$ s$^{-2}$)')
+axs[1, 4].set_xlim(-6., 6.)
+axs[1, 4].set_xticks([-4., 0., 4.])
+
 for i in xrange(2):
+
+    axs[i, 0].set_ylabel('$t$ (hours)')
+    axs[i, 0].set_title(str(Float.floatID) + ' P ' + str(hpid))
 
     M = Ms[i]
     hpid = hpids[i]
@@ -715,11 +736,18 @@ for i in xrange(2):
                     np.mean(Efluxz),stdf* np.std(Efluxz),
                     np.mean(Mfluxz), stdf*np.std(Mfluxz)))
 
-    # Plot fit comparison.
-    z = z.copy()/1000.
 
-    axs[i, 0].set_ylabel('$t$ (hours)')
-    axs[i, 0].set_title(str(Float.floatID) + ' P ' + str(hpid))
+
+    heights = np.array([-1400., -1300., -1200., -1100., -1000., -900., -800.])
+    idxs = np.searchsorted(z, heights)
+    for ax in axs[i, :]:
+        ax.hlines(thrs[idxs], *ax.get_xlim(), alpha=0.8, color='grey',
+                  linestyle=':', linewidth=0.5)
+
+    for j in range(len(idxs)):
+        s = "{:1.0f} m".format(-heights[j])
+        axs[i, -1].text(axs[i, -1].get_xlim()[1], thrs[idxs[j]], s,
+                            fontdict={'size': 4}, rotation=-50.)
 
     Ns = (samples - burn)/thin
 
@@ -744,22 +772,10 @@ for i in xrange(2):
     axs[i, 2].plot(100.*W, thrs, color='black', alpha=alpha, label=label)
     axs[i, 3].plot(10000.*B, thrs, color='black', alpha=alpha, label=label)
     axs[i, 4].plot(100.*PP, thrs, color='black', alpha=alpha, label=label)
+#    axs[i, 5].plot(z, thrs, color='black', alpha=alpha, label=label)
 
-axs[1, 0].set_xlabel('$u^\prime$\n(cm s$^{-1}$)')
-axs[1, 0].set_xlim(-30., 30.)
-axs[1, 0].set_xticks([-20., 0., 20.])
-axs[1, 1].set_xlabel('$v^\prime$\n(cm s$^{-1}$)')
-axs[1, 1].set_xlim(-30., 30.)
-axs[1, 1].set_xticks([-20., 0., 20.])
-axs[1, 2].set_xlabel('$w^\prime$\n(cm s$^{-1}$)')
-axs[1, 2].set_xlim(-30., 30.)
-axs[1, 2].set_xticks([-20., 0., 20.])
-axs[1, 3].set_xlabel('$b^\prime$ ($10^{-4}$\nm s$^{-2}$)')
-axs[1, 3].set_xlim(-10., 10.)
-axs[1, 3].set_xticks([-6., 0., 6.])
-axs[1, 4].set_xlabel('$p^\prime$ ($10^{-2}$\nm$^2$ s$^{-2}$)')
-axs[1, 4].set_xlim(-6., 6.)
-axs[1, 4].set_xticks([-4., 0., 4.])
+
+
 
 axs[1, 4].legend(loc='upper right', bbox_to_anchor=(1, 1.22), fontsize=7,
                  ncol=2)
