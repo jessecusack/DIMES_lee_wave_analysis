@@ -104,7 +104,7 @@ def calc_w_ud(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D_u, C
     g_ = g.flatten()
     rho_ = rho.flatten()
     w_ = np.full_like(p_, np.nan)
-    C_D = up*C_D_u + ~up*C_D_d
+    C_D = (up*C_D_u + ~up*C_D_d).flatten()
     ni = len(w_)
 
     for i in range(ni):
@@ -193,6 +193,26 @@ def apply_w_fit(Float, hpids, res, V0, p0, k0, M, A):
 
     return calc_w(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D, A)
 
+
+def apply_w_fit_ud(Float, hpids, res, V0, p0, k0, M, A):
+
+    __, idxs = Float.get_profiles(hpids, ret_idxs=True)
+
+    lat = Float.lat_start[idxs]
+    p = Float.P[:, idxs]
+    g = -gsw.grav(lat, p)
+    rho = Float.rho[:, idxs]
+    k = Float.ppos[:, idxs]
+    wf = Float.Wz[:, idxs]
+    t = Float.UTC[:, idxs]*86400.
+    dwfdt = np.gradient(wf, axis=0)/np.gradient(t, axis=0)
+    hpids = Float.hpid[idxs]
+    up = np.full_like(p, True, dtype=bool)
+    up[:, hpids % 2 != 0] = False
+
+    C_D_u, C_D_d, alpha_p, alpha_k = res.x
+
+    return calc_w_ud(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D_u, C_D_d, A, up)
 
 # %% up and down separate
 Float = E76
