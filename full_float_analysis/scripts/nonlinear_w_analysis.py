@@ -119,8 +119,8 @@ def calc_w_ud(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D_u, C
     return w_.reshape(p.shape)
 
 
-def cost(params, wf, p, k, V0, p0, k0, M, dwfdt, g, rho, A):
-    C_D, alpha_p, alpha_k = params
+def cost(params, wf, p, k, p0, k0, M, dwfdt, g, rho, A):
+    V0, C_D, alpha_p, alpha_k = params
     w = calc_w(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D, A)
     return (w**2).sum()
 
@@ -131,7 +131,7 @@ def cost_ud(params, wf, p, k, V0, p0, k0, M, dwfdt, g, rho, A, up):
     return (w**2).sum()
 
 
-def fit(Float, hpids, pmin, pmax, V0, p0, k0, M, A):
+def fit(Float, hpids, pmin, pmax, p0, k0, M, A):
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
@@ -146,8 +146,8 @@ def fit(Float, hpids, pmin, pmax, V0, p0, k0, M, A):
 
     use = (p > pmin) & (p < pmax) & ~np.isnan(dwfdt)
 
-    args = (wf[use], p[use], k[use], V0, p0, k0, M, dwfdt[use], g[use], rho[use], A)
-    res = opt.minimize(cost, [1.5, 3.6e-6, 1.1e-6], args=args)
+    args = (wf[use], p[use], k[use], p0, k0, M, dwfdt[use], g[use], rho[use], A)
+    res = opt.minimize(cost, [2.62e-2, 1.5, 3.6e-6, 1.1e-6], args=args)
 
     return res
 
@@ -176,7 +176,7 @@ def fit_ud(Float, hpids, pmin, pmax, V0, p0, k0, M, A):
     return res
 
 
-def apply_w_fit(Float, hpids, res, V0, p0, k0, M, A):
+def apply_w_fit(Float, hpids, res, p0, k0, M, A):
 
     __, idxs = Float.get_profiles(hpids, ret_idxs=True)
 
@@ -189,7 +189,7 @@ def apply_w_fit(Float, hpids, res, V0, p0, k0, M, A):
     t = Float.UTC[:, idxs]*86400.
     dwfdt = np.gradient(wf, axis=0)/np.gradient(t, axis=0)
 
-    C_D, alpha_p, alpha_k = res.x
+    V0, C_D, alpha_p, alpha_k = res.x
 
     return calc_w(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D, A)
 
@@ -215,24 +215,22 @@ def apply_w_fit_ud(Float, hpids, res, V0, p0, k0, M, A):
     return calc_w_ud(wf, p, k, V0, alpha_p, p0, alpha_k, k0, M, dwfdt, g, rho, C_D_u, C_D_d, A, up)
 
 # %% up and down separate
-Float = E76
-
 pmin = 50.
 pmax = 1400.
 
-hpids_up = np.arange(50, 150, 2)
-hpids_down = np.arange(51, 151, 2)
+#hpids_up = np.arange(50, 150, 2)
+#hpids_down = np.arange(51, 151, 2)
 hpids_updown = np.arange(50, 150)
 
 p0 = 2000.
 k0 = 16.
 A = 0.0214
-V0 = 2.62e-2
 M = 27.197
 
-res_up = fit(Float, hpids_up, pmin, pmax, V0, p0, k0, M, A)
-res_down = fit(Float, hpids_down, pmin, pmax, V0, p0, k0, M, A)
-res_updown = fit(Float, hpids_updown, pmin, pmax, V0, p0, k0, M, A)
+#res_up = fit(E76, hpids_up, pmin, pmax, p0, k0, M, A)
+#res_down = fit(E76, hpids_down, pmin, pmax, p0, k0, M, A)
+res_E76_updown = fit(E76, hpids_updown, pmin, pmax, p0, k0, M, A)
+res_E77_updown = fit(E77, hpids_updown, pmin, pmax, p0, k0, M, A)
 
 # %%
 hpids_up = np.arange(2, 150, 2)
