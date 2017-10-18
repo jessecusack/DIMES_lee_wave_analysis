@@ -8,9 +8,11 @@ Created on Fri Oct 31 16:27:36 2014
 import numpy as np
 import scipy as sp
 import matplotlib
+from matplotlib.dates import DayLocator, HourLocator, DateFormatter
 import matplotlib.pyplot as plt
 import os
 
+import utils
 import emapex
 import plotting_functions as pf
 import coloured_noise as cn
@@ -73,6 +75,42 @@ ax.set_ylabel('Probability density')
 ax.legend(loc=2)
 pf.my_savefig(fig, 'both', 'w_hist', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
+
+# %% Ws Wf W time series ######################################################
+hpids = np.arange(51, 59)
+pfls = E76.get_profiles(hpids)
+
+fig, ax = plt.subplots(1, 1, figsize=(6, 3))
+
+for i, pfl in enumerate(pfls):
+
+    t = utils.datenum_to_datetime(pfl.UTC)
+    wf = pfl.Wz
+    ws = pfl.Ws
+    ww = pfl.Ww
+
+    use = pfl.P > 60
+
+    if i == 0:
+        ax.plot(t[use], wf[use], 'g', label='$w_f$')
+        ax.plot(t[use], ws[use], 'r', label='$w_s$')
+        ax.plot(t[use], ww[use], 'b', label='$w$')
+    else:
+        ax.plot(t[use], wf[use], 'g', label=None)
+        ax.plot(t[use], ws[use], 'r', label=None)
+        ax.plot(t[use], ww[use], 'b', label=None)
+
+ax.legend(loc=0)
+
+ax.xaxis.set_major_locator(DayLocator())
+ax.xaxis.set_minor_locator(HourLocator(np.arange(0, 25, 1)))
+ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d'))
+
+ax.set_xlabel('Time (hrs)')
+ax.set_ylabel('$w$ (m s$^{-1}$)')
+
+fig.savefig(os.path.join(sdir, 'w_timeseries.png'), bbox_inches='tight', pad_inches=0.)
+fig.savefig(os.path.join(sdir, 'w_timeseries.pdf'), bbox_inches='tight', pad_inches=0.)
 
 # %% ##########################################################################
 
