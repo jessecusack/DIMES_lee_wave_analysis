@@ -365,7 +365,7 @@ axs[1].yaxis.set_ticks_position('both')
 axs[1].yaxis.set_label_position('right')
 
 labels=[r'$\frac{\alpha^2}{1 + \alpha^2}N^2$', r'$|\frac{w_0}{b_0}|N^2$']
-b = axs[0].boxplot([om_alt/N, om/N], labels=labels, showfliers=False);
+b = axs[0].boxplot([om_alt/N, om/N], labels=labels, whis=10.);
 [plt.setp(b[key], color='k') for key in b.keys()]
 axs[0].set_ylabel('$\omega/N$ (-)')
 axs[0].hlines(f/N, *axs[0].get_xlim())
@@ -373,7 +373,7 @@ axs[0].annotate('$f$', xy=(0.6, 1.1*f/N))
 axs[0].hlines(1., *axs[0].get_xlim())
 axs[0].annotate('$N$', xy=(0.6, 0.76))
 
-b = axs[1].boxplot(alpha, labels=[r'$\frac{w_0^2}{u_0^2 + v_0^2}$'], showfliers=False);
+b = axs[1].boxplot(alpha, labels=[r'$\frac{w_0^2}{u_0^2 + v_0^2}$'], whis=10.);
 [plt.setp(b[key], color='k') for key in b.keys()]
 axs[1].set_ylabel(r'$\alpha$ (-)')
 
