@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from scipy.integrate import trapz
 from scipy.stats import binned_statistic
+import scipy.signal as sig
 
 import emapex
 import misc_data_processing as mdp
@@ -682,3 +683,86 @@ plt.figtext(-0.02, 0.27, 'd)', fontdict=fontdict)
 
 pf.my_savefig(fig, 'both', 'epsilon_lem_thorpe_combined', sdir, ftype=('png', 'pdf'),
               fsize='single_col')
+
+
+# %% Example of w high pass filtered
+Float = E76
+cs = [0.146, 0.123]  # timeeheight
+x = np.arange(zmin, 0., dz)
+xvar = 'timeeheight'
+dx = 1.
+hpids = np.arange(1, 600)
+width = 20.
+lc = (100., 40.)
+btype = 'highpass'
+we = 0.001
+
+# Start analysis
+__, idxs = Float.get_profiles(hpids, ret_idxs=True)
+Np = len(idxs)
+dx = x[1] - x[0]
+
+if xvar == 'time':
+    __, __, w = Float.get_interp_grid(hpids, x, 'dUTC', 'Ww')
+    __, __, N2 = Float.get_interp_grid(hpids, x, 'dUTC', 'N2_ref')
+elif xvar == 'height':
+    __, __, w = Float.get_interp_grid(hpids, x, 'z', 'Ww')
+    __, __, N2 = Float.get_interp_grid(hpids, x, 'z', 'N2_ref')
+elif xvar == 'eheight':
+    __, __, w = Float.get_interp_grid(hpids, x, 'zw', 'Ww')
+    __, __, N2 = Float.get_interp_grid(hpids, x, 'zw', 'N2_ref')
+elif (xvar == 'timeheight') or (xvar == 'timeeheight'):
+    # First low-pass in time.
+    dt = 1.
+    t = np.arange(0., 15000., dt)
+    __, __, wt = Float.get_interp_grid(hpids, t, 'dUTC', 'Ww')
+    xc = 1./lc[0]  # cut off wavenumber
+    normal_cutoff = xc*dt*2.  # Nyquist frequency is half 1/dx.
+    b, a = sig.butter(4, normal_cutoff, btype='lowpass')
+    wf = sig.filtfilt(b, a, wt, axis=0)
+
+    # Now resample in depth space.
+    w = np.zeros((len(x), Np))
+
+    if xvar == 'timeheight':
+        __, __, N2 = Float.get_interp_grid(hpids, x, 'z', 'N2_ref')
+        __, __, it = Float.get_interp_grid(hpids, x, 'z', 'dUTC')
+    elif xvar == 'timeeheight':
+        __, __, N2 = Float.get_interp_grid(hpids, x, 'zw', 'N2_ref')
+        __, __, it = Float.get_interp_grid(hpids, x, 'zw', 'dUTC')
+
+    for i in xrange(Np):
+        w[:, i] = np.interp(it[:, i], t, wf[:, i])
+
+    btype = 'highpass'
+    lc = lc[1]
+else:
+    raise ValueError("xvar must either be 'time', 'height', 'eheight' or "
+                     "'timeheight'.")
+
+w_filt = np.zeros_like(w)
+for i in xrange(Np):
+    wp, N2p = w[:, i], N2[:, i]
+    w_filt[:, i] = TKED.w_scales(wp, x, N2p, dx, width, -1, lc, c,
+                                 0.2, btype, we, False, True)
+
+# %% Figure of above
+i = 27
+
+print(Float.hpid[i])
+
+fig, axs = plt.subplots(1, 2, sharey=True, figsize=(3.4, 4))
+
+axs[0].plot(w_filt[:, i], x)
+axs[1].plot(Float.Ww[:, i], Float.zw[:, i])
+#axs[1].plot(w[:, i], x)
+
+axs[0].set_ylabel('$z_s$ (m)')
+axs[0].set_xlabel('$q^\prime$ (m s$^{-1}$)')
+axs[1].set_xlabel('$w^\prime$ (m s$^{-1}$)')
+
+fontdict={'size': 10}
+fig.text(-0.02, 0.87, 'a)', fontdict=fontdict)
+fig.text(0.49, 0.87, 'b)', fontdict=fontdict)
+
+fig.savefig(os.path.join(sdir, 'w_filt_example.pdf'), bbox_inches='tight', pad_inches=0)
