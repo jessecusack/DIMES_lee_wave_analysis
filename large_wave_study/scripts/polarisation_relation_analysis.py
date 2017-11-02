@@ -80,7 +80,7 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
 
-# %%
+# %% Peak detection
 
 E76_hpids = np.array([31, 32])
 E77_hpids = np.array([26, 27])
@@ -94,6 +94,11 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
     __, w = Float.get_timeseries(hpids, 'Ww')
 #    __, b = Float.get_timeseries(hpids, 'b')
     __, z = Float.get_timeseries(hpids, 'z')
+    __, p = Float.get_timeseries(hpids, 'P')
+
+    use = p > 50.
+
+    t, x, w, z = t[use], x[use], w[use], z[use]
 
     posidxs = detect_peaks(w, mph=0.05, mpd=100.)
     negidxs = detect_peaks(w, mph=0.05, mpd=100., valley=True)
@@ -141,6 +146,40 @@ for Float, hpids in zip([E76, E77], [E76_hpids, E77_hpids]):
 #    print("Horizontal wavelength: {:1.0f} m\nVertical wavelength: {:1.0f} m\n"
 #          "Period: {:1.0f} min".format(np.pi*2/x[0], np.pi*2/x[1],
 #                                       np.pi*2/x[2]/60.))
+
+# %% Peak detection example
+
+hpids = np.array([31, 32])
+Float = E76
+
+t, w = Float.get_timeseries(hpids, 'Ww')
+
+__, p = Float.get_timeseries(hpids, 'P')
+
+use = p > 50.
+
+t, w = t[use], w[use]
+
+posidxs = detect_peaks(w, mph=0.05, mpd=100.)
+negidxs = detect_peaks(w, mph=0.05, mpd=100., valley=True)
+pidxs = np.sort(np.hstack((negidxs, posidxs)))
+#    TF = np.arange(len(pidxs))
+#    tpeaks = t[pidxs]
+#    pidxsef = np.searchsorted(tef, tpeaks)
+
+#    t = utils.datenum_to_datetime(t)
+#    tef = utils.datenum_to_datetime(tef)
+
+
+fig, ax = plt.subplots(1, 1, figsize=(6, 2.5))
+
+ax.plot(utils.datenum_to_datetime(t), w)
+ax.plot(utils.datenum_to_datetime(t[pidxs]), w[pidxs], 'ro')
+
+ax.set_ylabel('$w$ (m s$^{-1}$)')
+ax.set_xlabel('Time (month-day hour)')
+
+fig.savefig(os.path.join(sdir, 'peak_finding_example.pdf'), bbox_inches='tight', pad_inches=0.)
 
 # %% NOTE: THIS METHOD IS OBSOLETE AND PROVEN NOT TO WORK
 # Estimate position (x, z, t) of wave peaks from combination of profiles 31 and
