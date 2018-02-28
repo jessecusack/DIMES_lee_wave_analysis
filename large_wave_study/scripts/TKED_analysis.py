@@ -20,6 +20,7 @@ import misc_data_processing as mdp
 import TKED_parameterisations as TKED
 import plotting_functions as pf  # my_savefig
 import sandwell
+import GM
 
 zmin = -1450.
 dz = 1.
@@ -229,7 +230,7 @@ for Float in [E76, E77]:
     zw = getattr(Float, 'zw')[:, idxs]
     d = getattr(Float, 'dist_ctd')[:, idxs]
 
-    ts, td, Nsq = mdp.thorpe_float(Float, hpids, zvar='zw', R0=0.3, acc=1.6e-3,
+    ts, td, Nsq = mdp.thorpe_float(Float, hpids, zvar='zw', R0=0.25, acc=1.6e-3,
                                    use_int=True)
 
     eps_thorpe = (0.8*ts)**2 * Nsq**(3./2.)
@@ -265,8 +266,8 @@ for Float in [E76, E77]:
 
 #    LOG_EPS[~np.isfinite(LOG_EPS)] = np.NaN
 
-    sc = ax0.scatter(pdist.flatten(), z_av.flatten(), s=80., c=LOG_EPS_AV,
-                     cmap=plt.get_cmap('YlOrRd'), vmin=-10., vmax=-7, alpha=.5)
+    sc = ax0.scatter(pdist.flatten(), z_av.flatten(), s=80., c=LOG_EPS_AV.flatten(),
+                     cmap='YlOrRd', vmin=-10., vmax=-7, alpha=.5)
 
 #    step = 1
 #    sc = ax0.scatter(X[::step], Z[::step], s=5, c=LOG_EPS[::step],
@@ -301,8 +302,8 @@ fontdict={'size': 10}
 plt.figtext(-0.05, 0.85, 'a)', fontdict=fontdict)
 plt.figtext(-0.05, 0.65, 'b)', fontdict=fontdict)
 
-pf.my_savefig(fig, 'both', 'epsilon_thorpe', sdir, ftype=('png', 'pdf'),
-              fsize='single_col')
+#pf.my_savefig(fig, 'both', 'epsilon_thorpe', sdir, ftype=('png', 'pdf'),
+#              fsize='single_col')
 
 
 # %% Using finescale parameterisation
@@ -522,7 +523,7 @@ eps_av = np.zeros((len(bins) - 1, len(hpids_t)))
 z_av = np.zeros((len(bins) - 1, len(hpids_t)))
 d_av = np.zeros((len(bins) - 1, len(hpids_t)))
 
-fig = plt.figure(figsize=(3.125, 5))
+fig = plt.figure(figsize=(6, 5))
 gs = gridspec.GridSpec(4, 1)
 #gs.update(wspace=0.1)
 ax0 = plt.subplot(gs[0])
@@ -624,7 +625,7 @@ for j, (Float, c) in enumerate(zip([E76, E77], cs)):
     LOG_EPS_AV = np.ma.masked_invalid(np.log10(eps_av))
 
     sc = ax1.scatter(pdist.flatten(), z_av.flatten(), s=80., c=LOG_EPS_AV.flatten(),
-                     cmap=plt.get_cmap('YlOrRd'), vmin=-10., vmax=-7, alpha=.5)
+                     cmap=plt.get_cmap('viridis'), vmin=-10., vmax=-7, alpha=.5)
 
     ax0.plot(Float.dist[idxs] - dbathymax, 1000.*ieps_lem, color=colors[j], linestyle='-', label="{} LEM".format(Float.floatID))
 
@@ -632,7 +633,7 @@ for j, (Float, c) in enumerate(zip([E76, E77], cs)):
 
     step = 20
     sc = ax2.scatter(X[::step], Z[::step], s=5, c=LOG_EPS[::step],
-                     edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-10.,
+                     edgecolor='none', cmap=plt.get_cmap('viridis'), vmin=-10.,
                      vmax=-7, alpha=.5)
 
 
@@ -676,13 +677,13 @@ for ax in [ax1, ax2]:
     ax.yaxis.set_ticklabels(['-1.5', '-1.0', '-0.5', '-0.0'])
 
 fontdict={'size': 10}
-plt.figtext(-0.02, 0.90, 'a)', fontdict=fontdict)
-plt.figtext(-0.02, 0.69, 'b)', fontdict=fontdict)
-plt.figtext(-0.02, 0.48, 'c)', fontdict=fontdict)
-plt.figtext(-0.02, 0.27, 'd)', fontdict=fontdict)
+plt.figtext(0.05, 0.90, 'a)', fontdict=fontdict)
+plt.figtext(0.05, 0.69, 'b)', fontdict=fontdict)
+plt.figtext(0.05, 0.48, 'c)', fontdict=fontdict)
+plt.figtext(0.05, 0.27, 'd)', fontdict=fontdict)
 
 pf.my_savefig(fig, 'both', 'epsilon_lem_thorpe_combined', sdir, ftype=('png', 'pdf'),
-              fsize='single_col')
+              fsize='double_col')
 
 
 # %% Example of w high pass filtered
@@ -766,3 +767,50 @@ fig.text(-0.02, 0.87, 'a)', fontdict=fontdict)
 fig.text(0.49, 0.87, 'b)', fontdict=fontdict)
 
 fig.savefig(os.path.join(sdir, 'w_filt_example.pdf'), bbox_inches='tight', pad_inches=0)
+
+
+# %% Vertical spectra of shear
+
+Float = E77
+hpids = np.arange(200, 210)
+dz = 1.
+z = np.arange(-1400, -200, dz)
+N = 2e-3
+f = 1.2e-4
+
+IW = GM.GM(N, f, Ef=6., **GM.GM76)
+
+__, __, u = E77.get_interp_grid(hpids, z, 'zef', 'U_abs')
+__, __, v = E77.get_interp_grid(hpids, z, 'zef', 'V_abs')
+
+
+m, Su = sig.periodogram(u, fs=1./dz, window='hanning', axis=0)
+__, Sv = sig.periodogram(v, fs=1./dz, window='hanning', axis=0)
+
+use = m < 1./8.
+
+m, Su, Sv = m[use], Su[use, :], Sv[use, :]
+
+Stot = Su + Sv
+
+Ssh = (m**2 * Stot.T/(N/(np.pi*2))**2).T
+
+StotGM = IW.Sm(m, 'horiz_vel', rolloff=True)/(np.pi*2)
+SshGM = IW.Sm(m, 'vert_shear', rolloff=True)/(GM.N0/(np.pi*2))**2 / (np.pi*2)
+
+fig, axs = plt.subplots(2, 1, figsize=(6, 3))
+axs[0].loglog(m, Stot, 'k', linewidth=0.1)
+axs[0].loglog(m, StotGM, 'r')
+axs[1].loglog(m, Ssh, 'k', linewidth=0.1)
+axs[1].loglog(m, SshGM, 'r')
+
+
+
+
+
+
+
+
+
+
+

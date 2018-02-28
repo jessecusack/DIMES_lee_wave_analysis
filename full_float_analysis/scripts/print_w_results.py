@@ -16,9 +16,11 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 import cartopy.crs as ccrs
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+import matplotlib.ticker as ticker
 import sandwell
 import cmocean
 import utils
+import corner
 
 psdir = '../processed_data/'
 fsd = '../figures/w_sections'
@@ -202,3 +204,108 @@ ax.set_title(title_str)
 cbp = plt.colorbar(C, cax=cax, orientation='horizontal', extend='both')
 cbp.set_label('$w$ (m s$^{-1}$)')
 cbp.set_ticks([-0.05, 0, 0.05])
+
+# %% Corner plots
+floats = (4976, 6478)
+fits_ = dict((k, fits[k]) for k in floats if k in fits)
+
+for fid, wfi in fits_.iteritems():
+    not_fixed = np.array([(p is None) for p in wfi['pfixed']])
+    ps = wfi['ps'][:, not_fixed]
+    p = wfi['p'][not_fixed]
+    params0 = wfi['p0'][not_fixed]
+    pnames = wfi['param_names']
+
+    corner.corner(ps, labels=np.array(pnames)[not_fixed],
+                  label_kwargs={'fontsize':11}, plot_contours=False)
+    fig = plt.gcf()
+    fig.set_size_inches(6, 6)
+    axs = fig.axes
+    N = np.shape(ps)[1]
+
+    formatter = ticker.ScalarFormatter(useOffset=False)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((-1, 2))
+
+    for i in xrange(N):
+        for j in xrange(N):
+            idx = i*N + j
+            if i == N - 1:
+                axs[idx].xaxis.set_major_formatter(formatter)
+                axs[idx].xaxis.set_label_coords(0.5, -0.5)
+            if (j == 0) and (i > 0):
+                axs[idx].yaxis.set_major_formatter(formatter)
+                axs[idx].yaxis.set_label_coords(-0.5, 0.5)
+            if i == j:
+                axs[idx].vlines(p[i], *axs[idx].get_ylim(), color='r')
+                axs[idx].vlines(params0[i], *axs[idx].get_ylim(),
+                                color='g')
+
+    if save_figs:
+
+        filename = os.path.join('../figures/all_fit_specs', '{}_corner_alt.pdf'.format(fid))
+        fig.savefig(filename, bbox_inches='tight', pad_inches=0)
+        filename = os.path.join('../figures/all_fit_specs', '{}_corner_alt.png'.format(fid))
+        fig.savefig(filename, bbox_inches='tight', pad_inches=0)
+
+
+#    if save_figures:
+#        name = save_id + '_param_matrix_scatter.png'
+#        fname = os.path.join(save_dir, name)
+#        plt.savefig(fname, bbox_inches='tight')
+#        plt.close(fig)
+
+# %% Special figures for oxford presentation
+
+Float = FLOATS[-1]
+
+
+lon_lat = [-70, -30, -65, -45]
+proj = ccrs.PlateCarree()
+
+###############################################################################
+lons, lats, bathy = sandwell.read_grid(lon_lat, bf)
+bathy = -1*np.ma.masked_where(bathy > 0, bathy)
+
+fig = plt.figure(figsize=(6.5, 5))
+ax = plt.subplot(111, projection=proj)
+ax.set_extent(lon_lat, ccrs.PlateCarree())
+cax = fig.add_axes([0.6, 0.45, 0.2, 0.01])
+
+ax.contour(lons, lats, bathy.data, [0.], colors='k')
+
+C = ax.pcolormesh(lons[::10, ::10], lats[::10, ::10], bathy[::10, ::10],
+                  vmin=0., vmax=6000., cmap=cmocean.cm.deep, rasterized=True)
+cbp = plt.colorbar(C, cax=cax, orientation='horizontal')
+cbp.set_ticks([0., 3000., 6000])
+cbp.set_label('Depth (m)')
+
+
+lon = Float.lon_start[148]
+lat = Float.lat_start[148]
+
+ax.plot(lon, lat, 'ro', markersize=6, label=str(Float.floatID))
+
+ax.legend(loc=0, framealpha=1.)
+
+ax.set_xticks([-70, -65, -60, -55, -50, -45, -40, -35, -30], crs=proj)
+ax.set_yticks([-65, -60, -55, -50, -45], crs=proj)
+lon_formatter = LongitudeFormatter(zero_direction_label=True)
+lat_formatter = LatitudeFormatter()
+ax.xaxis.set_major_formatter(lon_formatter)
+ax.yaxis.set_major_formatter(lat_formatter)
+
+if save_figs:
+    filename = os.path.join(fsd, '6626_map.png')
+    fig.savefig(filename, bbox_inches='tight', pad_inches=0)
+
+
+fig, ax = plt.subplots(1, 1, figsize=(2, 4))
+ax.plot(Float.Ww[:, 148], Float.z[:, 148])
+ax.set_xlim(-0.15, 0.15)
+ax.set_xlabel('$w$ (m s$^{-1}$')
+ax.set_ylabel('$z$ (m)')
+
+if save_figs:
+    filename = os.path.join(fsd, '6626_vert_vel.png')
+    fig.savefig(filename, bbox_inches='tight', pad_inches=0)

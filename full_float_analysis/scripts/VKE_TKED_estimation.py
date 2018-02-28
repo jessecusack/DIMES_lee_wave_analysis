@@ -178,8 +178,8 @@ for Float in Floats:
                      edgecolor='none', cmap=plt.get_cmap('YlOrRd'), vmin=-10.,
                      vmax=-7, alpha=.5)
 
-    ax1.set_ylabel('$P$ (mW m$^{-2}$)')
-    ax1.yaxis.set_ticks(np.array([0., 5., 10.]))
+    ax1.set_ylabel('$P$')
+#    ax1.yaxis.set_ticks(np.array([0., 5., 10.]))
     ax1.xaxis.set_ticks([])
 
     ax1.legend(loc='upper right', fontsize=7)
@@ -187,7 +187,7 @@ for Float in Floats:
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.82, 0.15, 0.02, 0.7])
     C = fig.colorbar(sc, cax=cbar_ax, extend='both')
-    C.set_label(r'$\log_{10}(\epsilon)$ (W kg$^{-1}$)')
+    C.set_label(r'$\log_{10}(VKE)$')
 
     #    plt.clim(-11., -7.)
     ax0.set_xlim(np.min(X), np.max(X))
