@@ -19,7 +19,7 @@ scripts/*.png
 
 # Autosaves #
 #############
-*~ 
+*~
 \#*\#
 *.asv
 
@@ -73,3 +73,6 @@ scripts/*.png
 ehthumbs.db
 Thumbs.db
 *.ini
+
+# .env
+.envrc
