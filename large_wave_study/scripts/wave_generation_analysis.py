@@ -18,8 +18,8 @@ import gsw
 import os
 import glob
 
-import sandwell
-import utils
+import ocean_tools.sandwell as sandwell
+import ocean_tools.utils as utils
 import emapex
 import plotting_functions as pf
 
@@ -32,7 +32,7 @@ except NameError:
 # %% Script params.
 
 # Bathymetry file path.
-bf = os.path.abspath(glob.glob('/noc/users/jc3e13/storage/smith_sandwell/topo_*.img')[0])
+bf = os.path.abspath(glob.glob(os.path.expanduser('~/data/smith_sandwell/topo_*.img'))[0])
 # Figure save path.
 sdir = '../figures/wave_generation_analysis'
 if not os.path.exists(sdir):
@@ -103,7 +103,7 @@ boxlats = np.hstack((lats[0]*np.ones_like(lons), lats,
 m.plot(*m(boxlons, boxlats), color='white', linewidth=2)
 
 # Add VMP casts.
-UK2_vmp = sp.io.loadmat('/noc/users/jc3e13/storage/DIMES/combined_jc054.mat',
+UK2_vmp = sp.io.loadmat(os.path.expanduser('~/data/DIMES/combined_jc054.mat'),
                         variable_names=['vmp'])['vmp']
 vmp_lon = UK2_vmp['startlon'][0][0][0]
 vmp_lat = UK2_vmp['startlat'][0][0][0]

@@ -10,6 +10,6 @@ import emapex
 
 
 for floatID in emapex.FIDS_DIMES:
-    command = 'python fit_w_model_alt.py --floatID ' + str(floatID) + ' &'
+    command = 'source activate dimes && python fit_w_model_alt.py --floatID ' + str(floatID) + ' &'
     print(command)
     os.system(command)

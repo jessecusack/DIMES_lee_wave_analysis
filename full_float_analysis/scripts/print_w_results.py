@@ -17,14 +17,14 @@ from tabulate import tabulate
 import cartopy.crs as ccrs
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 import matplotlib.ticker as ticker
-import sandwell
+import ocean_tools.sandwell as sandwell
 import cmocean
-import utils
+import ocean_tools.utils as utils
 import corner
 
 psdir = '../processed_data/'
 fsd = '../figures/w_sections'
-bf = os.path.abspath(glob.glob('/noc/users/jc3e13/storage/smith_sandwell/topo_*.img')[0])
+bf = os.path.abspath(glob.glob(os.path.expanduser('~/data/smith_sandwell/topo_*.img'))[0])
 
 # Universal figure font size.
 matplotlib.rc('font', **{'size': 8})
@@ -102,7 +102,7 @@ cbp = plt.colorbar(C, cax=cax, orientation='horizontal')
 cbp.set_ticks([0., 3000., 6000])
 cbp.set_label('Depth (m)')
 
-for Float in FLOATS + [FLOATS_ALT[1]]:
+for Float in FLOATS: # + [FLOATS_ALT[1]]:
 
     lon = Float.lon_start
     lat = Float.lat_start
@@ -119,7 +119,7 @@ ax.xaxis.set_major_formatter(lon_formatter)
 ax.yaxis.set_major_formatter(lat_formatter)
 
 if save_figs:
-    filename = os.path.join(fsd, 'floats_map.pdf')
+    filename = os.path.join(fsd, 'floats_map.png')
     fig.savefig(filename, bbox_inches='tight', pad_inches=0)
 
 # %% vertical velocity sections
@@ -255,10 +255,13 @@ for fid, wfi in fits_.iteritems():
 #        plt.savefig(fname, bbox_inches='tight')
 #        plt.close(fig)
 
-# %% Special figures for oxford presentation
+# %% Special figures for oxford/CASPO presentation
 
-Float = FLOATS[-1]
+Float1 = E6626
+Float2 = E6480
 
+use = E6480.z[:, 132] > -1100
+use[-1] = False
 
 lon_lat = [-70, -30, -65, -45]
 proj = ccrs.PlateCarree()
@@ -280,11 +283,10 @@ cbp = plt.colorbar(C, cax=cax, orientation='horizontal')
 cbp.set_ticks([0., 3000., 6000])
 cbp.set_label('Depth (m)')
 
-
-lon = Float.lon_start[148]
-lat = Float.lat_start[148]
-
-ax.plot(lon, lat, 'ro', markersize=6, label=str(Float.floatID))
+ax.plot(Float1.lon_start[148], Float1.lat_start[148], 'ro', markersize=6,
+        label=str(Float1.floatID))
+ax.plot(Float2.lon_start[132], Float2.lat_start[132], 'bo', markersize=6,
+        label=str(Float2.floatID))
 
 ax.legend(loc=0, framealpha=1.)
 
@@ -296,16 +298,38 @@ ax.xaxis.set_major_formatter(lon_formatter)
 ax.yaxis.set_major_formatter(lat_formatter)
 
 if save_figs:
-    filename = os.path.join(fsd, '6626_map.png')
+    filename = os.path.join(fsd, '6626_6480_map.png')
     fig.savefig(filename, bbox_inches='tight', pad_inches=0)
 
 
 fig, ax = plt.subplots(1, 1, figsize=(2, 4))
-ax.plot(Float.Ww[:, 148], Float.z[:, 148])
+ax.plot(Float1.Ww[:, 148], Float1.z[:, 148], 'r-')
+ax.plot(Float.Ww[use, 132] - np.nanmean(Float.Ww[use, 132]), Float.z[use, 132], 'b-')
 ax.set_xlim(-0.15, 0.15)
-ax.set_xlabel('$w$ (m s$^{-1}$')
+ax.set_xlabel('$w$ (m s$^{-1}$)')
 ax.set_ylabel('$z$ (m)')
 
 if save_figs:
-    filename = os.path.join(fsd, '6626_vert_vel.png')
+    filename = os.path.join(fsd, '6626_6480_vert_vel.png')
     fig.savefig(filename, bbox_inches='tight', pad_inches=0)
+
+# %% Plot for CASPO
+Float = E4977
+Float.apply_isopycnal_displacement('../processed_data/4977_N2_ref_400dbar.p')
+Float.calculate_pressure_perturbation()
+# %%
+idx = 25
+zmin = -2000.
+zmax = -500.
+z = Float.z[:, idx]
+use = (z > zmin) & (z < zmax)
+z = z[use]
+w = Float.Ww[use, idx]
+b = Float.b[use, idx]
+p = Float.Pprime[use, idx]
+
+
+fig, axs = plt.subplots(1, 3)
+axs[0].plot(w, z)
+axs[1].plot(b, z)
+axs[2].plot(p, z)
